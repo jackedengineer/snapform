@@ -62,3 +62,22 @@ export const formsPageSchema = z.strictObject({
 });
 export type FormSnapshot = z.infer<typeof formSnapshotSchema>;
 export type FormsPage = z.infer<typeof formsPageSchema>;
+// Browser recovery is form authoring data only, never an authentication cache.
+export const localDraftSchema = z
+  .strictObject({
+    version: z.literal(1),
+    userId: z.string().min(1).max(128),
+    workspaceId: identity,
+    formId: identity,
+    editorId: identity,
+    updatedAt: z.int().nonnegative(),
+    revision,
+    definition: formDefinitionSchema,
+    pending: saveDraftSchema.nullable(),
+    backup: formDefinitionSchema.nullable(),
+  })
+  .refine(
+    (value) =>
+      !value.pending || value.pending.expectedRevision === value.revision,
+  );
+export type LocalDraft = z.infer<typeof localDraftSchema>;
