@@ -6,7 +6,9 @@ describe('browser auth HTTP client', () => {
   it('sends same-origin JSON once without retaining a returned token', async () => {
     const transport = vi
       .fn<typeof fetch>()
-      .mockResolvedValue(Response.json({ token: 'synthetic-session' }));
+      .mockResolvedValue(
+        Response.json({ success: true, token: 'synthetic-session' }),
+      );
     vi.stubGlobal('fetch', transport);
     expect(await authPost('sign-out', {})).toBeUndefined();
     expect(transport).toHaveBeenCalledTimes(1);
@@ -86,4 +88,35 @@ describe('browser auth HTTP client', () => {
       'We couldn’t complete that request. Please try again.',
     );
   });
+  it.each([
+    new Response('<html>wrong route</html>'),
+    Response.json({ unexpected: true }),
+  ])(
+    'rejects a false success from an unexpected response',
+    async (response) => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
+      await expect(authPost('sign-out', {})).rejects.toThrow(
+        'We couldn’t complete that request. Please try again.',
+      );
+    },
+  );
+  it.each([
+    'sign-up/email',
+    'sign-in/email',
+    'request-password-reset',
+    'reset-password',
+    'send-verification-email',
+  ])(
+    'accepts the documented %s reply without exposing credentials',
+    async (path) => {
+      const reply = path.includes('/email')
+        ? {
+            token: 'synthetic-token',
+            user: { id: 'qa', name: 'QA', email: 'qa@example.invalid' },
+          }
+        : { status: true };
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(reply)));
+      expect(await authPost(path, {})).toBeUndefined();
+    },
+  );
 });

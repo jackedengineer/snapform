@@ -22,7 +22,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             'A clear start for your next project. Build and review a project brief.',
         },
       ],
-      links: [{ rel: 'stylesheet', href: styles }],
+      links: [
+        { rel: 'stylesheet', href: styles },
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+      ],
     }),
     component: Root,
     shellComponent: Document,
@@ -57,7 +60,7 @@ function Document({ children }: { children: ReactNode }) {
       </head>
       <body>
         <a className="skip-link" href="#main">
-          Skip to brief
+          Skip to content
         </a>
         {children}
         <Scripts />

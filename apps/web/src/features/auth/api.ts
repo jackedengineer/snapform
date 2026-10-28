@@ -20,8 +20,8 @@ export async function authPost(path: string, body: unknown): Promise<void> {
   }).catch(() => {
     throw new Error(genericFailure);
   });
+  const result: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const result: unknown = await response.json().catch(() => null);
     let code = '';
     if (typeof result === 'object' && result !== null) {
       if ('code' in result && typeof result.code === 'string')
@@ -41,8 +41,23 @@ export async function authPost(path: string, body: unknown): Promise<void> {
         : messages[code] || genericFailure,
     );
   }
-  // Session credentials stay in the server's HttpOnly cookie, never client state.
-  await response.body?.cancel();
+  const record =
+    typeof result === 'object' && result !== null ? result : undefined;
+  const valid =
+    record &&
+    (['sign-up/email', 'sign-in/email'].includes(path)
+      ? 'user' in record && readUser(record.user) !== undefined
+      : path === 'sign-out'
+        ? 'success' in record && record.success === true
+        : [
+            'request-password-reset',
+            'reset-password',
+            'send-verification-email',
+          ].includes(path) &&
+          'status' in record &&
+          record.status === true);
+  if (!valid) throw new Error(genericFailure);
+  // Validate the reply but never return session capabilities to application state.
 }
 export type User = { id: string; name: string; email: string };
 export async function currentUser(): Promise<User | null> {
@@ -54,24 +69,22 @@ export async function currentUser(): Promise<User | null> {
   if (response.status === 401) return null;
   if (response.ok) {
     const result: unknown = await response.json();
-    if (
-      typeof result === 'object' &&
-      result !== null &&
-      'user' in result &&
-      typeof result.user === 'object' &&
-      result.user !== null
-    ) {
-      const user = result.user;
-      if (
-        'id' in user &&
-        typeof user.id === 'string' &&
-        'name' in user &&
-        typeof user.name === 'string' &&
-        'email' in user &&
-        typeof user.email === 'string'
-      )
-        return { id: user.id, name: user.name, email: user.email };
+    if (typeof result === 'object' && result !== null && 'user' in result) {
+      const user = readUser(result.user);
+      if (user) return user;
     }
   }
   throw new Error('We couldn’t load your account.');
+}
+function readUser(value: unknown): User | undefined {
+  if (typeof value !== 'object' || value === null) return;
+  if (
+    'id' in value &&
+    typeof value.id === 'string' &&
+    'name' in value &&
+    typeof value.name === 'string' &&
+    'email' in value &&
+    typeof value.email === 'string'
+  )
+    return { id: value.id, name: value.name, email: value.email };
 }
