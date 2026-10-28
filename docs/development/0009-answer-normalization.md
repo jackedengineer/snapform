@@ -1,0 +1,7 @@
+# Typed answer normalization
+
+28 October 2026. Shared codecs validate all nine answer types independently of browser controls. Zero and false remain values; blank, missing and refusal remain distinct states. The respondent cannot declare a field not applicable: only deterministic engine evaluation can assign that state. Required acknowledgment needs actual boolean true, while optional false remains evidence.
+
+Text preserves whitespace and normalizes line endings; email preserves the local part and normalizes its domain. Numbers require finite safe-range values and explicit units in the definition; ambiguous currency/separator strings are rejected. ISO local dates validate real calendar and configured bounds. Choice IDs, not labels, identify selections; multiple choices normalize to definition order and reject duplicates/unknown IDs. File references are bounded UUIDs only. The future collection transaction must still establish file ownership and scan status; a valid UUID is not proof of a clean upload.
+
+Eight behavioral tests were added before the codec implementation and now pass, bringing unit tests to 81. Pure-contract coverage remains 100%. The actual workerd test verifies numeric zero and rejection of respondent-supplied applicability as well as native currency/Unicode behavior. Strict type/lint/format checks, Worker tests and production builds pass. This adds no visible respondent screen yet; its browser workflow is a subsequent feature gate. No dependency was added.

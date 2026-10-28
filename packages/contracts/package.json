@@ -6,7 +6,8 @@
     ".": "./src/brief.ts",
     "./auth": "./src/auth.ts",
     "./workspace": "./src/workspace.ts",
-    "./form": "./src/form.ts"
+    "./form": "./src/form.ts",
+    "./answers": "./src/answers.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
