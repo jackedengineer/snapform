@@ -4,11 +4,14 @@
   "type": "module",
   "exports": {
     ".": "./src/client.ts",
-    "./schema": "./src/schema.ts"
+    "./schema": "./src/schema.ts",
+    "./workspaces": "./src/workspaces.ts",
+    "./workspace-schema": "./src/workspace-schema.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",
-    "drizzle-orm": "0.45.4"
+    "drizzle-orm": "0.45.4",
+    "@snapform/contracts": "workspace:*"
   },
   "scripts": {
     "migrate": "node --env-file-if-exists=../../.env src/migrate.ts",

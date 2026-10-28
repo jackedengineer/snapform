@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isStorableText } from './text.ts';
 export const email = z
   .email()
   .max(254)
@@ -12,7 +13,8 @@ export const signupSchema = z.strictObject({
     .string()
     .trim()
     .min(1, 'Enter your name.')
-    .max(96, 'Use no more than 96 characters.'),
+    .max(96, 'Use no more than 96 characters.')
+    .refine(isStorableText, 'Use valid text characters.'),
   email,
   password,
   callbackURL: z.literal('/login').optional(),

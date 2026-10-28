@@ -17,6 +17,8 @@ describe('auth input contracts', () => {
   it.each([
     { ...signup, emailVerified: true },
     { ...signup, name: ' '.repeat(5) },
+    { ...signup, name: 'A\0B' },
+    { ...signup, name: 'A\ud800B' },
     { ...signup, name: 'x'.repeat(97) },
     { ...signup, password: 'short' },
     { ...signup, password: 'x'.repeat(129) },

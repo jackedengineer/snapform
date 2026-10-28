@@ -11,6 +11,8 @@ export default defineConfig({
       include: [
         'packages/contracts/src/brief.ts',
         'packages/contracts/src/auth.ts',
+        'packages/contracts/src/workspace.ts',
+        'packages/contracts/src/text.ts',
       ],
       reporter: ['text', 'json-summary'],
       thresholds: { lines: 90, functions: 90, statements: 90, branches: 85 },

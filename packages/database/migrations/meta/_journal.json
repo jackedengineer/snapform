@@ -15,6 +15,27 @@
       "when": 1793173285641,
       "tag": "0001_runtime_privileges",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793177826422,
+      "tag": "0002_colorful_krista_starr",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793178082451,
+      "tag": "0003_workspace_runtime_grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793178166147,
+      "tag": "0004_sleepy_robbie_robertson",
+      "breakpoints": true
     }
   ]
 }

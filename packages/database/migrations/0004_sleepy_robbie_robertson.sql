@@ -1,0 +1,1 @@
+ALTER POLICY "membership_read" ON "membership" TO snapform_runtime USING (case when nullif(current_setting('snapform.workspace_id', true), '') is null then "membership"."user_id" = current_setting('snapform.user_id', true) else "membership"."workspace_id"::text = current_setting('snapform.workspace_id', true) end);

@@ -99,4 +99,18 @@ describe('public auth boundary', () => {
     expect(limited.status).toBe(429);
     expect(limited.headers.get('Retry-After')).toBe('60');
   }, 20000);
+  it.each(['A\0B', 'A\ud800B'])(
+    'rejects text that cannot be stored before signup',
+    async (name) => {
+      expect(
+        (
+          await post('sign-up/email', {
+            name,
+            email: 'approved@example.invalid',
+            password: 'Synthetic-QA-passphrase',
+          })
+        ).status,
+      ).toBe(422);
+    },
+  );
 });
