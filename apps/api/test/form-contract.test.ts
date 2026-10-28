@@ -2,6 +2,8 @@ import { expect, it } from 'vitest';
 import { blockSchema } from '@snapform/contracts/form';
 import { decodeAnswer } from '@snapform/contracts/answers';
 import { conditionSchema } from '@snapform/contracts/rules';
+import { compileDefinition } from '@snapform/contracts/compile';
+import { formFixture } from '../../../packages/contracts/test/form-fixture.ts';
 
 it('validates native currency and Unicode contracts inside workerd', () => {
   const value = {
@@ -34,4 +36,7 @@ it('rejects deep condition input without overflowing the Worker stack', () => {
   let condition: unknown = { op: 'answered', fieldId: crypto.randomUUID() };
   for (let i = 0; i < 10000; i++) condition = { op: 'not', condition };
   expect(conditionSchema.safeParse(condition).success).toBe(false);
+});
+it('compiles the same bounded definition fixture inside the Worker runtime', () => {
+  expect(compileDefinition(formFixture().definition).ok).toBe(true);
 });

@@ -1,0 +1,7 @@
+# Semantic definition compiler
+
+28 October 2026. Publishing/preview validation can now reject empty forms, missing field/page/ending references, incompatible comparison operands, repeated priorities, competing visibility rules, backward navigation and forward/cyclic visibility dependencies. Diagnostics identify the affected rule; schema diagnostics retain their field path. Rules sort by explicit priority without changing the supplied source object. Content blocks never enter the answer registry.
+
+Conditions on visibility targets may reference only earlier fields; navigation conditions may reference fields on the source page or earlier pages, and destinations must move forward. This ordering removes cycles rather than introducing a general graph solver. Choice comparisons use stable option IDs. Number/date order operations validate their field types; acknowledgments compare booleans and multi-choice membership references existing options. No evaluation of scripts, formulas or model-defined routing is involved.
+
+Behavioral tests were written first and now cover valid rule ordering, invalid definitions/references/types, content blocks and ambiguous/cyclic navigation. The same valid fixture compiles in actual workerd. Strict checks and the applicable production builds pass. This remains a shared internal compiler; the authoring inspector, path tester, publish transaction and public collector are not claimed implemented by this increment.
