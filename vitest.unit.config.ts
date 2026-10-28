@@ -5,6 +5,8 @@ export default defineConfig({
       'packages/contracts/**/*.test.ts',
       'apps/web/src/features/auth/api.test.ts',
       'apps/web/src/features/workspaces/api.test.ts',
+      'apps/web/src/features/forms/api.test.ts',
+      'apps/web/src/features/forms/new-form.test.ts',
     ],
     allowOnly: false,
     coverage: {
