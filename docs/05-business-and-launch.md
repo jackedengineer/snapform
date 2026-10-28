@@ -82,15 +82,15 @@ Revised planning bands in USD/month before taxes, for low-volume paid operation.
 
 | Cost line | Pilot / market V1 allowance | Driver |
 |---|---:|---|
-| Cloudflare Workers/Containers/Queues | $40–200 | SSR/API traffic, memory and active CPU, warm instances, scanner, routing and queue operations |
+| Cloudflare Workers/Containers/Queues | $40–200 | SSR/API traffic, memory and active CPU, API CPU/requests, native scanner and queue operations |
 | Neon Postgres compute/storage/restore history | $40–200 | Compute hours, concurrency, branches, database bytes and required recovery retention |
-| R2 objects and protected recovery copies | $10–80 | Object volume/operations, exports, scan/copy traffic and retention; independent S3 copy is a separate scenario |
+| R2 objects and protected recovery copies | $10–80 | Object volume/operations, exports, scan/copy traffic and retention; separate-account Cloudflare copies and retention |
 | Email/monitoring/status/support tooling | $20–100 | Volume, retention, seats and alerts |
 | AI development/evaluation/pilot calls | $20–150 | Repeated evals, chosen models and bounded abuse |
 | **Component sum** | **$130–730/month** | Arithmetic sum, before taxes and transaction fees |
 | **Rounded planning envelope** | **$150–750/month** | Working allocation; not an approved purchasing budget |
 
-Earlier Supabase/Render cost assumptions are superseded. Use the official [Cloudflare Containers](https://developers.cloudflare.com/containers/platform/pricing/), [Workers](https://developers.cloudflare.com/workers/platform/pricing/), [R2](https://developers.cloudflare.com/r2/pricing/) and [Neon](https://neon.com/pricing) pricing for the actual configured deployment. Choose paid restore settings and test database/file recovery independently. Hosting an auth library moves its operation into compute/support effort rather than eliminating it. Razorpay transaction charges, taxes, refunds, disputes, international/currency terms and any AWS fallback capacity are separate inputs; use the actual account agreement/tested product configuration before final margin claims.
+Earlier Supabase/Render cost assumptions are superseded. Use the official [Cloudflare Containers](https://developers.cloudflare.com/containers/platform/pricing/), [Workers](https://developers.cloudflare.com/workers/platform/pricing/), [R2](https://developers.cloudflare.com/r2/pricing/) and [Neon](https://neon.com/pricing) pricing for the actual configured deployment. Choose paid restore settings and test database/file recovery independently. Hosting an auth library moves its operation into compute/support effort rather than eliminating it. Razorpay transaction charges, taxes, refunds, disputes, international/currency terms and isolated native scanner capacity are separate inputs; use the actual account agreement/tested product configuration before final margin claims.
 
 V1 founder engineering: previous envelope 960–1,200 focused hours including contingency, now provisional pending the TanStack/Cloudflare/auth/outbox feasibility re-baseline. Specialist allowances: product/UI design 40–80h; QA/accessibility 40–80h; application security 16–32h; jurisdiction-specific legal/accounting 8–20h. Total specialist 104–212h. At a purely illustrative blended $50/hour, this is $5,200–10,600 plus infrastructure; get actual specialist quotes. Founder opportunity cost and sales/support time are separate. Reserve another 5–10h/week for discovery, sales, support and administration; do not count those as the 30 focused engineering hours.
 

@@ -1,6 +1,6 @@
 # Snapform — product and development blueprint
 
-**Planning draft · 27 October 2026 · Design and platform revision 28 October 2026 · No application has been implemented.**
+**Product blueprint and implementation workspace · Updated 28 October 2026.**
 
 Snapform turns a service enquiry or onboarding brief into a branded intake flow, lets people answer through fields or optional guided conversation, and delivers a reviewed, usable record to the team's existing tools.
 
@@ -20,9 +20,11 @@ This blueprint critically reviews the supplied 37-page research report and conve
 10. [Foundation 0.2 design direction, references and review evidence](docs/08-design-direction.md)
 11. [Platform revision, TanStack assessment and Go comparison](docs/09-platform-stack-decision.md)
 12. [ADR-011: Cloudflare, TanStack, Neon and Razorpay](docs/decisions/ADR-011-cloudflare-tanstack-neon-razorpay.md)
-13. [Express on Node/Workers versus Bun — comparison and local evidence](docs/10-express-node-bun-comparison.md)
+13. [Express on Node/Workers versus Bun — historical comparison](docs/10-express-node-bun-comparison.md)
+14. [V1 scope and incremental delivery contract](docs/11-v1-scope-and-delivery.md)
+15. [Accepted Express/Workers decision](docs/decisions/ADR-012-express-workers-native-first.md)
 
-Foundation 0.2 uses self-hosted DM Sans, warm ivory/ink/cobalt colors, generous display typography and restrained, optional motion. The revised application stack uses TanStack Start/Router/Query/Form, TypeScript/Fastify, Neon/Drizzle, private R2 and Razorpay. Cloudflare is the preferred platform; AWS is the workload fallback. Better Auth is the proposed identity replacement.
+Foundation 0.2 uses self-hosted DM Sans, warm ivory/ink/cobalt colors, generous display typography and restrained, optional motion. The revised application stack uses TanStack Start/Router/Query/Form, TypeScript/Express, Neon/Drizzle, private R2 and Razorpay. Cloudflare is the selected deployment platform, with no alternate-cloud fallback. Better Auth is the proposed identity replacement.
 
 The [visual design specimen](design/system.html) is a local, interactive design reference with working controls and responsive layouts. It demonstrates the proposed visual language and review states; it is not the product. [Machine-readable design tokens](design/tokens.json) and [CSS tokens](design/tokens.css) accompany it.
 
@@ -34,7 +36,7 @@ An [interactive overview](/Users/jackedengineer/.cursor/projects/Users-jackedeng
 - Support all four target segments through shared capabilities and focused templates. Prioritize agency project qualification and consultant discovery for the first pilots.
 - V1 includes deterministic collection, limited migration, AI draft assistance, bounded optional guided intake, reviewed structured answers, reliable delivery, small-team permissions, transparent billing, and operational recovery.
 - Launch with one form contract, one rule engine, immutable publications, and transactionally durable submissions. AI proposes; validated application policy commits.
-- Use a TypeScript modular monolith with separately deployed authoring, collection/API, and worker workloads. Use Neon transactions and a durable outbox feeding Cloudflare Queues. Frontends/queue handlers use Workers; the Fastify API uses a full Node Cloudflare Container because the tested direct-Workers setup failed runtime code-generation restrictions.
+- Use a TypeScript modular monolith with separately deployed authoring, collection/API, and worker workloads. Use Neon transactions and a durable outbox feeding Cloudflare Queues. Frontends/queue handlers use Workers; the Express API runs directly on Workers through the Node HTTP bridge.
 - Plan **960–1,200 founder engineering hours, approximately 32–40 weeks at 30 focused hours/week**, including contingency, plus specialist assistance. This earlier envelope is provisional after the platform revision; re-estimate foundation effort after deployment/auth/outbox feasibility. This is a planning estimate, not a fixed bid. A narrower private pilot arrives earlier.
 
 ## Source boundary
@@ -43,4 +45,4 @@ Primary input: `/Users/jackedengineer/Downloads/Typeform_Jotform_Formless_Resear
 
 ## Status
 
-All 66 backlog items are pending. A local Fastify/Workers compatibility spike and ordinary Node control were run; they do not prove deployed Cloudflare Containers, Neon, auth or billing integration. Product demand, conversion improvement, AI accuracy, SLOs, and unit economics have **not** been validated. No vendor accounts were provisioned, paid services purchased, or external customer messages sent.
+Implementation is beginning in verified slices; the market V1 is not shipped. Local framework probes do not prove hosted Neon/auth/billing integration. Product demand, conversion improvement, AI accuracy, SLOs, and unit economics have **not** been validated. No vendor accounts were provisioned, paid services purchased, or external customer messages sent.

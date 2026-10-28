@@ -2,6 +2,8 @@
 
 ## Status
 
+**Superseded by ADR-012.** This is a historical record, not the active deployment plan.
+
 Accepted for the user-specified provider/framework direction on 28 October 2026. Fastify Containers, Better Auth and queue implementation details are recommended baselines pending the stated deployment/integration gates. No live service is provisioned.
 
 Supersedes ADR-004's proposed pg-boss deployment and the hosted-auth/provider choices under ADR-005; refines ADR-002/003 without replacing the shared engine, Postgres or Drizzle. Earlier proposal snapshots are retained under `docs/archive/platform-baseline-2026-10-28/`; ADR-001 through ADR-010 remain in the original decision register with status annotations.

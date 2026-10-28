@@ -32,12 +32,12 @@ Security, accessibility, observability and recovery run through every stage. A s
 
 ## 3. Schedule and reviewable outputs
 
-Estimates are judgment-based ranges with no historical delivery velocity. **Total 32–40 weeks / 960–1,200 founder engineering hours includes ~20% uncertainty reserve**, not 20% added again. Specialist hours and business work are separate. Re-estimate after discovery and the first end-to-end slice; do not treat phase windows as deadlines. No calendar launch date is committed. **28 October platform revision:** this previous estimate is provisional until the TanStack/Cloudflare Containers/Neon/auth/outbox slice is proven. T65/T66 add explicit foundation verification; re-baseline P1 and the overall envelope after the spike, rather than treating the changed platform as free scope.
+Estimates are judgment-based ranges with no historical delivery velocity. **Total 32–40 weeks / 960–1,200 founder engineering hours includes ~20% uncertainty reserve**, not 20% added again. Specialist hours and business work are separate. Re-estimate after discovery and the first end-to-end slice; do not treat phase windows as deadlines. No calendar launch date is committed. **28 October platform revision:** this previous estimate is provisional until the TanStack/Cloudflare Workers/Neon/auth/outbox slice is proven. T65/T66 add explicit foundation verification; re-baseline P1 and the overall envelope after the spike, rather than treating the changed platform as free scope.
 
 | Phase | Duration | Cumulative window | Deliverable / exit gate |
 |---|---|---|---|
 | P0 Commercial definition and feasibility | 2w | Weeks 1–2 | 12–16 interviews, sample briefs, three workflow-aligned pilot commitments, merchant/region/adapter feasibility, scope and owner decision |
-| P1 Foundation and design | 3–4w | Weeks 3–6 | TanStack monorepo, Workers/Containers environments/CI, Better Auth/Neon tenants, contracts, tokens, outbox/Queues, telemetry/backups; cross-tenant denial and deployment slice proven |
+| P1 Foundation and design | 3–4w | Weeks 3–6 | TanStack monorepo, Workers environments/CI with a separate gated native-scanner workload, Better Auth/Neon tenants, contracts, tokens, outbox/Queues, telemetry/backups; cross-tenant denial and deployment slice proven |
 | P2 Deterministic vertical slice | 5–6w | Weeks 6–12 | Creator edits five fields/conditional path, versions publish, mobile collector reviews/submits once, durable event/usage/outbox survives retry and queue-publication failure |
 | P3 Usable intake and handoff | 4–5w | Weeks 11–17 | Full V1 field subset, safe files, results/export, email/webhook/recovery, basic analytics, branding/embed; invited operational pilot |
 | P4 Migration and commercial lifecycle | 4–5w | Weeks 15–22 | Supported Typeform import/report, cutover plan, checkout/cancel/dunning/quotas, retention/delete, role/support flows; paid pilot possible |
@@ -56,7 +56,7 @@ The cumulative windows express earliest phase start through latest phase end, no
 ### CP0 — Scope before substantial construction
 
 - Workflow, buyer, sample fields and demanded destination fit a shared product.
-- Region/selling entity, existing Razorpay account Subscription configuration/currency/market coverage, Cloudflare container feasibility and source adapter are recorded.
+- Region/selling entity, existing Razorpay account Subscription configuration/currency/market coverage, Cloudflare Worker/native-scanner feasibility and source adapter are recorded.
 - V1 inclusions, exclusions, capacity and claims approved as a concrete baseline.
 - Design specimen is reviewed with target users; revise assumptions, not just colors.
 
@@ -64,7 +64,7 @@ The cumulative windows express earliest phase start through latest phase end, no
 
 - New user can create workspace; second tenant cannot read/write/export its records.
 - CI builds all deployments; secrets and environment data are separated.
-- Deployed Start/ingress/Fastify Container/Neon/auth/R2 slice passes lifecycle, cookie and transaction checks; fallback decision recorded.
+- Deployed Start/ingress/Express Worker/Neon/auth/R2 slice passes lifecycle, cookie and transaction checks; runtime constraints and release blockers recorded.
 - Outbox/Cloudflare queue relay survives duplicate dispatch, lease expiry and transport failure before dependent collection work expands.
 - Backup configuration and recovery ownership exist; initial restore test planned/executable.
 - Static request contracts and bounded form DSL are documented.

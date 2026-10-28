@@ -26,8 +26,8 @@
 
 **Requirements:** FR-28,FR-37. **Dependencies:** T01.
 
-- Acceptance: Existing Razorpay account Subscription configuration, methods/currency/customer coverage and data geography have evidence; Cloudflare Start + Fastify Container/scanner feasibility and AWS fallback triggers are recorded; authorized source sample maps to the bounded engine.
-- Verify: Time-boxed deployment/provider feasibility spike, test mode only and founder decision record. Local Fastify/Workers failure is recorded evidence; deployed container readiness remains unproven.
+- Acceptance: Existing Razorpay account Subscription configuration, methods/currency/customer coverage and data geography have evidence; Cloudflare Start + Express Worker and native-scanner feasibility and release-blocking runtime constraints are recorded; authorized source sample maps to the bounded engine.
+- Verify: Time-boxed deployment/provider feasibility spike, test mode only and founder decision record. Local Earlier framework runtime failure is recorded evidence; deployed container readiness remains unproven.
 - Proposed files (small/medium scope): `docs/decisions/provider-selection.md`, `docs/discovery/import-feasibility.md`.
 
 ### [ ] T04 — Test review and readiness design with users
@@ -110,9 +110,9 @@
 
 **Requirements:** FR-01,NFR-01,NFR-03,NFR-08,NFR-11. **Dependencies:** T05, T06, T07, T12.
 
-- Acceptance: Synthetic TanStack Start → ingress Worker → full-Node Fastify Container → Neon transaction slice deploys; auth cookies, tenant context, streaming and R2 signing work; lifecycle/placement/routing/rollout and AWS fallback decision are recorded.
+- Acceptance: Synthetic TanStack Start → ingress Worker → Express Worker → Neon transaction slice deploys; auth cookies, tenant context, streaming and R2 signing work; lifecycle/placement/routing/rollout and release-blocking incompatibility decision are recorded.
 - Verify: Local Worker tests plus deployed staging idle/warm requests, concurrent tenants, instance replacement, rollback and raw-webhook-body preservation. Local Node control alone does not pass this gate.
-- Proposed files (small/medium scope): `apps/ingress/wrangler.jsonc`, `apps/ingress/src/index.ts`, `apps/api/Dockerfile`, `tests/integration/platform.test.ts`, `docs/runbooks/platform.md`.
+- Proposed files (small/medium scope): `apps/api/wrangler.jsonc`, `apps/api/src/worker.ts`, `apps/web/vite.config.ts`, `tests/integration/platform.test.ts`, `docs/runbooks/platform.md`.
 
 ### [ ] T66 — Implement durable outbox dispatch and Cloudflare queue recovery
 
@@ -246,7 +246,7 @@
 
 **Requirements:** FR-21. **Dependencies:** T20, T11.
 
-- Acceptance: Private R2 upload/quarantine uses expiring scoped capabilities, server-side byte/type/count checks and tenant/session binding; CORS and multipart completion checks work. S3 is an interface fallback, not a second default store.
+- Acceptance: Private R2 upload/quarantine uses expiring scoped capabilities, server-side byte/type/count checks and tenant/session binding; CORS and multipart completion checks work. R2 is the selected object store; separate-account protected copies support recovery.
 - Verify: Spoofed file, excessive bytes and cross-tenant upload tests.
 - Proposed files (small/medium scope): `apps/api/modules/uploads.ts`, `packages/database/uploads.ts`, `tests/integration/uploads.test.ts`.
 
@@ -254,7 +254,7 @@
 
 **Requirements:** FR-21,FR-22. **Dependencies:** T27, T24.
 
-- Acceptance: Isolated ClamAV container on Cloudflare, or AWS Fargate after a recorded incompatibility, marks clean/rejected/pending; scan hash/object identity, expiring downloads and required-file policy work. No ClamAV process is assumed inside an ordinary Worker.
+- Acceptance: Isolated ClamAV container on Cloudflare, on the selected Cloudflare platform, marks clean/rejected/pending; scan hash/object identity, expiring downloads and required-file policy work. No ClamAV process is assumed inside an ordinary Worker.
 - Verify: Scanner outage, malware fixture, deleted response and link expiry tests.
 - Proposed files (small/medium scope): `apps/worker/jobs/scan.ts`, `apps/api/modules/downloads.ts`, `packages/form-ui/file.tsx`, `tests/integration/files.test.ts`.
 

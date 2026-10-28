@@ -1,108 +1,69 @@
 # Technical foundation
 
-**Revised:** 28 October 2026. **Status:** User-selected platform direction, with deployment/auth integration gates still pending. No production application is implemented. Official sources checked for this revision; pin exact compatible versions and image digests at scaffold time.
+**Accepted platform:** 28 October 2026. React/TanStack Start frontends and a TypeScript/Express 5 API run on Cloudflare Workers. Neon PostgreSQL/Drizzle, private R2 and Razorpay remain selected. Superseded framework/deployment proposals are historical records only. Read [ADR-012](decisions/ADR-012-express-workers-native-first.md), [V1 scope](11-v1-scope-and-delivery.md) and the root quality contract.
 
-## 1. Architecture and deployment decision
+## 1. Architecture
 
-Use a **TypeScript modular monolith** in a pnpm workspace. All frontend applications use **React + TanStack Start**, including the creator application, public collector and marketing/help surfaces. TanStack Router, Query and Form provide their respective application layers. Vite is Start's build tool, not a competing frontend framework. The collector stays a separate deployment and bundle; use prerendering/client rendering where appropriate and exclude authenticated editor code from it.
-
-**Cloudflare is the first deployment choice.** TanStack Start runs on Workers with static assets. The selected Fastify deployment is a full Node.js Docker image on **Cloudflare Containers**, reached through an ingress Worker. Queue consumers and scheduled handlers run on Workers. Neon supplies managed PostgreSQL; R2 supplies private object storage. AWS is the documented fallback for workloads that fail Cloudflare's deployment or operating gates.
+One pnpm workspace, shared contracts and one deterministic form engine. Separate web, collector, API and queue/scheduled Worker deployments isolate workloads without introducing microservices per feature. Start uses Vite and Cloudflare's official plugin. Express runs through Cloudflare's Node HTTP bridge **inside workerd**, not an installed Node server process. Node LTS remains the development/build toolchain. A local representative Express/Workers probe passed; hosted services and full product journeys still need their own evidence.
 
 ```mermaid
 flowchart LR
-  C[Creator / marketing browser] --> W[TanStack Start on Cloudflare Workers]
-  R[Respondent browser] --> S[Separate TanStack Start collector / static assets]
-  W --> E[Cloudflare API ingress Worker]
-  S --> E
-  E --> A[Fastify / Node container on Cloudflare]
-  A --> P[(Neon Postgres / Drizzle)]
-  A --> F[Private R2 quarantine and objects]
-  A --> G[Bounded AI adapter / TanStack AI]
-  G --> L[OpenAI provider]
+  B[Creator browser] --> W[TanStack Start web Worker]
+  U[Respondent] --> C[Separate Start collector / CDN assets]
+  W --> A[Express API Worker]
+  C --> A
+  A --> H[Hyperdrive / pg / Drizzle]
+  H --> P[(Neon Postgres)]
+  A --> R[Private R2 quarantine / clean objects]
   P --> O[Transactional outbox]
-  O --> J[Scheduled relay Worker]
-  J --> Q[Cloudflare Queues]
-  Q --> K[Consumer Workers / isolated scan container]
-  K --> D[Resend / signed webhook / Razorpay reconciliation]
-  K --> P
+  O --> S[Scheduled relay Worker]
+  S --> Q[Cloudflare Queues / consumer Workers]
+  Q --> E[Email / signed webhook / billing reconciliation]
+  Q --> F[Isolated Cloudflare scanner container]
 ```
 
-One repository and shared domain packages remain the baseline. Ingress proxies HTTP and preserves webhook bytes, streaming, headers and cancellation; it does not become a second policy engine. The API still authorizes every operation. No business write is implemented independently in a Start server function. Start functions can handle rendering/session lookups and delegate business commands to Fastify. Do not cache sessions, answers or tenant results at the edge.
+Business commands go through the API/domain layer; Start server functions do not duplicate authorization or commit logic. Production routing exposes the API under an application-owned same-origin path, via a service binding/Worker route; local Vite proxy follows the same path. Default deny unknown origins for state-changing requests. This is an additional CSRF/abuse boundary, not authentication. Public session capability and workspace-role checks remain mandatory as implemented. Versioned assets may be cached; sessions/answers/permissions/entitlements are not shared-cache content.
 
-Follow-up evaluation: [Express on Node/Workers versus Bun](10-express-node-bun-comparison.md) records a successful local Express/Workers probe and a potential alternative. This comparison does not change the current Fastify selection.
+## 2. Stack and dependency policy
 
-### Why Containers for Fastify
-
-Cloudflare documents Node HTTP bridging through `httpServerHandler`, but Workers prohibits dynamic string evaluation. A local spike with **Fastify 5.12.7, Wrangler 4.154.0 and workerd 1.20261023.1** started the Worker after deferring Fastify readiness to a request, then failed because Fastify's router used `new Function`; AJV compilation also encountered the restriction. The same routes/plugins passed under ordinary Node. Therefore an unmodified Fastify/plugin stack is **not** our direct-Workers deployment baseline. This is a result for the tested setup, not a proof that every custom build/adapter fails. Do not patch runtime security or maintain router/compiler forks just to preserve the deployment label.
-
-[Local evidence](evidence/fastify-cloudflare-compat/worker-result.txt), [Cloudflare HTTP bridge](https://developers.cloudflare.com/workers/runtime-apis/nodejs/http/#httpserverhandler), [Workers web standards](https://developers.cloudflare.com/workers/runtime-apis/web-standards/), [Fastify validation](https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/).
-
-A Cloudflare Container runs a conventional Node server and supports libraries needing that runtime. Cloudflare's current scaling guide requires deliberate instance routing/lifecycle management; do not assume automatic managed replica scaling. Validate container availability, cold starts, warm capacity, placement near Neon, instance replacement and rolling deployment before committing public intake to it. If these fail our targets, move **that workload** to AWS ECS/Fargate while retaining Cloudflare frontend/edge services. See [platform decision](09-platform-stack-decision.md) and [ADR-011](decisions/ADR-011-cloudflare-tanstack-neon-razorpay.md).
-
-## 2. Selected stack and library inventory
-
-| Concern | Selection | Scope / boundary |
+| Layer | Selection | Install/use boundary |
 |---|---|---|
-| Language / runtime | TypeScript strict; Node.js LTS for containers, CI and tooling | Workers uses workerd, not a full Node process; pin compatibility dates separately |
-| All frontend apps | React + TanStack Start + TanStack Router | Creator, marketing/help and separately deployed collector; Start uses Vite with `@cloudflare/vite-plugin` |
-| Remote state | TanStack Query | API cache/mutations; request-scoped SSR clients; clear user/tenant caches on identity/workspace change |
-| Input state | TanStack Form + Zod | Replaces React Hook Form; the shared engine still owns applicability and canonical validation |
-| Local editor state | TanStack Store behind a small internal adapter | Replaces Zustand; currently alpha, so pin and test upgrades; use React state for component-local values |
-| Tables / large lists | TanStack Table; TanStack Virtual when measured | Server cursor/filter/sort remains authoritative; virtualize only where needed |
-| Interaction utilities | TanStack Pacer, Hotkeys as bounded optional modules | Currently beta; debounce/search and opt-in editor shortcuts, never billing/authorization/rate-limit authority |
-| AI integration | TanStack AI + `@tanstack/ai-openai`, `@tanstack/ai-react` | Thin typed provider/stream boundary; engine validation, evidence, budgets and commits remain ours; load guided client code only on opt-in |
-| Other TanStack offerings | DB, Charts, Markdown, Highlight, Devtools, CLI, Config, Intent and Redact assessed separately | Adoption/maturity table in the platform decision; do not install everything into the public collector |
-| API | Fastify + Cookie, CORS, Helmet, Swagger plugins | Full Node container; REST/OpenAPI and trusted static schemas |
-| Contracts | Zod 4 + JSON Schema export | Versioned form DSL and request/events; never compile arbitrary customer schemas as code |
-| Database | Neon managed PostgreSQL + Drizzle ORM / Drizzle Kit | `pg` pool in Node containers; `pg` via Hyperdrive for database-using Workers; migrations from a controlled release job |
-| Alternative database transport | `@neondatabase/serverless` + matching Drizzle driver | Only if selected by transport spike; HTTP reads/batched transactions are not an interchangeable interactive transaction connection |
-| Identity | Better Auth + official Drizzle adapter, sessions in Neon | Recommended replacement for removed hosted auth; verification, reset, OAuth, TOTP and revocation must pass integration/security gates |
-| Object storage | Cloudflare R2 private buckets | Native bindings in Workers; S3-compatible API in containers; AWS S3 fallback through storage interface |
-| Object SDK / signing | AWS SDK v3 S3 client / presigner in Node; native R2 bindings and `aws4fetch` in Workers where needed | Short-lived scoped upload/download capability; signing does not make uploaded content trusted |
-| Durable background delivery | Cloudflare Queues + Cron Triggers + Neon transactional outbox | Replaces pg-boss daemon; queue publication is outside the Postgres transaction, repaired from retained outbox |
-| UI | Tailwind CSS, owned shadcn/ui, Radix primitives, Lucide React | TanStack's headless libraries do not replace CSS or accessible primitive components |
-| Font / motion | Self-hosted DM Sans Variable (OFL 1.1), native CSS | Foundation 0.2 remains the visual direction; no animation runtime needed |
-| Reordering | dnd-kit with explicit Move up/down actions | No general TanStack drag-and-drop replacement selected |
-| CSV / upload checks | `csv-stringify`, `file-type`; isolated ClamAV | Streaming export, formula escaping, content signature and malware checks |
-| Email | Resend + React Email | Verification/reset and internal notifications; distinct senders, durable send ledger |
-| SaaS billing | Razorpay Subscriptions + Standard Checkout + official `razorpay` Node SDK | Existing founder account; Snapform owns subscription-management UI; no assumption of a Stripe-style hosted portal |
-| Observability | Pino in Node; structured Worker logs; OpenTelemetry where supported; Sentry Node / Cloudflare SDKs | Runtime-specific integrations; scrub answer content, credentials and session tokens |
-| Tests | Vitest, Testing Library, fast-check, Playwright, axe-core, k6 | Add `@cloudflare/vitest-pool-workers`/Wrangler integration for actual Worker behavior |
-| Design QA | Storybook | Component states and journey accessibility; no automatic compliance guarantee |
-| Build / delivery | pnpm workspaces, ESLint, Prettier, GitHub Actions, Wrangler, Docker | Lockfiles and image digests; linux/amd64 container image; explicit release/migration jobs |
+| Language/toolchain | Strict TypeScript, Node LTS, pnpm workspaces | Pin runtime/package-manager versions and lockfile; workerd compatibility date is separate |
+| Frontends | React + TanStack Start/Router; Vite + official Cloudflare plugin | Web, marketing/help and separate collector; never bundle editor code into collector |
+| Forms/server state | TanStack Form and Query | Input and remote state; shared engine owns canonical rules; no broad global state for simple components |
+| Shared validation | Zod with explicit request/output schemas | Unknown keys/type/size constraints at boundaries; no arbitrary customer code/schema compilation |
+| API | Express 5 via `cloudflare:node` HTTP bridge | Small routers and native headers/URL/crypto/streams; centralized sanitized errors and explicit output DTOs |
+| Database | Neon managed Postgres, Drizzle ORM/Kit, `pg` through Hyperdrive | Request-local connection; same connection for interactive transactions; query caching off for authoritative data |
+| Auth | Better Auth + official Drizzle adapter on Neon | Verification/recovery/MFA/revocation and origin/cookie tests precede private features; do not invent auth |
+| Object storage | Private Cloudflare R2 | Native bindings; short-lived capabilities, quarantine and authorized retrieval; lightweight signing adapter only if required |
+| Jobs | Neon outbox + Cloudflare Queues + Cron | Atomic DB intent then retryable queue publish; dedupe/lease/DLQ/reconciliation; no polling daemon or durable `waitUntil` assumption |
+| Native scanning/backups | Isolated Cloudflare container where native tools require it | Not the HTTP API; feasibility/resource/rollout proof is a release gate; no alternate-cloud deployment path |
+| Billing | Razorpay Subscriptions + Standard Checkout | Existing account; owner billing/cancel UI; raw-body HMAC, dedupe, reconciliation and test-mode lifecycle |
+| Email | Resend + React Email when the flow is built | Distinct auth/notification senders; durable send ledger; native fetch permitted where it keeps integration simpler |
+| AI | Bounded TanStack AI/OpenAI adapter when P5/P6 begin | Evidence, semantic validation, usage/storage controls and reservations remain owned; standard fields always work |
+| Styling | Semantic CSS tokens and self-hosted DM Sans | Native semantic controls first; add a headless primitive only for behavior native HTML cannot meet cleanly |
+| Later UI needs | TanStack Table/Virtual/Store/Pacer/Hotkeys; Radix/shadcn; dnd-kit | Add only for an implemented need; no blanket ecosystem install; manual keyboard reordering remains available |
+| Diagnostics | Worker structured logs, Sentry Cloudflare SDK/OTel as justified | Strip request content, auth/capability headers and provider keys; no session replay of respondents |
+| Tests | Vitest + official Cloudflare Vitest plugin; focused pure-code coverage; browser journeys | Test actual workerd behavior, not just Node mocks; normal/power/adversarial browser evidence every feature |
+| Delivery | Git, GitHub Actions workflow, Wrangler | Short-lived branches, atomic verified commits, read-only CI permissions, protected main when remote exists |
 
-TanStack Start has an official Cloudflare guide. Form supports application form state, and Table is headless; styling and the domain form engine remain separate responsibilities. TanStack Store/DB/Pacer/Hotkeys maturity differs from Start/Query/Form, so wrappers and selective adoption are deliberate. [Start deployment](https://developers.cloudflare.com/workers/framework-guides/web-apps/tanstack-start/), [official ecosystem catalog](https://tanstack.com/libraries), [Form](https://tanstack.com/form/latest/docs/overview), [Table](https://tanstack.com/table/latest/docs/overview).
+Every new dependency records purpose, native alternative, license, exact version, transitive/runtime cost and measured bundle impact. Development-only tools do not ship to browsers, but their install/CI cost still matters. Native Date/Intl, URL, fetch, AbortController, Web Crypto, streams, semantic forms and CSS are preferred over utility, date, animation or request-wrapper packages. No ORM/API calls in browser bundles. See `CONSTRAINTS.md` and `docs/dependencies.md` for measured gates and current additions.
 
-TanStack AI's OpenAI adapter and React client are selected for the TanStack preference, subject to a compatibility gate for structured results, refusals, output limits, usage accounting, cancellation and non-storage controls. If an adapter cannot preserve required provider controls, keep the official provider SDK behind the same server interface; never silently relax policy. Experimental agent/workflow features are not needed for V1. [TanStack OpenAI adapter](https://tanstack.com/ai/latest/docs/adapters/openai).
+## 3. Runtime and operating contracts
 
-Better Auth has official TanStack Start, Fastify and Drizzle integration documentation. Prefer one auth authority mounted at Fastify's auth boundary, exposed under the creator's same-origin API path. Start reads the authenticated session through that boundary; it must not treat a client route guard as authorization. Use the current official adapter package (`@better-auth/drizzle-adapter` in checked docs), not an unverified community Cloudflare wrapper. Password hashing CPU/memory, multiple Set-Cookie headers, callbacks, MFA and recovery are early feasibility work. [TanStack integration](https://better-auth.com/docs/integrations/tanstack), [Fastify integration](https://better-auth.com/docs/integrations/fastify), [Drizzle adapter](https://better-auth.com/docs/adapters/drizzle).
+Use separate local/staging/production identities, keys, Neon branches/roles, R2 buckets, queues and billing modes. No production data in previews. No credentials in Git; example environment files contain names/placeholders only. The API boot path must fail safely when a required integration is unavailable; never replace production persistence with an in-memory fallback.
 
-**Licensing/version gate:** capture versions/licenses in an SBOM, audit transitive dependencies, and test the selected combination. Font package is `@fontsource-variable/dm-sans@5.3.0`. Spike package versions are reproducibility evidence, not automatic production pins. No Supabase, Stripe, Next.js, React Hook Form or Zustand dependency is selected.
+Database: use a non-owner role with no BYPASSRLS. Set verified workspace context transaction-locally on the same client as all tenant queries; authorize first. Hyperdrive caching is disabled for identity, collection and commerce. Always end request-local connections. Migrations run once as explicit release jobs using separate credentials, not at every Worker startup. Neon remains the primary store; D1/Durable Objects do not become competing business databases.
 
-## 3. Services, operating gates and fallback
+Files: R2 objects stay private, reference an owned session/response and remain pending until checked against limits and scanner outcome. Never mark clean on scanner outage. A maintained ClamAV image may run only as an isolated Cloudflare container, not inside a Worker. If that workload cannot meet requirements, stop file-feature release and record the issue; do not silently change provider. Protected recovery copies use a separate Cloudflare account/bucket/identity with tested retention locks; database history does not include object bytes. Same-provider outage recovery is an explicit limitation, not a promised independent failover.
 
-| Workload | Cloudflare-first / selected service | Gate and fallback |
-|---|---|---|
-| Frontend SSR and assets | TanStack Start on Workers + static assets/CDN | Separate web/collector deployments; official Vite plugin; if blocked, containerized Start on AWS |
-| API | Fastify Node image on Cloudflare Containers behind ingress Worker | Prove idle-start latency, health routing, placement, fixed capacity/scaling, rollouts, quotas and failure recovery; AWS ECS/Fargate if inadequate |
-| Database | Neon production and isolated staging/preview branches | Dedicated non-owner roles, paid restore retention, connection budgets, migration role; Neon stays selected even if compute moves to AWS |
-| Worker database access | Hyperdrive → Neon, caching disabled for authoritative data | Transaction-mode connection discipline and tenant isolation; alternative Neon WebSocket transport only after equivalent transaction tests |
-| Auth | Better Auth on API runtime + Neon identity tables | Auth feature/security tests and Resend mail; adding external managed identity requires a separate recorded decision |
-| Objects | Private R2; quarantine and clean namespaces/buckets | Short-lived capabilities, strict CORS, immutable object IDs; S3 adapter if R2 constraint is established |
-| Queues / scheduled work | Queues consumers and Cron relay/reconciliation | DLQ, dedupe, next-attempt records, bounded fan-out; an AWS fallback must replace both relay/consumer adapters deliberately |
-| Native file scanner / backup tools | Isolated Cloudflare Container | Maintained ClamAV signatures, constrained resources and outbound access; `pg_dump`/restore jobs run in controlled containers; AWS Fargate for these jobs if unsupported |
-| DNS / abuse | Cloudflare DNS/WAF + Turnstile | Validate challenge server-side; API enforces budgets if edge is bypassed |
-| Email / AI / billing | Resend / OpenAI via bounded adapter / Razorpay | Separate environment keys, provider limits and verified event handling; no silent vendor switch |
-| Recovery copies | Separate-account protected R2 bucket by default | Verify retention locks and write/read/delete separation; choose independent AWS S3 copy if disaster scenario requires provider independence; no assumption of full S3 versioning parity |
-| Monitoring / deploy | Sentry + external uptime/status; GitHub Actions + Wrangler + Docker | Independent alert path; preview/test/live separation; deploy and roll back a known artifact |
+Auth: use the official Better Auth Express handler, trusted origins, correct multi-cookie behavior and Neon/Drizzle identity storage. Raw-body routes must be mounted before generic JSON parsing. Framework route guards are not API authorization. Owner actions require recent authentication and the stated MFA policy. Staging must prove hashing limits, session revocation, recovery and cookie behavior through the real Worker routing path.
 
-Neon is the database provider; **TanStack DB is a client collection library**, and neither D1 nor Durable Object storage replaces Neon business records. Durable Objects may coordinate container routing, not become a second source of response truth. Hyperdrive is a connection accelerator, not the database. Its query cache does not automatically invalidate after writes, so disable query caching for sessions, permissions, entitlements and other authoritative data. [Neon from Workers](https://developers.cloudflare.com/workers/databases/third-party-integrations/neon/), [Drizzle/Hyperdrive](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/drizzle-orm/), [Hyperdrive behavior](https://developers.cloudflare.com/hyperdrive/concepts/how-hyperdrive-works/).
+Razorpay: use the existing account. Confirm the enabled Subscription methods/currency/market coverage in test mode, verify callback/webhook signatures against the correct message, dedupe provider event IDs and business transitions, and reconcile uncertain outcomes before creating another subscription. Checkout redirect is not payment proof. Snapform owns billing management; no hosted portal is assumed.
 
-In containers use a bounded `pg` pool with Neon pooling as configured; budget max instances × pool size and leave migration/recovery headroom. In Workers create/close a client within the request or queue invocation using Hyperdrive. Interactive submit/tenant transactions must use one connection throughout; do not stitch a transaction across unrelated HTTP queries. Choose one verified transport per runtime; do not stack Hyperdrive and a serverless driver merely because both exist.
+Deploy only to the selected Cloudflare platform. A platform incompatibility or unmet launch target is a blocking engineering decision; there is no alternate-cloud fallback in this plan. Native scanner/container tools are separate from the Express API. Cloudflare capacity, API limits, Neon locality/cold starts, raw bytes, streaming, secrets and rollback need staged evidence before public launch.
 
-Cloudflare frontend execution is distributed, but Neon and container instances have physical location and latency. Prefer a Neon region near pilot traffic, then verify actual compute-to-database latency, cold-start behavior and data paths. A global edge does not guarantee globally local database access or end-to-end residency. [Containers deployment](https://developers.cloudflare.com/containers/get-started/), [routing/lifecycle](https://developers.cloudflare.com/containers/configuration/scaling-and-routing/).
-
-The founder already has a Razorpay account. Use it; do not repeat provider selection or require a new account. At T03 confirm its test/live Subscription configuration, methods, charge currency and intended customer markets, then run test-mode checkout/renewal/cancel/refund scenarios. These are integration gates, not an assertion that an account is missing. [Subscriptions integration](https://razorpay.com/docs/payments/subscriptions/integration-guide/).
+Sources checked: [Express/Workers](https://developers.cloudflare.com/workers/tutorials/deploy-an-express-app/), [TanStack Start/Workers](https://developers.cloudflare.com/workers/framework-guides/web-apps/tanstack-start/), [Neon connection options](https://developers.cloudflare.com/workers/databases/third-party-integrations/neon/), [Drizzle/Hyperdrive](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/drizzle-orm/), [Queues](https://developers.cloudflare.com/queues/reference/delivery-guarantees/), [Better Auth Express](https://better-auth.com/docs/integrations/express), [Razorpay](https://razorpay.com/docs/payments/subscriptions/integration-guide/). Sources establish integration patterns, not completed Snapform deployment or SLOs.
 
 ## 4. Canonical form and engine contract
 
@@ -218,21 +179,20 @@ WCAG is a conformance target requiring component and journey evidence; using a c
 
 ## 10. Verification and release evidence
 
-Use tests where failure has real consequence. Engine fixture corpus ≥100 paths plus property tests; tenant negative matrix for routes/jobs/files/exports; integration tests use real Neon-compatible Postgres/RLS/outbox transactions plus Cloudflare queue integration, not just mocked repositories; browser tests cover authoring→publication→mobile→response→delivery and interruption/retry. [Playwright](https://playwright.dev/docs/intro).
+Use tests where failure has real consequence. Engine fixture corpus ≥100 paths plus property tests; tenant negative matrix for routes/jobs/files/exports; integration tests use real Postgres/RLS/outbox transactions plus actual workerd/queue integration, not just mocked repositories; browser tests cover authoring→publication→mobile→response→delivery and interruption/retry. [Playwright](https://playwright.dev/docs/intro).
 
 AI gates: ≥100 representative authoring briefs, ≥300 labeled extraction/correction cases, ≥100 supported/unsupported/adversarial knowledge questions. Hold out at least 30% from prompt tuning. Report counts, types and uncertainty by cohort. Targets: 100% final proposal schema/reference validity after allowed repair; ≥95% supported-brief task success by human rubric; ≥98% exact normalized match for unambiguous extraction cases; zero unsupported consequential business claims or unconfirmed critical values committed in release corpus. Require abstention tests, including successful abstention on unsupported questions; measure supported-question answer coverage (initial target ≥80%) so refusal alone cannot “pass.” Zero observed critical errors is not a population guarantee.
 
-Manual release checks include keyboard/IME, screen readers, 320/768/1024/1440px, slow networks, expired session, refresh, double submit, stale AI, role removal, provider outages, billing delays, 429s and restore. Keep evidence with build hash/model config and owner sign-off. Include a deployed Cloudflare container/Neon/queue/R2 slice before committing to that runtime; the local Fastify spike does not prove container deployment. No reduced security/reliability bar to recover schedule.
+Manual release checks include keyboard/IME, screen readers, 320/768/1024/1440px, slow networks, expired session, refresh, double submit, stale AI, role removal, provider outages, billing delays, 429s and restore. Keep evidence with build hash/model config and owner sign-off. Include a deployed Express Worker/Neon/queue/R2 slice before committing to that runtime; the local Express probe does not prove provider integration. No reduced security/reliability bar to recover schedule.
 
 ## 11. Proposed repository and commands
 
 ```text
 apps/web/                TanStack Start authoring, marketing and help
 apps/collector/          Separate TanStack Start collector and static assets
-apps/api/                Fastify full-Node API / Better Auth / Docker image
+apps/api/                Express Worker / Better Auth HTTP boundary
 apps/worker/             Cloudflare queue/scheduled handlers and outbox relay
-apps/ingress/            API routing and Cloudflare container controller
-apps/scanner/            Isolated ClamAV container
+apps/scanner/            Later isolated Cloudflare ClamAV workload
 packages/platform/       Neon transports, queue/storage/runtime adapters
 packages/contracts/      Static request/event/definition contracts
 packages/form-engine/    Pure codecs, applicability, navigation, compiler
@@ -250,12 +210,8 @@ docs/                    Product/technical/operating records
 
 Define these scripts during scaffold; **they do not exist yet**: `pnpm install --frozen-lockfile`, `pnpm dev`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:integration`, `pnpm test:e2e`, `pnpm test:ai`, `pnpm build`, `pnpm db:migrate`, `pnpm test:load`. Migration runs are explicit release jobs, never every API process startup. Exact test flags live in package scripts after tooling is selected.
 
-## 12. Scale and vendor exit triggers
+## 12. Scale without speculative architecture
 
-Prefer Cloudflare services where they meet the workload. Move API or scanner compute to AWS ECS/Fargate if Cloudflare container placement, startup, capacity control, rollout, access, cost or incident recovery fails measured gates. Frontend Workers and R2 can stay in place; do not migrate Neon or rewrite the API language as a prerequisite for changing compute. AWS S3 is a storage fallback/independent recovery option with explicit retention and copy validation. Provider fallback is a controlled deployment change, not automatic failover already implemented. [AWS Fargate](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/AWS_Fargate.html).
+Profile before changing infrastructure. Reduce database round trips, bound all queries/payloads/queues, stream exports and uploads, and keep CPU-heavy work off submit. Add TanStack DB only for a measured client collection need, pgvector only for a proven larger approved knowledge corpus, and orchestration only for actual long-lived workflows. No microservices, extra cloud provider, generic event bus or dependency is added for hypothetical scale.
 
-Add TanStack DB for justified client-side collection/live-query needs; it does not replace Neon or server authorization. Add pgvector only for a proven larger approved knowledge corpus. Add durable workflows only for actual long-lived approvals/compensation; Cloudflare Workflows and TanStack orchestration are different tools and neither is required for the current bounded V1. Split API control/collection deployments only when measured contention requires it.
-
-Consider Go for a separately profiled CPU-heavy subsystem if TypeScript cannot meet cost/latency targets after query, I/O and scheduling fixes. Go can exploit multiple cores in a native container, but it does not make Neon queries or model calls faster automatically, and Go/Wasm on Workers does not inherit a native Go server's execution environment. Drizzle is a TypeScript ORM: a complete Go data layer would need a separate SQL/driver strategy and contract-generation boundary. Do not create a TypeScript database proxy merely to keep saying Drizzle is used.
-
-Exit planning preserves Postgres exports, auth tables/secrets/password-hash compatibility, R2 object manifests, queue/outbox identities, billing provider IDs and adapter contracts. Rehearse key rotation, auth-session invalidation and restore. S3 API similarity is not proof of identical features; test the operations and recovery paths actually used. No Supabase component is part of the current application plan.
+Every feature follows test-first logic verification, real Worker integration checks, browser workflows in three user modes and an explicit performance/dependency review. Budget/regression failures block completion; never hide them by suppressing errors, deleting assertions or weakening thresholds. Deployment artifacts, model policies and schema versions are recorded with verification evidence.

@@ -1,12 +1,12 @@
 # Node/Express and Bun/Express versus the Fastify baseline
 
-**28 October 2026 · Evaluation, not a framework-selection change.** The current architecture baseline remains Fastify on a full Node container. This follow-up identifies Express on Workers as a credible alternative to validate before freezing API deployment. No account, remote deployment or live payment was used.
+**Historical evaluation, superseded by the user's Express/Workers selection in ADR-012.** The current architecture baseline remains Fastify on a full Node container. This follow-up identifies Express on Workers as a credible alternative to validate before freezing API deployment. No account, remote deployment or live payment was used.
 
 ## Distinguish the two choices
 
 Express and Fastify are HTTP application frameworks. Node, Bun and Cloudflare workerd are execution runtimes. Node + Express changes the framework from our current Node + Fastify baseline. Bun + Express changes both the framework and runtime. Both Express alternatives can retain TypeScript, Neon, Drizzle and the shared domain engine.
 
-Cloudflare Workers executes compatible JavaScript in **workerd**; it does not launch a full Node or Bun process. Node-compatible imports allow Express to use parts of the Node API. Installing dependencies or building with Bun does not make a deployed Worker run Bun. An actual Bun process belongs in a Cloudflare Container or an AWS container fallback. [Cloudflare HTTP bridge](https://developers.cloudflare.com/workers/runtime-apis/nodejs/http/), [Express on Workers](https://developers.cloudflare.com/workers/tutorials/deploy-an-express-app/), [Bun Express guide](https://bun.sh/guides/ecosystem/express).
+Cloudflare Workers executes compatible JavaScript in **workerd**; it does not launch a full Node or Bun process. Node-compatible imports allow Express to use parts of the Node API. Installing dependencies or building with Bun does not make a deployed Worker run Bun. An actual Bun process belongs in a Cloudflare Container or an other container hosting container fallback. [Cloudflare HTTP bridge](https://developers.cloudflare.com/workers/runtime-apis/nodejs/http/), [Express on Workers](https://developers.cloudflare.com/workers/tutorials/deploy-an-express-app/), [Bun Express guide](https://bun.sh/guides/ecosystem/express).
 
 ## Framework tradeoffs
 
@@ -20,7 +20,7 @@ Cloudflare Workers executes compatible JavaScript in **workerd**; it does not la
 | OpenAPI/logging | Established Swagger plugin and logger integration | Deliberately wire contract documentation, request IDs and structured logging; avoid per-route drift |
 | Performance | Compiled schemas/serializers can reduce framework overhead | Extra middleware and manual parsing/serialization determine overhead; no workload speed ranking measured here |
 | Ordinary Workers | Tested default router/compiler failed string-code generation restrictions | Official Cloudflare guide and successful local representative probe; full dependency integration still pending |
-| Node container | Retained baseline; local control passed representative checks | Conventional supported deployment; preserves an AWS fallback path |
+| Node container | Retained baseline; local control passed representative checks | Conventional supported deployment; preserves an other container hosting fallback path |
 
 Neither framework is automatically secure or automatically understands the form DSL. Tenant authorization, stable IDs, submission transactions, outbox recovery, billing invariants, uploads and AI policy remain application responsibilities. [Fastify validation/serialization](https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/), [Express error handling](https://expressjs.com/en/guide/error-handling/), [Express performance guidance](https://expressjs.com/en/advanced/best-practice-performance/).
 
@@ -56,6 +56,8 @@ Allowed-origin CORS and `nosniff` headers were observed. This does not establish
 
 Given the Cloudflare-first preference, **evaluate Express 5 on Workers before committing the API to Fastify Containers**. The deployment simplification is better supported by current evidence than a speculative Bun speedup. Retain TypeScript/Zod/Drizzle/domain packages, and prove Neon transactions/tenant context, Better Auth cookies/MFA, Razorpay SDK/signatures, R2 capabilities, queue recovery, telemetry and real streaming in staging. Use explicit validation/output wrappers so the lightweight framework does not weaken API contracts.
 
-If that integration passes, Express can remove the API's dependency on container lifecycle and routing. The isolated native scanner still needs a container. If a required library or operating limit fails, Node + Express can run in Cloudflare Containers/AWS without changing the domain engine. Bun + Express is worth selecting only if compatible full-stack measurements justify another runtime; it does not provide a Bun runtime inside ordinary Workers.
+If that integration passes, Express can remove the API's dependency on container lifecycle and routing. The isolated native scanner still needs a container. If a required library or operating limit fails, Node + Express can run in Cloudflare Containers/other container hosting without changing the domain engine. Bun + Express is worth selecting only if compatible full-stack measurements justify another runtime; it does not provide a Bun runtime inside ordinary Workers.
 
 This report records an alternative and a recommended next feasibility choice. It does not amend ADR-011 or replace Fastify in the accepted blueprint merely because the user asked a comparison question.
+
+Current authority: [ADR-012](decisions/ADR-012-express-workers-native-first.md). Fastify is no longer the selected backend.
