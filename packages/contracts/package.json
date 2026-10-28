@@ -9,7 +9,8 @@
     "./form": "./src/form.ts",
     "./answers": "./src/answers.ts",
     "./rules": "./src/rules.ts",
-    "./compile": "./src/compile.ts"
+    "./compile": "./src/compile.ts",
+    "./evaluate": "./src/evaluate.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
