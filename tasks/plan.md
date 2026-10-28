@@ -1,6 +1,6 @@
 # V1 delivery plan and whole-product roadmap
 
-**Status:** Reviewable planning draft; implementation not started. **Baseline:** solo founder, 30 focused engineering hours/week plus 5–10h business work; part-time design, QA/accessibility, security and legal/accounting support. Audience: agencies, coaches, consultants and small-to-medium startups. Source analysis and requirements are in `docs/`.
+**Status:** Market release plan; first local intake/review slice implemented, hosted integrations pending. **Baseline:** solo founder, 30 focused engineering hours/week plus 5–10h business work; part-time design, QA/accessibility, security and legal/accounting support. Audience: agencies, coaches, consultants and small-to-medium startups. Source analysis and requirements are in `docs/`.
 
 ## 1. Development strategy
 
@@ -32,7 +32,7 @@ Security, accessibility, observability and recovery run through every stage. A s
 
 ## 3. Schedule and reviewable outputs
 
-Estimates are judgment-based ranges with no historical delivery velocity. **Total 32–40 weeks / 960–1,200 founder engineering hours includes ~20% uncertainty reserve**, not 20% added again. Specialist hours and business work are separate. Re-estimate after discovery and the first end-to-end slice; do not treat phase windows as deadlines. No calendar launch date is committed. **28 October platform revision:** this previous estimate is provisional until the TanStack/Cloudflare Workers/Neon/auth/outbox slice is proven. T65/T66 add explicit foundation verification; re-baseline P1 and the overall envelope after the spike, rather than treating the changed platform as free scope.
+Estimates are judgment-based ranges with no historical delivery velocity. **Total 32–40 weeks / 960–1,200 founder engineering hours includes ~20% uncertainty reserve**, not 20% added again. Specialist hours and business work are separate. Re-estimate after discovery and the first end-to-end slice; do not treat phase windows as deadlines. No calendar launch date is committed. **28 October platform revision:** this previous estimate is provisional until the hosted TanStack/Cloudflare Workers/Neon/auth/outbox slice is proven. The local validation slice does not satisfy that gate. T65/T66 add explicit foundation verification; re-baseline P1 and the overall envelope after the spike, rather than treating the changed platform as free scope.
 
 | Phase | Duration | Cumulative window | Deliverable / exit gate |
 |---|---|---|---|

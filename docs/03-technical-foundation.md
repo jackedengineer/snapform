@@ -22,7 +22,7 @@ flowchart LR
   Q --> F[Isolated Cloudflare scanner container]
 ```
 
-Business commands go through the API/domain layer; Start server functions do not duplicate authorization or commit logic. Production routing exposes the API under an application-owned same-origin path, via a service binding/Worker route; local Vite proxy follows the same path. Default deny unknown origins for state-changing requests. This is an additional CSRF/abuse boundary, not authentication. Public session capability and workspace-role checks remain mandatory as implemented. Versioned assets may be cached; sessions/answers/permissions/entitlements are not shared-cache content.
+Business commands go through the API/domain layer; Start server functions do not duplicate authorization or commit logic. Production routing exposes the API under an application-owned same-origin path, via a service binding/Worker route; local development uses Wrangler for API isolate reloads and Vite for frontend refresh, retaining the same service binding. Production builds/previews bundle the auxiliary API Worker. Origin checks use the original Worker Request because the Node HTTP bridge uses an internal HTTP connection. Default deny unknown origins for state-changing requests. This is an additional CSRF/abuse boundary, not authentication. Public session capability and workspace-role checks remain mandatory as implemented. Versioned assets may be cached; sessions/answers/permissions/entitlements are not shared-cache content.
 
 ## 2. Stack and dependency policy
 
@@ -208,10 +208,12 @@ tests/load/              k6 profiles
 docs/                    Product/technical/operating records
 ```
 
-Define these scripts during scaffold; **they do not exist yet**: `pnpm install --frozen-lockfile`, `pnpm dev`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:integration`, `pnpm test:e2e`, `pnpm test:ai`, `pnpm build`, `pnpm db:migrate`, `pnpm test:load`. Migration runs are explicit release jobs, never every API process startup. Exact test flags live in package scripts after tooling is selected.
+Implemented scripts: `pnpm dev`, `pnpm types:generate`, `pnpm check:fast`, `pnpm test:unit`, `pnpm test:api`, `pnpm test:preview`, `pnpm test:dev-reload`, `pnpm build`, `pnpm check:bundle` and `pnpm check`. Install with `pnpm install --frozen-lockfile`. The production HTTP smoke test verifies SSR/CSP nonces and the actual web → Express service binding. Database, AI, load and automated whole-product browser scripts will be added with their implemented capabilities; they do not exist yet. Migration runs are explicit release jobs, never API startup. See [slice 1 evidence](development/0001-workers-intake-validation.md).
 
 ## 12. Scale without speculative architecture
 
 Profile before changing infrastructure. Reduce database round trips, bound all queries/payloads/queues, stream exports and uploads, and keep CPU-heavy work off submit. Add TanStack DB only for a measured client collection need, pgvector only for a proven larger approved knowledge corpus, and orchestration only for actual long-lived workflows. No microservices, extra cloud provider, generic event bus or dependency is added for hypothetical scale.
 
 Every feature follows test-first logic verification, real Worker integration checks, browser workflows in three user modes and an explicit performance/dependency review. Budget/regression failures block completion; never hide them by suppressing errors, deleting assertions or weakening thresholds. Deployment artifacts, model policies and schema versions are recorded with verification evidence.
+
+The pinned local toolchain is Node 24.14.0, pnpm 10.34.5 and TypeScript 6.0.3. Workers use compatibility date 2026-10-23, supported by both pinned local toolchains; this is intentionally distinct from the document date. Dependency versions/licenses and emitted sizes are in [the inventory](dependencies.md).

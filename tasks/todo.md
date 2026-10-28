@@ -1,6 +1,6 @@
 # V1 implementation backlog
 
-**All work is pending.** This is a plan, not evidence of shipped features. Read the phase estimates and gates in [plan.md](plan.md). Task IDs are stable; T65/T66 were added in the 28 October platform revision, bringing the backlog to 66 items. Paths are proposed; no application files exist yet. Each item is a bounded implementation/review unit; split before starting if it grows beyond ~5 files or one focused session. Effort estimates live at phase level and include integration, defects, polish and contingency.
+**Market backlog acceptance gates remain pending.** The local intake/review foundation is recorded in [slice 1 evidence](../docs/development/0001-workers-intake-validation.md); it does not complete the hosted/auth/durable-response gates. Read the phase estimates and gates in [plan.md](plan.md). Task IDs are stable; T65/T66 were added in the 28 October platform revision, bringing the backlog to 66 items. Paths below remain proposals unless implemented in the current workspace. Each item is a bounded implementation/review unit; split before starting if it grows beyond ~5 files or one focused session. Effort estimates live at phase level and include integration, defects, polish and contingency.
 
 **Engineering verification convention:** run the focused test named below plus `pnpm lint`, `pnpm typecheck`, and the affected build once scaffold scripts exist. Use actual Postgres/RLS/queue for transaction/isolation cases. Business/document tasks use evidence review rather than artificial code tests. Security/accessibility checks apply whenever those boundaries change.
 
@@ -254,7 +254,7 @@
 
 **Requirements:** FR-21,FR-22. **Dependencies:** T27, T24.
 
-- Acceptance: Isolated ClamAV container on Cloudflare, on the selected Cloudflare platform, marks clean/rejected/pending; scan hash/object identity, expiring downloads and required-file policy work. No ClamAV process is assumed inside an ordinary Worker.
+- Acceptance: Isolated ClamAV container on Cloudflare, marks clean/rejected/pending; scan hash/object identity, expiring downloads and required-file policy work. No ClamAV process is assumed inside an ordinary Worker.
 - Verify: Scanner outage, malware fixture, deleted response and link expiry tests.
 - Proposed files (small/medium scope): `apps/worker/jobs/scan.ts`, `apps/api/modules/downloads.ts`, `packages/form-ui/file.tsx`, `tests/integration/files.test.ts`.
 

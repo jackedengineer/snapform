@@ -19,7 +19,7 @@ This blueprint critically reviews the supplied 37-page research report and conve
 9. [Hands-on competitor fieldwork and prioritized product gaps](docs/07-competitor-fieldwork.md)
 10. [Foundation 0.2 design direction, references and review evidence](docs/08-design-direction.md)
 11. [Platform revision, TanStack assessment and Go comparison](docs/09-platform-stack-decision.md)
-12. [ADR-011: Cloudflare, TanStack, Neon and Razorpay](docs/decisions/ADR-011-cloudflare-tanstack-neon-razorpay.md)
+12. [ADR-011: superseded platform record](docs/decisions/ADR-011-cloudflare-tanstack-neon-razorpay.md)
 13. [Express on Node/Workers versus Bun — historical comparison](docs/10-express-node-bun-comparison.md)
 14. [V1 scope and incremental delivery contract](docs/11-v1-scope-and-delivery.md)
 15. [Accepted Express/Workers decision](docs/decisions/ADR-012-express-workers-native-first.md)
@@ -45,4 +45,13 @@ Primary input: `/Users/jackedengineer/Downloads/Typeform_Jotform_Formless_Resear
 
 ## Status
 
-Implementation is beginning in verified slices; the market V1 is not shipped. Local framework probes do not prove hosted Neon/auth/billing integration. Product demand, conversion improvement, AI accuracy, SLOs, and unit economics have **not** been validated. No vendor accounts were provisioned, paid services purchased, or external customer messages sent.
+The first local intake/review slice is implemented with real Express Worker validation; the market V1 is not shipped. Local framework probes do not prove hosted Neon/auth/billing integration. Product demand, conversion improvement, AI accuracy, SLOs, and unit economics have **not** been validated. No vendor accounts were provisioned, paid services purchased, or external customer messages sent.
+
+
+## Run the first slice
+
+Use Node 24.14.0 and pnpm 10.34.5. Run `pnpm install --frozen-lockfile`, `pnpm types:generate`, then `pnpm dev`. Open http://127.0.0.1:5173. A native Node launcher runs the Wrangler API and Vite frontend locally through the API service binding; no cloud credentials are required for this validation preview.
+
+`pnpm check` runs generated types, strict type/lint checks, core coverage, workerd tests, production builds, bundle budgets and isolated production HTTP and development reload checks. Stop existing servers on ports 5173/8787 before the isolated checks. The reload check briefly modifies/restores API middleware to verify real handler replacement and refuses to overwrite a concurrent edit. Run `pnpm audit --prod --audit-level high` as well. `pnpm git:hooks` enables the committed local pre-commit checks. The CI workflow repeats these checks; it has not run on a hosted remote yet.
+
+This preview checks four details and supports direct editing. It does **not** create accounts, save responses, upload files, bill customers or call AI. Those remain in the [ordered delivery contract](docs/11-v1-scope-and-delivery.md). See [first-slice verification and browser evidence](docs/development/0001-workers-intake-validation.md).
