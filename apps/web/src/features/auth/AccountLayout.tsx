@@ -1,8 +1,20 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect, useRef } from 'react';
 import { Link, Outlet, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authPost, currentUser } from './api';
 import type { User } from './api';
+import {
+  endDraftSession,
+  prepareDraftSignOut,
+  draftSessionChannel,
+  draftSessionEnded,
+} from '../forms/draft-session';
+const SignOutGuardContext = createContext<React.RefObject<
+  (() => Promise<void>) | null
+> | null>(null);
+export function useSignOutGuard() {
+  return useContext(SignOutGuardContext);
+}
 const AccountContext = createContext<User | null>(null);
 export function useAccountUser() {
   const user = useContext(AccountContext);
@@ -19,13 +31,34 @@ export function AccountLayout() {
     staleTime: 0,
     gcTime: 0,
   });
+  const signOutGuard = useRef<(() => Promise<void>) | null>(null);
   const logout = useMutation({
-    mutationFn: () => authPost('sign-out', {}),
-    onSuccess: async () => {
-      queryClient.clear();
+    mutationFn: async () => {
+      if (!(await prepareDraftSignOut(signOutGuard.current))) return false;
+      await authPost('sign-out', {});
+      return true;
+    },
+    onSuccess: async (signedOut) => {
+      if (!signedOut) return;
+      try {
+        await endDraftSession();
+      } finally {
+        queryClient.clear();
+      }
       await navigate({ to: '/login' });
     },
   });
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return;
+    const channel = new BroadcastChannel(draftSessionChannel);
+    channel.onmessage = (event: MessageEvent<unknown>) => {
+      if (event.data !== 'signed-out') return;
+      window.dispatchEvent(new Event(draftSessionEnded));
+      queryClient.clear();
+      void navigate({ to: '/login' });
+    };
+    return () => channel.close();
+  }, [queryClient, navigate]);
   return (
     <>
       <header className="topbar">
@@ -45,8 +78,20 @@ export function AccountLayout() {
           </button>
         )}
       </header>
-      <main id="main">
-        {profile.isPending ? (
+      <main id="main" inert={logout.isPending}>
+        {profile.data ? (
+          <AccountContext.Provider value={profile.data}>
+            {profile.isError && (
+              <p role="alert" className="request-error account-home">
+                We couldn’t refresh your session. Local edits are preserved;
+                saving still requires a valid session.
+              </p>
+            )}
+            <SignOutGuardContext.Provider value={signOutGuard}>
+              <Outlet key={profile.data.id} />
+            </SignOutGuardContext.Provider>
+          </AccountContext.Provider>
+        ) : profile.isPending ? (
           <div className="account-home">
             <p role="status">Loading your account…</p>
           </div>
@@ -61,10 +106,6 @@ export function AccountLayout() {
               Try again
             </button>
           </div>
-        ) : profile.data ? (
-          <AccountContext.Provider value={profile.data}>
-            <Outlet key={profile.data.id} />
-          </AccountContext.Provider>
         ) : (
           <div className="account-home">
             <h1>Let’s get you signed in.</h1>
