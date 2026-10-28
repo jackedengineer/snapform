@@ -23,6 +23,23 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Configure isolated local runtime (no live email)
+        run: |
+          node --input-type=module <<'JS'
+          import { writeFile } from 'node:fs/promises';
+          for (const key of ['DATABASE_URL', 'BETTER_AUTH_SECRET']) {
+            if (!process.env[key]) throw new Error(`Missing required CI secret: ${key}`);
+          }
+          const values = {
+            DATABASE_URL: process.env.DATABASE_URL,
+            BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+            BETTER_AUTH_URL: 'http://127.0.0.1:5173',
+            RESEND_API_KEY: 'no-live-email-in-ci',
+            EMAIL_FROM: 'Snapform <no-reply@jacked.dev>',
+            AUTH_ALLOWED_RECIPIENT: 'runtime-check@example.invalid',
+          };
+          await writeFile('apps/api/.dev.vars', Object.entries(values).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join('\n') + '\n', { mode: 0o600, flag: 'wx' });
+          JS
       - run: pnpm types:generate
       - run: pnpm build
       - run: pnpm check:fast

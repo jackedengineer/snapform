@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Router } from 'express';
+import type { Request, Response } from 'express';
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
 import { openDatabase } from '@snapform/database';
 import { createAuth } from './auth.ts';
@@ -14,6 +15,32 @@ export const authRoutes = Router();
 authRoutes.use(async (req, res, next) => {
   if (!(req.path.startsWith('/api/auth/') || req.path === '/api/v1/me'))
     return next();
+  const scope = requestScope.getStore();
+  if (!scope) throw new Error('Request context is required.');
+  const completion = handleAuth(req, res, scope);
+  // Node's HTTP bridge can return a response before Express async cleanup finishes.
+  scope.context.waitUntil(
+    completion.catch(() => {
+      console.error(
+        JSON.stringify({
+          event: 'auth_request_failed',
+          requestId: res.getHeader('X-Request-Id'),
+        }),
+      );
+    }),
+  );
+  try {
+    await completion;
+  } catch {
+    if (res.headersSent) res.destroy();
+    else next(new Error('Authentication request could not be completed.'));
+  }
+});
+async function handleAuth(
+  req: Request,
+  res: Response,
+  scope: NonNullable<ReturnType<typeof requestScope.getStore>>,
+) {
   if (req.path === '/api/v1/me' && req.method !== 'GET') {
     res.status(405).json({ error: { code: 'METHOD_NOT_ALLOWED' } });
     return;
@@ -22,8 +49,10 @@ authRoutes.use(async (req, res, next) => {
     res.status(401).json({ error: { code: 'UNAUTHENTICATED' } });
     return;
   }
-  const scope = requestScope.getStore();
-  if (!scope) throw new Error('Request context is required.');
+  if (req.path === '/api/auth/sign-out' && !req.headers.cookie) {
+    res.json({ success: true });
+    return;
+  }
   const settings = scope.environment;
   if (
     !settings.DATABASE_URL ||
@@ -35,7 +64,7 @@ authRoutes.use(async (req, res, next) => {
     res.status(503).json({ error: { code: 'AUTH_UNAVAILABLE' } });
     return;
   }
-  const { db, close } = openDatabase(settings.DATABASE_URL);
+  const { db, close } = await openDatabase(settings.DATABASE_URL);
   try {
     const send = makeAuthMailer({
       apiKey: settings.RESEND_API_KEY,
@@ -74,4 +103,4 @@ authRoutes.use(async (req, res, next) => {
   } finally {
     await close();
   }
-});
+}

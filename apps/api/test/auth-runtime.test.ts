@@ -6,7 +6,7 @@ import type { AuthEnvironment } from '../src/environment.ts';
 const settings = env as AuthEnvironment;
 
 it('runs real Better Auth and Neon transactions inside workerd', async () => {
-  const { db, close } = openDatabase(settings.DATABASE_URL);
+  const { db, close } = await openDatabase(settings.DATABASE_URL);
   const rollback = new Error('Rollback the Worker auth fixture');
   try {
     try {

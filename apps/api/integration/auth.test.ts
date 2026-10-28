@@ -19,7 +19,7 @@ const settings = {
 const headers = new Headers({ Origin: settings.baseURL });
 
 async function rolledBack(run: (tx: Transaction) => Promise<void>) {
-  const { db, close } = openDatabase(runtimeURL);
+  const { db, close } = await openDatabase(runtimeURL);
   const rollback = new Error('Rollback synthetic auth fixtures');
   try {
     try {

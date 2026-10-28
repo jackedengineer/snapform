@@ -12,7 +12,7 @@ const rollback = new Error('Rollback synthetic test data');
 
 describe('single Neon database foundation', () => {
   it('connects to the requested database through Drizzle', async () => {
-    const { db, close } = openDatabase(connectionString);
+    const { db, close } = await openDatabase(connectionString);
     try {
       const result = await db.execute<{ name: string }>(
         sql`select current_database() as name`,
@@ -23,7 +23,7 @@ describe('single Neon database foundation', () => {
     }
   });
   it('rolls back synthetic identity writes without altering persisted users', async () => {
-    const { db, close } = openDatabase(connectionString);
+    const { db, close } = await openDatabase(connectionString);
     const id = crypto.randomUUID();
     try {
       await expect(
@@ -47,7 +47,7 @@ describe('single Neon database foundation', () => {
     }
   });
   it('enforces unique identities atomically and rolls the failed transaction back', async () => {
-    const { db, close } = openDatabase(connectionString);
+    const { db, close } = await openDatabase(connectionString);
     const id = crypto.randomUUID();
     const email = `${id}@example.invalid`;
     try {
@@ -67,7 +67,7 @@ describe('single Neon database foundation', () => {
     }
   });
   it('uses a runtime login without administrative capabilities', async () => {
-    const { db, close } = openDatabase(connectionString);
+    const { db, close } = await openDatabase(connectionString);
     try {
       const result = await db.execute<{
         rolname: string;
@@ -90,7 +90,7 @@ describe('single Neon database foundation', () => {
     }
   });
   it('cannot create schema objects, even inside a rolled-back transaction', async () => {
-    const { db, close } = openDatabase(connectionString);
+    const { db, close } = await openDatabase(connectionString);
     try {
       await expect(
         db.transaction(async (tx) => {
@@ -104,13 +104,13 @@ describe('single Neon database foundation', () => {
       await close();
     }
   });
-  it('rejects missing or non-Neon connections without reflecting credentials', () => {
+  it('rejects missing or non-Neon connections without reflecting credentials', async () => {
     for (const value of [
       '',
       'https://example.test',
       'postgresql://synthetic:private@example.test/db',
     ]) {
-      expect(() => openDatabase(value)).toThrow(
+      await expect(openDatabase(value)).rejects.toThrow(
         'A valid secure Neon connection is required.',
       );
     }

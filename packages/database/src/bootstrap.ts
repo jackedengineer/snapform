@@ -13,7 +13,7 @@ if (existsSync(runtimeFile)) {
   if (!process.env.DATABASE_MIGRATION_URL)
     throw new Error('Configure the ignored migration environment first.');
   const password = randomBytes(32).toString('base64url');
-  const { db, close } = openDatabase(process.env.DATABASE_MIGRATION_URL);
+  const { db, close } = await openDatabase(process.env.DATABASE_MIGRATION_URL);
   try {
     await db.transaction(async (tx) => {
       await tx.execute(

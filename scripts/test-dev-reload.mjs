@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { parseEnv } from 'node:util';
 import { readFile, writeFile } from 'node:fs/promises';
 import { setTimeout } from 'node:timers/promises';
 
@@ -84,7 +85,41 @@ try {
   await writeFile(path, original);
   modified = false;
   await waitForHeader(null);
-  console.log('Two API edits/reloads passed through the web service binding.');
+  output = ''; // Only failures after the completed reload belong to this lifecycle check.
+  const local = parseEnv(await readFile('apps/api/.dev.vars', 'utf8'));
+  const recipient =
+    local.AUTH_ALLOWED_RECIPIENT || 'runtime-check@example.invalid';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const response = await fetch(
+      'http://127.0.0.1:5173/api/auth/sign-in/email',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'http://127.0.0.1:5173',
+        },
+        body: JSON.stringify({
+          email: recipient,
+          password: 'Synthetic-runtime-check-wrong-password',
+        }),
+        signal: AbortSignal.timeout(15000),
+      },
+    );
+    assert.equal(
+      response.status,
+      401,
+      'The live auth bridge must reject synthetic invalid credentials.',
+    );
+    await response.arrayBuffer();
+    await setTimeout(500);
+  }
+  assert.doesNotMatch(
+    output,
+    /Unhandled error|Network connection lost|auth_request_failed/,
+  );
+  console.log(
+    'Two API reloads and three real auth request/cleanup cycles passed.',
+  );
 } finally {
   try {
     if (modified) {
