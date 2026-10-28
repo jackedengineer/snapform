@@ -1,0 +1,3 @@
+Browser tab: 1, Title: "Form - Jotform Form Builder", URL: "https://www.jotform.com/build/262994790682071/settings/conditions".
+There has been no change in the accessibility tree.
+The focused UI element is 1 AXWebArea Form - Jotform Form Builder, URL: jotform.com/build/262994790682071/settings/conditions

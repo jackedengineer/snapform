@@ -1,0 +1,18 @@
+Local Wrangler/workerd check, 28 October 2026.
+Fastify 5.12.7; Wrangler 4.154.0; workerd 1.20261023.1; Node v24.14.0.
+Compatibility date 2026-10-28; nodejs_compat enabled. No deployment/account/database/real billing credentials used.
+
+Initial top-level await app.register(...) failed with unsettled top-level await.
+Moving app.ready() into the fetch handler allowed runtime startup, then GET /health returned 500.
+Uncaught EvalError: Code generation from strings disallowed for this context
+  at new Function (<anonymous>)
+  at HandlerStorage._compileCreateParamsObject
+  at HandlerStorage.addHandler
+  at Node.addRoute
+  at Router._on
+The checked find-my-way/lib/handler-storage.js used new Function at line 82.
+AJV schema compilation also encountered dynamic-code restrictions.
+
+Control: same routes/plugins under ordinary Node passed /health 200, /cookie 200 with two Set-Cookie headers, valid POST /validated 200, invalid POST /validated 400. See node-results.json.
+
+Conclusion: tested unmodified Fastify/plugin setup is not a drop-in Workers deployment. This is not a proof that every custom adapter/build strategy fails; Cloudflare Containers is the selected full-Node path. No container/cloud production deployment or benchmark performed.

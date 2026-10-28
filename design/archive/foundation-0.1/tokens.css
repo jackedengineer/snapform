@@ -1,0 +1,16 @@
+:root {
+  --surface-canvas: #F6F7F5; --surface-panel: #FFFFFF; --surface-subtle: #EEF1ED;
+  --text-primary: #18231D; --text-secondary: #4C5C52; --text-muted: #626F66; --text-inverse: #FFFFFF;
+  --border-default: #CAD2CB; --border-control: #7B887E;
+  --action-primary: #175C40; --action-hover: #10472F; --focus: #2563EB;
+  --status-success: #17643A; --status-warning: #815309; --status-danger: #B42318; --status-info: #234F91;
+  --bg-success: #EAF5EE; --bg-warning: #FFF5DF; --bg-danger: #FFF0EE; --bg-info: #EDF3FC;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
+  --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-16: 64px;
+  --radius-micro: 4px; --radius-control: 6px; --radius-panel: 10px; --radius-pill: 999px;
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  --motion-fast: 120ms; --motion-normal: 180ms;
+  --form-max: 720px; --card-max: 640px; --outline-width: 240px; --inspector-width: 320px;
+}
+@media (prefers-reduced-motion: reduce) { :root { --motion-fast: 0ms; --motion-normal: 0ms; } }

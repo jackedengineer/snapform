@@ -1,0 +1,28 @@
+[
+  {
+    "case": "health",
+    "status": 200,
+    "body": "{\"ok\":true}",
+    "cookies": []
+  },
+  {
+    "case": "cookie",
+    "status": 200,
+    "body": "{\"ok\":true}",
+    "cookies": [
+      "first=one; HttpOnly; SameSite=Lax",
+      "second=two; HttpOnly; SameSite=Lax"
+    ]
+  },
+  {
+    "case": "valid",
+    "status": 200,
+    "body": "{\"value\":3}",
+    "cookies": []
+  },
+  {
+    "case": "invalid",
+    "status": 400,
+    "body": "{\"statusCode\":400,\"code\":\"FST_ERR_VALIDATION\",\"error\":\"Bad Request\",\"message\":\"body/value must be integer\"}"
+  }
+]

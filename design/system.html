@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snapform — Foundation 0.2</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="system.css">
+</head>
+<body data-view="experience">
+<a class="skip" href="#content">Skip to content</a>
+<header><div class="top"><div class="brand"><svg viewBox="0 0 28 28" aria-hidden="true"><path fill="currentColor" d="M3 4h12v5H8v7H3zM13 12h12v12H13v-5h7v-2h-7z"/><path d="M8 16h7V9" fill="none" stroke="currentColor" stroke-width="3"/></svg>snapform</div><div class="row"><span class="badge">Foundation 0.2</span><span class="meta">Expressive clarity<span class="revision-date"> · 28 Oct 2026</span></span></div></div></header>
+<main id="content" class="shell">
+<div class="intro"><div><span class="eyebrow">The intake workspace</span><h1>Expressive by design.<br>Clear by default.</h1><p>A product foundation for agencies, coaches, consultants and startup teams. Branded intake, optional guided help, and a record that is ready for the next step.</p></div><div class="rule"><strong>Make the state visible.</strong><span class="small">Proposed is not confirmed. Saved is not published. Submitted is not delivered.</span></div></div>
+<nav role="tablist" aria-label="Design reference sections">
+<button role="tab" aria-selected="true" aria-controls="experience" id="tab-experience" data-tab="experience">The experience</button>
+<button role="tab" aria-selected="false" aria-controls="foundation" id="tab-foundation" data-tab="foundation" tabindex="-1">Foundations</button>
+<button role="tab" aria-selected="false" aria-controls="intake" id="tab-intake" data-tab="intake" tabindex="-1">Intake & review</button>
+<button role="tab" aria-selected="false" aria-controls="operations" id="tab-operations" data-tab="operations" tabindex="-1">Trust & delivery</button>
+<button role="tab" aria-selected="false" aria-controls="scope" id="tab-scope" data-tab="scope" tabindex="-1">V1 & roadmap</button>
+</nav>
+
+<section class="section" role="tabpanel" id="experience" aria-labelledby="tab-experience">
+  <div class="experience-hero">
+    <div>
+      <div class="eyebrow hero-enter"><span class="eyebrow-dot" aria-hidden="true"></span>A more thoughtful first impression</div>
+      <h1 class="experience-title hero-enter second"><span>Better briefs.</span><span class="accent-line">Better beginnings.</span></h1>
+    </div>
+    <div class="hero-support hero-enter third">
+      <p>Turn a first enquiry into a clear next step. Beautiful forms, helpful conversations, and answers your team can trust.</p>
+      <div class="row"><button class="btn primary marketing" data-open-tab="intake">Try the intake <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></button><button class="btn marketing" data-open-tab="foundation">Explore the system</button></div>
+      <p class="hero-caption">An interactive design direction. No signup, no data sent.</p>
+    </div>
+  </div>
+  <div class="audience-line"><span>Made for people-led businesses</span><span>Agencies</span><span>Consultants</span><span>Coaches</span><span>Startup teams</span></div>
+  <div class="experience-stage">
+    <div class="stage-description">
+      <span class="eyebrow">Less chasing. More understanding.</span>
+      <h2 id="stage-title">Start with a good question.</h2>
+      <p id="stage-copy">Give people room to explain what they need, with just enough structure to keep things useful.</p>
+      <div class="step-tabs" role="group" aria-label="Sample intake stages">
+        <button data-step="0" aria-pressed="true" aria-controls="demo-collect"><span class="step-index">01</span>Collect</button>
+        <button data-step="1" aria-pressed="false" aria-controls="demo-review"><span class="step-index">02</span>Review</button>
+        <button data-step="2" aria-pressed="false" aria-controls="demo-deliver"><span class="step-index">03</span>Deliver</button>
+      </div>
+      <div class="stage-controls"><span class="stage-note">Click through a synthetic example.</span><button class="motion-toggle" id="motion-toggle" aria-pressed="false">Turn motion off</button></div>
+      <span class="skip" id="stage-announcement" role="status" aria-live="polite"></span>
+    </div>
+    <div class="stage-canvas">
+      <div class="demo-sheet">
+        <div class="floating-note" aria-hidden="true">A little more human.</div>
+        <div class="demo-sheet-top"><span class="demo-brand"><svg viewBox="0 0 28 28" aria-hidden="true"><path fill="currentColor" d="M3 4h12v5H8v7H3zM13 12h12v12H13v-5h7v-2h-7z"/><path d="M8 16h7V9" fill="none" stroke="currentColor" stroke-width="3"/></svg> Studio North</span><span>Project enquiry</span></div>
+        <div class="demo-page" id="demo-collect">
+          <h3>What are you<br>working on?</h3><p>Tell us a little about what you have in mind.</p>
+          <div class="demo-field">A new website for our growing studio.</div>
+          <div class="demo-chip-row"><span class="demo-chip active">Website</span><span class="demo-chip">Branding</span><span class="demo-chip">Something else</span></div>
+          <button class="demo-action" data-step-next="1">See the review <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></button>
+        </div>
+        <div class="demo-page" id="demo-review" hidden>
+          <h3>Your words.<br>A clearer picture.</h3><p>Check the details before they become a record.</p>
+          <dl class="demo-record"><div><dt>Project</dt><dd>Website redesign</dd></div><div><dt>Budget</dt><dd class="demo-value">USD 7,500</dd></div><div><dt>Timing</dt><dd>15 January 2027</dd></div></dl>
+          <button class="demo-action" data-step-next="2">Preview the handoff <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></button>
+        </div>
+        <div class="demo-page" id="demo-deliver" hidden>
+          <div class="demo-success"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg></div><h3>A brief you<br>can build on.</h3><p>Synthetic receipt. Real delivery needs a durable acknowledgment.</p>
+          <div class="demo-receipt"><span>Response</span><span class="receipt-state">Saved · sample</span></div><div class="demo-receipt"><span>Team notification</span><span class="receipt-state">Delivered · sample</span></div>
+          <button class="demo-action" data-open-tab="operations" style="margin-top:20px">Explore delivery states <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="experience-bottom">
+    <div><h2>Personality at the front.<br>Clarity all the way through.</h2><p>Generous typography and a tactile first impression. Calm fields, direct corrections, and clear status when the work begins.</p></div>
+    <div><h2>A little motion.<br>A clear purpose.</h2><p>A brief entrance and a deliberate transition between collection, review and delivery. Your answers stay still while you read and edit.</p><button class="btn tertiary" id="replay-entrance">Replay the introduction <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></button></div>
+  </div>
+</section>
+
+<section class="section" role="tabpanel" id="foundation" aria-labelledby="tab-foundation" hidden>
+<h2>Expressive clarity.</h2><p>A geometric type family, warm neutral surfaces and one confident cobalt action color. A consistent voice from the first impression to the final record.</p>
+<div class="swatches">
+<div><div class="swatch" style="background:var(--action-primary)"></div><p class="swatch-label">Action / primary</p><span class="swatch-value">#3154F4</span></div><div><div class="swatch" style="background:var(--text-primary)"></div><p class="swatch-label">Text / primary</p><span class="swatch-value">#191A1B</span></div><div><div class="swatch" style="background:var(--surface-canvas)"></div><p class="swatch-label">Surface / canvas</p><span class="swatch-value">#F7F6F2</span></div><div><div class="swatch" style="background:var(--border-control)"></div><p class="swatch-label">Border / control</p><span class="swatch-value">#85878B</span></div>
+</div>
+<div class="split"><div class="panel"><div class="panel-head"><h3>Typography</h3><span class="small">DM Sans · variable · self-hosted</span></div><div class="panel-body"><div class="type-row"><span style="font-size:40px;line-height:44px;font-weight:550;letter-spacing:-.04em">Project enquiries</span><span class="small">40 / 44</span></div><div class="type-row"><span style="font-size:24px;font-weight:550;letter-spacing:-.035em">Review your answers</span><span class="small">24 / 32</span></div><div class="type-row"><span>Your brief, ready for the next step.</span><span class="small">16 / 24</span></div><div class="type-row"><span class="small">Draft saved · Version 3 is live</span><span class="small">13 / 20</span></div></div></div>
+<div class="panel"><div class="panel-head"><h3>Controls with a clear next step</h3><span class="small">44px touch target</span></div><div class="panel-body stack"><div class="row"><button class="btn primary" id="save-demo">Save draft</button><button class="btn" id="reset-demo">Reset specimen</button><button class="btn" disabled>Publishing…</button></div><p id="save-state" class="statusline" role="status">Specimen controls are local only.</p><div><label for="email-demo">Work email <span class="small">· Required</span></label><input id="email-demo" type="email" value="alex@example.com" aria-describedby="email-hint"><p class="hint" id="email-hint">Used by the collecting business to follow up.</p></div><div class="row"><span class="badge confirmed">Confirmed</span><span class="badge review">Needs detail</span><span class="badge failed">Needs action</span></div></div></div></div>
+<div class="motion-spec"><strong>Motion that explains the flow.</strong><p>One entrance on the introduction. User-triggered 12px transitions between sample stages. Instant text and field feedback while working. No looping typewriter, parallax or animated numbers.</p><label for="review-speed">Animation review speed</label><select id="review-speed"><option value="normal">Normal speed</option><option value="slow">10% speed · design review only</option></select><p class="hint">Reduced-motion preference and the motion-off switch always take priority.</p><button class="btn" data-open-tab="experience">Try the motion specimen</button></div>
+<div class="states"><h3>Space for content, density for work.</h3><p class="small">Spacing: 4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 · 64px. Controls: 10px radius. Panels: 20px. Display surfaces: 32px. Motion: 120ms controls / 420ms scene transitions / 600ms introduction, with reduced-motion support.</p><div class="notice">Accessibility is a journey requirement: labels, keyboard navigation, focus, errors, contrast, mobile and screen-reader checks.</div></div>
+</section>
+<section class="section" role="tabpanel" id="intake" aria-labelledby="tab-intake" hidden>
+<h2>Let people correct the record.</h2><p>Direct editing is available even when a conversation collected the answers. This specimen uses synthetic content and no AI or backend.</p>
+<div class="segment"><label for="segment">Workflow example</label><select id="segment"><option value="agency">Agency project enquiry</option><option value="consultant">Consultant discovery</option><option value="coach">Coaching enquiry</option><option value="startup">Startup demo request</option></select></div>
+<div class="split"><div class="panel"><div class="panel-head"><h3>Respondent fields</h3><span class="badge">Standard form</span></div><div class="panel-body form-preview"><div class="mini-brand">Example Studio · Synthetic reference</div><h3 id="question-title">Tell us about your project.</h3><p class="small" id="question-help">A few details help us prepare a useful first conversation.</p><hr class="divider"><div class="stack"><div><label for="goals">What would you like to achieve?</label><textarea id="goals">A website redesign that brings in more qualified enquiries.</textarea></div><div><label for="budget-input">Budget · USD <span class="small">· Required</span></label><input id="budget-input" type="number" min="0" value="7500" aria-describedby="budget-error"><p id="budget-error" class="error" hidden>Enter a budget of zero or more.</p></div><div><label for="timing">Target date <span class="small">· Required</span></label><input id="timing" type="date" value="2027-01-15"></div><div class="notice">In the product, guided help shares these same fields. AI-proposed values need review.</div><button class="btn primary" id="review-btn">Update review</button></div></div></div>
+<div class="panel"><div class="panel-head"><h3>The record before submission</h3><span class="badge review" id="review-state">Review required</span></div><div class="panel-body"><div class="review-row"><div><span class="small">Goal</span><strong id="goal-value">A website redesign that brings in more qualified enquiries.</strong><span class="badge">Entered by respondent</span></div></div><div class="review-row"><div><span class="small">Budget</span><strong id="budget-value">USD 7,500</strong><span class="badge review" id="budget-state">Proposed · confirm</span></div><button class="btn" id="edit-budget">Edit</button><div class="review-edit" id="budget-edit" hidden><label for="budget-correction">Correct the budget · USD</label><input id="budget-correction" type="number" min="0" value="7500"><button class="btn" id="apply-budget" style="margin-top:12px">Apply correction</button><p class="error" id="correction-error" hidden>Enter a budget of zero or more.</p></div></div><div class="review-row"><div><span class="small">Target date</span><strong id="date-value">15 January 2027</strong><span class="badge review" id="date-state">Proposed · confirm</span></div></div><blockquote class="quote">“Correction: the budget is USD 7,500. We need it by 15 January 2027.”<br><span class="small">Synthetic source message. Proposed values stay distinguishable from evidence.</span></blockquote><label class="check"><input id="confirm" type="checkbox">I have reviewed these details.</label><button class="btn primary" id="confirm-demo">Confirm specimen record</button><p id="confirm-result" class="small" role="status">Nothing will be sent or persisted.</p></div></div></div>
+</section>
+<section class="section" role="tabpanel" id="operations" aria-labelledby="tab-operations" hidden>
+<h2>Trust includes the handoff.</h2><p>Keep creator-approved knowledge, respondent evidence and external delivery status distinct. A fluent sentence is not a durable action receipt.</p>
+<div class="split"><div class="panel"><div class="panel-head"><h3>AI factual proposal</h3><span class="badge review" id="fact-badge">Needs approval</span></div><div class="panel-body stack"><div class="facts"><div><span class="small">Supplied company name</span><p>Example Studio — research only</p></div><div class="fact"><span class="small">AI-proposed description</span><p>“A studio focused on research and exploration.”</p><span class="badge review">No supplied factual source</span></div></div><div class="notice warn">A company name does not establish its services. Review this claim before using it in published answers.</div><label for="fact-text">Creator-approved description</label><textarea id="fact-text" placeholder="Describe the business using facts you can verify."></textarea><button class="btn" id="approve-fact">Approve edited description</button><p class="small" id="fact-result" role="status">Draft proposal only.</p></div></div>
+<div class="panel"><div class="panel-head"><h3>Delivery receipts · synthetic</h3><span class="badge confirmed">Response saved</span></div><div class="panel-body"><div class="delivery"><div class="row"><strong>Internal email</strong><span class="badge confirmed">Delivered</span></div><p>Provider acknowledged the event. The notification links to the private response.</p></div><div class="delivery"><div class="row"><strong>Signed webhook</strong><span class="badge review" id="delivery-state">Retrying</span></div><p id="delivery-detail">Attempt 2 timed out. The response remains saved. A replay uses the original event identity.</p><button class="btn" id="retry-demo">Simulate safe retry</button></div><div class="delivery"><strong>Preflight before sharing</strong><p>Inspect the exact effective payload, test the destination, and invalidate the test receipt when its mapping changes.</p><div class="notice">External side effects are not universally exactly-once. Unknown outcomes need reconciliation.</div></div></div></div></div>
+</section>
+<section class="section" role="tabpanel" id="scope" aria-labelledby="tab-scope" hidden>
+<h2>A complete V1, with a bounded promise.</h2><p>Planning estimate: 960–1,200 founder engineering hours / 32–40 weeks at 30 focused hours per week, including contingency. No product functionality has been built.</p>
+<div class="scope-grid"><div><h3>Required for the market release</h3><ul class="scope-list"><li><strong>Build and publish safely</strong>Templates, stable fields, conditional paths, save/conflict states, immutable versions and branding.</li><li><strong>Collect a trusted record</strong>Mobile fields, optional bounded conversation, candidate evidence, direct review, private files and durable submit.</li><li><strong>Finish the business job</strong>Results/export, email and signed webhook, visible recovery, payload preflight and supported migration.</li><li><strong>Operate a paid product</strong>Small-team roles, billing/limits/cancellation, privacy/deletion, abuse protection, monitoring and tested recovery.</li></ul></div><div><h3>Expansion after evidence</h3><div class="notice warn">Payments inside forms, bookings, signing, voice, offline, advanced workflows and enterprise controls need their own commercial case and release gates.</div><p class="small">V1.1: activation and connectors.<br>V1.5: branding and collection breadth.<br>V2: one adjacent workflow.<br>V3: enterprise/vertical commitments when funded.</p><a href="../tasks/plan.md">Read the development plan</a></div></div>
+<div class="phases"><div class="phase"><span class="phase-id">P0</span><div><strong>Discovery & feasibility</strong><p>Paid workflow, sample briefs, provider eligibility, first source and region.</p></div><span class="duration">2 weeks</span></div><div class="phase"><span class="phase-id">P1</span><div><strong>Foundation & design</strong><p>Tenants, contracts, UI states, deployment, telemetry and recovery.</p></div><span class="duration">3–4w</span></div><div class="phase"><span class="phase-id">P2</span><div><strong>Deterministic intake</strong><p>Publish, mobile fields, rules, review and one durable response.</p></div><span class="duration">5–6w</span></div><div class="phase"><span class="phase-id">P3</span><div><strong>Usable handoff</strong><p>Private files, results, email/webhook, preflight, branding and templates.</p></div><span class="duration">4–5w</span></div><div class="phase"><span class="phase-id">P4</span><div><strong>Migration & commerce</strong><p>Supported import, billing lifecycle, retention and paid pilot.</p></div><span class="duration">4–5w</span></div><div class="phase"><span class="phase-id">P5</span><div><strong>AI authoring</strong><p>Typed proposals, factual review, conflict handling and held-out evaluation.</p></div><span class="duration">5–6w</span></div><div class="phase"><span class="phase-id">P6</span><div><strong>Guided intake</strong><p>Grounded knowledge, extraction evidence, corrections, budgets and fallback.</p></div><span class="duration">5–6w</span></div><div class="phase"><span class="phase-id">P7</span><div><strong>Market launch gates</strong><p>Paid repeat use, security/accessibility/load/restore evidence and support.</p></div><span class="duration">4–6w</span></div></div>
+</section>
+<footer class="footer">Foundation 0.2 · Local design specimen · Synthetic content · Self-hosted fonts · No external requests, backend or model execution.<br><a class="tablink" href="../README.md">Blueprint index</a><a class="tablink" href="../docs/04-design-system.md">Design specification</a><a class="tablink" href="../docs/07-competitor-fieldwork.md">Competitor observations</a></footer>
+</main>
+<script>
+const tabs=[...document.querySelectorAll('[role=tab]')];
+function activate(tab){document.body.dataset.view=tab.dataset.tab;tabs.forEach(t=>{const active=t===tab;t.setAttribute('aria-selected',String(active));t.tabIndex=active?0:-1;document.getElementById(t.dataset.tab).hidden=!active;});}
+tabs.forEach((tab,i)=>{tab.onclick=()=>activate(tab);tab.onkeydown=e=>{let next;if(e.key==='ArrowRight')next=(i+1)%tabs.length;if(e.key==='ArrowLeft')next=(i-1+tabs.length)%tabs.length;if(e.key==='Home')next=0;if(e.key==='End')next=tabs.length-1;if(next!==undefined){e.preventDefault();activate(tabs[next]);tabs[next].focus();}}});
+const $=id=>document.getElementById(id);
+// User-driven transitions: no timers, auto-advancement or live model claims.
+const sceneCopy=[['Start with a good question.','Give people room to explain what they need, with just enough structure to keep things useful.'],['Make the meaning visible.','A clear record gives people the chance to confirm the details and correct an interpretation.'],['Know the next step happened.','A saved response and an acknowledged handoff have different states. Make both easy to inspect.']];
+function showStep(index, announce=true){
+  document.querySelectorAll('[data-step]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.step)===index)));
+  ['demo-collect','demo-review','demo-deliver'].forEach((id,i)=>{const page=$(id);page.hidden=i!==index;page.classList.remove('step-enter');if(i===index){void page.offsetWidth;page.classList.add('step-enter');}});
+  $('stage-title').textContent=sceneCopy[index][0];$('stage-copy').textContent=sceneCopy[index][1];
+  if(announce)$('stage-announcement').textContent=['Collect sample shown.','Review sample shown.','Delivery sample shown.'][index];
+}
+document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>showStep(Number(b.dataset.step)));
+document.querySelectorAll('[data-step-next]').forEach(b=>b.onclick=()=>{const index=Number(b.dataset.stepNext);showStep(index);document.querySelector('[data-step="'+index+'"]').focus();});
+document.querySelectorAll('[data-open-tab]').forEach(b=>b.onclick=()=>{const target=$('tab-'+b.dataset.openTab);activate(target);target.focus();target.scrollIntoView({block:'nearest'});});
+$('motion-toggle').onclick=()=>{const off=document.documentElement.dataset.motion!=='off';document.documentElement.dataset.motion=off?'off':'on';$('motion-toggle').setAttribute('aria-pressed',String(off));$('motion-toggle').textContent=off?'Turn motion on':'Turn motion off';};
+$('review-speed').onchange=()=>{document.documentElement.dataset.reviewSpeed=$('review-speed').value;};
+$('replay-entrance').onclick=()=>{document.querySelectorAll('.hero-enter').forEach(e=>{e.style.animation='none';void e.offsetWidth;e.style.removeProperty('animation');});};
+const resetConfirmation=()=>{$('confirm').checked=false;$('review-state').textContent='Review required';$('review-state').className='badge review';$('budget-state').textContent='Edited · confirm';$('budget-state').className='badge review';$('date-state').textContent='Review required';$('date-state').className='badge review';$('confirm-result').textContent='Nothing will be sent or persisted.';};
+function updateReview(){const n=Number($('budget-input').value),valid=$('budget-input').value.trim()!==''&&Number.isFinite(n)&&n>=0;$('budget-error').hidden=valid;$('budget-input').setAttribute('aria-invalid',String(!valid));if(!valid){$('budget-input').focus();return false;}$('goal-value').textContent=$('goals').value.trim()||'No goal supplied';$('budget-value').textContent='USD '+n.toLocaleString('en-US');$('budget-correction').value=n;const d=$('timing').value;$('date-value').textContent=d?new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}):'Date needs detail';resetConfirmation();return true;}
+['goals','budget-input','timing'].forEach(id=>$(id).addEventListener('input',resetConfirmation));
+$('review-btn').onclick=()=>{if(updateReview())$('confirm-result').textContent='Review updated. Check and confirm the details.';};
+$('edit-budget').onclick=()=>{$('budget-edit').hidden=!$('budget-edit').hidden;if(!$('budget-edit').hidden)$('budget-correction').focus();};
+$('apply-budget').onclick=()=>{const v=$('budget-correction').value,n=Number(v),valid=v.trim()!==''&&Number.isFinite(n)&&n>=0;$('correction-error').hidden=valid;if(!valid)return;$('budget-input').value=v;updateReview();$('budget-edit').hidden=true;$('edit-budget').focus();};
+$('confirm-demo').onclick=()=>{if(!$('confirm').checked){$('confirm-result').textContent='Review the details and select the confirmation checkbox.';$('confirm').focus();return;}if(!$('timing').value){$('confirm-result').textContent='Choose a target date before confirmation.';$('timing').focus();return;}const wasChecked=$('confirm').checked;if(!updateReview())return;$('confirm').checked=wasChecked;['review-state','budget-state','date-state'].forEach(id=>{$(id).textContent='Confirmed';$(id).className='badge confirmed';});$('confirm-result').textContent='Specimen record confirmed locally. No response was sent.';};
+$('save-demo').onclick=()=>{$('save-state').textContent='Draft save state demonstrated locally. No server is connected.';};
+$('reset-demo').onclick=()=>{location.reload();};
+$('retry-demo').onclick=()=>{$('delivery-state').textContent='Delivered · simulation';$('delivery-state').className='badge confirmed';$('delivery-detail').textContent='Simulated receiver acknowledgment. In production, a durable remote receipt would be required.';$('retry-demo').disabled=true;};
+$('approve-fact').onclick=()=>{if($('fact-text').value.trim().length<20){$('fact-result').textContent='Add a factual description of at least 20 characters to demonstrate approval.';$('fact-text').focus();return;}$('fact-badge').textContent='Creator approved · specimen';$('fact-badge').className='badge confirmed';$('fact-result').textContent='Local approval state only. A production approval must record identity, source and version.';};
+const segmentCopy={agency:['Tell us about your project.','A few details help us prepare a useful first conversation.'],consultant:['Prepare for your discovery call.','Share the outcome you want and the context we should understand.'],coach:['Tell us what you want to work toward.','A business-coaching enquiry, without clinical assessment or sensitive screening.'],startup:['Help us prepare a relevant demo.','Share the workflow and team context so we can focus on what matters.']};
+$('segment').onchange=()=>{const c=segmentCopy[$('segment').value];$('question-title').textContent=c[0];$('question-help').textContent=c[1];};
+</script>
+</body></html>

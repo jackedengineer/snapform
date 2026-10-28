@@ -1,0 +1,15 @@
+{
+  "testedAt": "2026-10-28",
+  "nodeTooling": "v24.14.0",
+  "workerRuntime": "workerd",
+  "packages": {
+    "express": "5.3.0",
+    "zod": "4.6.7",
+    "helmet": "8.3.0",
+    "cors": "2.8.6",
+    "cookie-parser": "1.4.7",
+    "wrangler": "4.154.0",
+    "workerd": "1.20261023.1"
+  },
+  "bun": "not installed or tested"
+}

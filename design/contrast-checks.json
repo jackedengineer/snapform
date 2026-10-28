@@ -1,0 +1,46 @@
+[
+  {
+    "pair": "Primary/ivory",
+    "ratio": 16.12
+  },
+  {
+    "pair": "Secondary/ivory",
+    "ratio": 6.59
+  },
+  {
+    "pair": "Muted/ivory",
+    "ratio": 5.01
+  },
+  {
+    "pair": "White/cobalt",
+    "ratio": 5.67
+  },
+  {
+    "pair": "Cobalt/ivory",
+    "ratio": 5.24
+  },
+  {
+    "pair": "Control/white",
+    "ratio": 3.6
+  },
+  {
+    "pair": "Inverse muted/ink",
+    "ratio": 9.66
+  },
+  {
+    "pair": "Inverse border/ink",
+    "ratio": 3.16
+  },
+  {
+    "pair": "Ink/lime",
+    "ratio": 14.79
+  },
+  {
+    "pair": "Ink/peach",
+    "ratio": 13.1
+  },
+  {
+    "pair": "Cobalt/selection",
+    "ratio": 5.0
+  }
+]

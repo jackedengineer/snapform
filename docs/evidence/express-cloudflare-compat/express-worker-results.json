@@ -1,0 +1,86 @@
+[
+  {
+    "case": "health",
+    "status": 200,
+    "body": "{\"ok\":true}",
+    "cookies": [],
+    "cors": "https://example.test",
+    "nosniff": "nosniff",
+    "contentType": "application/json; charset=utf-8"
+  },
+  {
+    "case": "cookies",
+    "status": 200,
+    "body": "{\"ok\":true}",
+    "cookies": [
+      "first=one; Path=/; HttpOnly; Secure; SameSite=Lax",
+      "second=two; Path=/; HttpOnly; Secure; SameSite=Lax"
+    ],
+    "cors": "https://example.test",
+    "nosniff": "nosniff",
+    "contentType": "application/json; charset=utf-8"
+  },
+  {
+    "case": "valid",
+    "status": 200,
+    "body": "{\"value\":3}",
+    "cookies": [],
+    "cors": "https://example.test",
+    "nosniff": "nosniff",
+    "contentType": "application/json; charset=utf-8"
+  },
+  {
+    "case": "invalid",
+    "status": 422,
+    "body": "{\"code\":\"INVALID_INPUT\"}",
+    "cookies": [],
+    "cors": "https://example.test",
+    "nosniff": "nosniff",
+    "contentType": "application/json; charset=utf-8"
+  },
+  {
+    "case": "unknown_property",
+    "status": 422,
+    "body": "{\"code\":\"INVALID_INPUT\"}",
+    "cookies": [],
+    "cors": "https://example.test",
+    "nosniff": "nosniff",
+    "contentType": "application/json; charset=utf-8"
+  },
+  {
+    "case": "raw_webhook",
+    "status": 200,
+    "body": "{\"verified\":true,\"bytes\":16}",
+    "cookies": [],
+    "cors": "https://example.test",
+    "nosniff": "nosniff",
+    "contentType": "application/json; charset=utf-8"
+  },
+  {
+    "case": "tampered_webhook",
+    "status": 401,
+    "body": "{\"code\":\"BAD_SIGNATURE\"}",
+    "cookies": [],
+    "cors": "https://example.test",
+    "nosniff": "nosniff",
+    "contentType": "application/json; charset=utf-8"
+  },
+  {
+    "case": "async_error",
+    "status": 500,
+    "body": "{\"code\":\"INTERNAL_ERROR\"}",
+    "cookies": [],
+    "cors": "https://example.test",
+    "nosniff": "nosniff",
+    "contentType": "application/json; charset=utf-8"
+  },
+  {
+    "case": "events",
+    "status": 200,
+    "body": "event: state\ndata: {\"stage\":\"review\"}\n\nevent: done\ndata: {}\n\n",
+    "cookies": [],
+    "cors": "https://example.test",
+    "nosniff": "nosniff",
+    "contentType": "text/event-stream"
+  }
+]
