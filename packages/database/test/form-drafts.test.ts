@@ -7,6 +7,7 @@ import { createWorkspace, inWorkspace } from '../src/workspaces.ts';
 import { form, formDraft, draftOperation } from '../src/form-schema.ts';
 import { createForm, getForm, saveDraft, listForms } from '../src/forms.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
+import { compileDefinition } from '@snapform/contracts/compile';
 async function fixture(
   run: (tx: Transaction, actor: string, workspaceId: string) => Promise<void>,
 ) {
@@ -37,6 +38,27 @@ async function fixture(
     await close();
   }
 }
+it(
+  'persists incomplete edits while the publication compiler still blocks them',
+  async () =>
+    fixture(async (tx, actor, workspaceId) => {
+      const input = {
+        id: crypto.randomUUID(),
+        definition: formFixture().definition,
+      };
+      await createForm(tx, actor, workspaceId, input);
+      const definition = { ...input.definition, title: '' };
+      await saveDraft(tx, actor, workspaceId, input.id, {
+        operationId: crypto.randomUUID(),
+        expectedRevision: 1,
+        definition,
+      });
+      const saved = await getForm(tx, actor, workspaceId, input.id);
+      expect(saved.definition.title).toBe('');
+      expect(compileDefinition(saved.definition).ok).toBe(false);
+    }),
+  30000,
+);
 it(
   'deduplicates saves and never overwrites a newer draft with a stale operation',
   async () =>

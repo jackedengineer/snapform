@@ -54,6 +54,53 @@ it('keeps content blocks outside the answer and dependency registry', () => {
   );
   expect(codes(definition)).toEqual([]);
 });
+it('blocks incomplete labels and inconsistent field constraints from publication', () => {
+  const { definition, ids } = formFixture();
+  const common = {
+    id: ids.kind,
+    label: 'Question',
+    description: '',
+    required: false,
+    aiEnabled: false,
+  };
+  for (const block of [
+    { ...common, type: 'short-text', label: '', minLength: 0, maxLength: 500 },
+    { ...common, type: 'short-text', minLength: 5, maxLength: 2 },
+    { ...common, type: 'number', unit: { kind: 'none' }, min: 10, max: 0 },
+    { ...common, type: 'number', unit: { kind: 'custom', label: '' } },
+    { ...common, type: 'date', min: '2026-10-28', max: '2026-10-27' },
+    { ...common, type: 'single-choice', options: [] },
+    {
+      ...common,
+      type: 'single-choice',
+      options: [{ id: ids.agency, label: '' }],
+    },
+    {
+      ...common,
+      type: 'multiple-choice',
+      options: [{ id: ids.agency, label: 'Agency' }],
+      minSelections: 2,
+      maxSelections: 1,
+    },
+    {
+      ...common,
+      type: 'multiple-choice',
+      options: [{ id: ids.agency, label: 'Agency' }],
+      minSelections: 0,
+      maxSelections: 2,
+    },
+  ]) {
+    definition.pages[0].blocks[0] = blockSchema.parse(block);
+    expect(codes(definition).length).toBeGreaterThan(0);
+  }
+  const original = formFixture().definition;
+  definition.pages[0].blocks[0] = { id: ids.kind, type: 'heading', text: '' };
+  expect(codes(definition)).toContain('MISSING_LABEL');
+  expect(codes({ ...original, title: '' })).toContain('MISSING_TITLE');
+  expect(
+    codes({ ...original, endings: [{ ...original.endings[0], title: '' }] }),
+  ).toContain('MISSING_LABEL');
+});
 it('blocks missing fields, source/destination pages and ending references', () => {
   const { definition, ids } = formFixture();
   const missing = crypto.randomUUID();

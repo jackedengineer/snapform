@@ -9,6 +9,46 @@ export type CompileResult =
   | { ok: false; issues: CompileIssue[] };
 type Predicate = Extract<Condition, { fieldId: string }>;
 const dateSchema = z.iso.date();
+function fieldDiagnostics(field: Field): CompileIssue[] {
+  const issues: CompileIssue[] = [];
+  const add = (code: string, message: string) =>
+    issues.push({ code, message, targetId: field.id });
+  if (!field.label.trim())
+    add('MISSING_LABEL', 'Add a label to this question.');
+  if (
+    (field.type === 'short-text' || field.type === 'long-text') &&
+    field.minLength > field.maxLength
+  )
+    add('INVALID_CONSTRAINT', 'Minimum text length must not exceed maximum.');
+  if (field.type === 'number') {
+    if (
+      field.min !== undefined &&
+      field.max !== undefined &&
+      field.min > field.max
+    )
+      add('INVALID_CONSTRAINT', 'Minimum number must not exceed maximum.');
+    if (field.unit.kind === 'custom' && !field.unit.label.trim())
+      add('MISSING_LABEL', 'Name the number unit.');
+  }
+  if (field.type === 'date' && field.min && field.max && field.min > field.max)
+    add('INVALID_CONSTRAINT', 'Earliest date must not follow latest date.');
+  if (field.type === 'single-choice' || field.type === 'multiple-choice') {
+    if (!field.options.length)
+      add('EMPTY_CHOICES', 'Add an option to this question.');
+    if (field.options.some((option) => !option.label.trim()))
+      add('MISSING_LABEL', 'Label every option.');
+    if (
+      field.type === 'multiple-choice' &&
+      (field.minSelections > field.maxSelections ||
+        field.maxSelections > field.options.length)
+    )
+      add(
+        'INVALID_CONSTRAINT',
+        'Choice limits must fit the available options.',
+      );
+  }
+  return issues;
+}
 function compatible(condition: Predicate, field: Field): boolean {
   if (condition.op === 'answered' || condition.op === 'unanswered') return true;
   if (condition.op === 'contains')
@@ -57,14 +97,21 @@ export function compileDefinition(raw: unknown): CompileResult {
   let position = 0;
   definition.pages.forEach((page, pageIndex) => {
     for (const block of page.blocks) {
-      if (block.type !== 'heading' && block.type !== 'help')
+      if (block.type !== 'heading' && block.type !== 'help') {
+        issues.push(...fieldDiagnostics(block));
         fields.set(block.id, {
           field: block,
           page: pageIndex,
           position: position++,
         });
+      } else if (block.type === 'heading' && !block.text.trim())
+        add('MISSING_LABEL', 'Add heading text.', block.id);
     }
   });
+  if (!definition.title.trim()) add('MISSING_TITLE', 'Add a form title.');
+  for (const ending of definition.endings)
+    if (!ending.title.trim())
+      add('MISSING_LABEL', 'Add an ending title.', ending.id);
   if (fields.size === 0) add('EMPTY_FORM', 'Add at least one answer field.');
   if (!endings.has(definition.defaultEndingId))
     add('UNKNOWN_ENDING', 'Choose an available default ending.');
