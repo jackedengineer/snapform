@@ -7,6 +7,8 @@ export default defineConfig({
       'apps/web/src/features/workspaces/api.test.ts',
       'apps/web/src/features/forms/api.test.ts',
       'apps/web/src/features/forms/new-form.test.ts',
+      'apps/web/src/features/forms/DraftRecovery.test.ts',
+      'apps/web/src/features/forms/recover-draft.test.ts',
     ],
     allowOnly: false,
     coverage: {
