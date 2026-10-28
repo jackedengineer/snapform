@@ -1,11 +1,17 @@
-import { betterAuth } from 'better-auth';
+import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import type { Database, Transaction } from '@snapform/database';
 import * as schema from '@snapform/database/schema';
+import type { AuthMessage } from './email.ts';
 
 export function createAuth(
   db: Database | Transaction,
-  config: { baseURL: string; secret: string },
+  config: {
+    baseURL: string;
+    secret: string;
+    sendEmail?: (message: AuthMessage) => Promise<void>;
+    backgroundTask?: (promise: Promise<unknown>) => void;
+  },
 ) {
   const origin = new URL(config.baseURL);
   if (
@@ -35,7 +41,37 @@ export function createAuth(
       requireEmailVerification: true,
       minPasswordLength: 12,
       maxPasswordLength: 128,
+      resetPasswordTokenExpiresIn: 900,
+      revokeSessionsOnPasswordReset: true,
+      ...(config.sendEmail
+        ? {
+            sendResetPassword: async ({
+              user,
+              url,
+            }: {
+              user: { email: string };
+              url: string;
+            }) => config.sendEmail?.({ kind: 'reset', to: user.email, url }),
+          }
+        : {}),
     },
+    ...(config.sendEmail
+      ? {
+          emailVerification: {
+            sendOnSignUp: true,
+            sendOnSignIn: false,
+            expiresIn: 900,
+            autoSignInAfterVerification: false,
+            sendVerificationEmail: async ({
+              user,
+              url,
+            }: {
+              user: { email: string };
+              url: string;
+            }) => config.sendEmail?.({ kind: 'verify', to: user.email, url }),
+          },
+        }
+      : {}),
     session: {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
@@ -47,6 +83,9 @@ export function createAuth(
     },
     advanced: {
       cookiePrefix: 'snapform',
+      ...(config.backgroundTask
+        ? { backgroundTasks: { handler: config.backgroundTask } }
+        : {}),
       useSecureCookies: origin.protocol === 'https:',
       defaultCookieAttributes: { httpOnly: true, sameSite: 'lax', path: '/' },
     },

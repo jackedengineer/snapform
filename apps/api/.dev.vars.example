@@ -1,0 +1,8 @@
+# Runtime only. Never put DATABASE_MIGRATION_URL here.
+DATABASE_URL="postgresql://snapform_runtime:replace@your-host.neon.tech/snapform?sslmode=require"
+BETTER_AUTH_SECRET="replace-with-at-least-32-random-bytes"
+BETTER_AUTH_URL="http://127.0.0.1:5173"
+RESEND_API_KEY="replace-with-a-domain-scoped-sending-key"
+EMAIL_FROM="Snapform <no-reply@jacked.dev>"
+# Keep local sends scoped to the explicitly approved owner address.
+AUTH_ALLOWED_RECIPIENT="your-approved-address@example.com"

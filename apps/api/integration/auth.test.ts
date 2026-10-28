@@ -102,4 +102,64 @@ describe('Better Auth with the real Neon/Drizzle schema', () => {
       await auth.api.signOut({ headers: sessionHeaders });
       expect(await auth.api.getSession({ headers: sessionHeaders })).toBeNull();
     }));
+  it('verifies email, consumes reset links once and revokes older sessions', async () =>
+    rolledBack(async (tx) => {
+      const messages: { kind: string; url: string }[] = [];
+      const auth = createAuth(tx, {
+        ...settings,
+        sendEmail: async (message) => {
+          messages.push(message);
+        },
+      });
+      const email = `${crypto.randomUUID()}@example.invalid`;
+      await auth.api.signUpEmail({
+        body: { email, password, name: 'Recovery QA', callbackURL: '/login' },
+        headers,
+      });
+      expect(messages).toHaveLength(1);
+      expect(messages[0].kind).toBe('verify');
+      const verified = await auth.handler(new Request(messages[0].url));
+      expect(verified.status).toBe(302);
+      expect(
+        new URL(verified.headers.get('location')!, settings.baseURL).pathname,
+      ).toBe('/login');
+      const signedIn = await auth.api.signInEmail({
+        body: { email, password },
+        headers,
+        returnHeaders: true,
+      });
+      const sessionHeaders = new Headers({
+        Cookie: signedIn.headers
+          .getSetCookie()
+          .map((value) => value.split(';')[0])
+          .join('; '),
+        Origin: settings.baseURL,
+      });
+      expect(
+        await auth.api.getSession({ headers: sessionHeaders }),
+      ).not.toBeNull();
+      await auth.api.requestPasswordReset({
+        body: { email, redirectTo: '/reset-password' },
+        headers,
+      });
+      expect(messages.at(-1)?.kind).toBe('reset');
+      const token = new URL(messages.at(-1)!.url).pathname.split('/').at(-1)!;
+      const newPassword = 'New-Synthetic-QA-passphrase-28';
+      await auth.api.resetPassword({ body: { token, newPassword }, headers });
+      expect(await auth.api.getSession({ headers: sessionHeaders })).toBeNull();
+      await expect(
+        auth.api.resetPassword({ body: { token, newPassword }, headers }),
+      ).rejects.toMatchObject({ body: { code: 'INVALID_TOKEN' } });
+      await expect(
+        auth.api.signInEmail({ body: { email, password }, headers }),
+      ).rejects.toMatchObject({ body: { code: 'INVALID_EMAIL_OR_PASSWORD' } });
+      expect(
+        (
+          await auth.api.signInEmail({
+            body: { email, password: newPassword },
+            headers,
+          })
+        ).user.emailVerified,
+      ).toBe(true);
+    }));
 });
