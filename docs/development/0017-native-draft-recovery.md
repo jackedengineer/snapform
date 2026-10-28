@@ -12,7 +12,7 @@ IndexedDB supplies ordered transactions without another library. Reads prune exp
 - Real in-app browser testing stopped both local services, edited the loaded application, observed the local-only save state, restarted services, reloaded and explicitly recovered the IndexedDB copy. Its original pending save completed against real Neon and survived another reload.
 - Two actual tabs produced one successful save and one conflict. The conflicting local version survived reload. Loading the server copy retained the alternative; that backup also survived another reload.
 - HTML-shaped text in a recovery title rendered literally, with zero image elements and no horizontal overflow at 375px.
-- Browser sign-out cancellation preserved the account/editor and recovery choices. Completing the destructive local-copy cleanup check is pending explicit approval; it is not claimed as verified here.
+- Browser sign-out cancellation preserved the account/editor and recovery choices. The later approved cleanup, cross-tab sign-out and fresh sign-in checks passed; see [the integration review](0018-autosave-browser-review.md).
 
 The cache is an aid to recovery, not a guarantee against browser eviction, disk failure or clearing site data. Fresh authentication still requires a connection; no offline application shell or service worker was added. There is no new runtime dependency.
 

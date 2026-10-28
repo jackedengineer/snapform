@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useForm, useStore } from '@tanstack/react-form';
 import type { Block } from '@snapform/contracts/form';
-import type { FormSnapshot, SaveDraft } from '@snapform/contracts/draft';
+import type { FormSnapshot } from '@snapform/contracts/draft';
 import { compileDefinition } from '@snapform/contracts/compile';
 import { can } from '@snapform/contracts/workspace';
 import { useAccountUser } from '../auth/AccountLayout';
-import { fetchForm, saveDraftRequest, FormRequestError } from './api';
+import { fetchForm } from './api';
+import { useDraftAutosave } from './use-draft-autosave';
 import { blockNames, newBlock, duplicateBlock } from './new-form';
 import { BlockInspector } from './BlockInspector';
 import { DraftRecovery } from './DraftRecovery';
@@ -50,56 +51,34 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   const { rules: initialRules, ...initialValues } = snapshot.definition;
   const [rules, setRules] = useState(initialRules);
   const [role, setRole] = useState(snapshot.role);
-  const [revision, setRevision] = useState(snapshot.revision),
-    [selected, setSelected] = useState<string | null>(
-      snapshot.definition.pages[0].blocks[0]?.id || null,
-    );
-  const [type, setType] = useState<Block['type']>('short-text'),
-    [conflict, setConflict] = useState(false),
-    [loading, setLoading] = useState(false),
+  const user = useAccountUser();
+  const autosave = useDraftAutosave(snapshot, user.id);
+  const ready = autosave.state !== null;
+  const status = autosave.state?.status || 'saved';
+  const saving = status === 'saving';
+  const conflict = status === 'conflict';
+  const revision = autosave.state?.record.revision || snapshot.revision;
+  const [selected, setSelected] = useState<string | null>(
+    snapshot.definition.pages[0].blocks[0]?.id || null,
+  );
+  const [type, setType] = useState<Block['type']>('short-text');
+  const [loading, setLoading] = useState(false),
     [loadError, setLoadError] = useState('');
   const [backup, setBackup] = useState<typeof snapshot.definition | null>(null);
-  const pending = useRef<SaveDraft | null>(null),
-    busy = useRef(false),
-    acknowledged = useRef(
-      JSON.stringify({ ...initialValues, rules: initialRules }),
-    );
   const editable = can(role, 'forms.write');
-  const mutation = useMutation({
-    mutationFn: (input: SaveDraft) =>
-      saveDraftRequest(snapshot.workspaceId, snapshot.id, input),
-  });
   const form = useForm({
     defaultValues: initialValues,
-    onSubmit: async ({ value }) => {
-      if (!editable || busy.current || conflict) return;
-      busy.current = true;
-      pending.current ||= {
-        operationId: crypto.randomUUID(),
-        expectedRevision: revision,
-        definition: structuredClone({ ...value, rules }),
-      };
-      const operation = pending.current;
-      try {
-        const result = await mutation.mutateAsync(operation);
-        if (result.currentRevision !== result.revision) {
-          setConflict(true);
-          return;
-        }
-        acknowledged.current = JSON.stringify(operation.definition);
-        pending.current = null;
-        setRevision(result.revision);
-      } catch (error) {
-        if (error instanceof FormRequestError && error.code === 'conflict')
-          setConflict(true);
-      } finally {
-        busy.current = false;
-      }
+    onSubmit: async () => {
+      await autosave.flush();
     },
   });
+  autosave.capture.current = () => ({ ...form.state.values, rules });
   const values = useStore(form.store, (state) => state.values);
   const definition = { ...values, rules };
-  const dirty = JSON.stringify(definition) !== acknowledged.current;
+  const dirty = status !== 'saved';
+  useEffect(() => {
+    if (editable && ready) autosave.edit({ ...values, rules });
+  }, [values, rules, editable, ready, autosave.edit]);
   const compilation = compileDefinition(definition);
   const blocks = definition.pages.flatMap((page) => page.blocks),
     block = blocks.find((item) => item.id === selected);
@@ -110,15 +89,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
     selectedPage?.blocks.findIndex((item) => item.id === selected) ?? -1;
   const answerCount = blocks.filter((item) => 'required' in item).length;
   const contentType = type === 'heading' || type === 'help';
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty]);
+
   function update(block: Block) {
     form.setFieldValue('pages', (pages) =>
       pages.map((page) => ({
@@ -184,14 +155,10 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
       );
       setRules(nextRules);
       setRole(latest.role);
-      setRevision(latest.revision);
-      acknowledged.current = JSON.stringify({
-        ...nextValues,
-        rules: nextRules,
-      });
-      pending.current = null;
-      setConflict(false);
-      mutation.reset();
+      if (
+        !autosave.accept(latest.revision, { ...nextValues, rules: nextRules })
+      )
+        throw new Error('Please wait for the current save, then try again.');
       setSelected(latest.definition.pages[0].blocks[0]?.id || null);
     } catch (error) {
       setLoadError(
@@ -220,7 +187,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
       >
         ← Back to forms
       </Link>
-      <fieldset disabled={mutation.isPending || loading}>
+      <fieldset disabled={loading || (editable && !ready)}>
         <div className="editor-header">
           <div>
             <p className="eyebrow">FORM DRAFT</p>
@@ -240,22 +207,30 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
               )}
             </form.Field>
             <p role="status" className="save-status" data-revision={revision}>
-              {mutation.isPending
-                ? 'Saving…'
-                : conflict
-                  ? 'Conflicting edits — your version is still here'
-                  : dirty
-                    ? 'Unsaved changes'
-                    : 'All changes saved'}
+              {!ready && editable
+                ? 'Preparing local recovery…'
+                : saving
+                  ? 'Saving…'
+                  : conflict
+                    ? 'Conflicting edits — your version is still here'
+                    : status === 'blocked'
+                      ? 'Saving paused — review the message below'
+                      : status === 'offline'
+                        ? autosave.state?.buffered
+                          ? 'Saved on this device — reconnect to sync'
+                          : 'Not saved — keep this tab open'
+                        : dirty
+                          ? 'Saving shortly…'
+                          : 'All changes saved'}
             </p>
           </div>
           {editable && (
             <button
               className="button primary compact-button"
               type="submit"
-              disabled={!dirty || conflict}
+              disabled={!dirty || conflict || saving || status === 'blocked'}
             >
-              {mutation.isPending ? 'Saving…' : 'Save changes'}
+              {saving ? 'Saving…' : 'Save now'}
               <span aria-hidden="true">↗</span>
             </button>
           )}
@@ -401,20 +376,65 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
           Viewer access. Ask an owner or editor to make changes.
         </p>
       )}
-      {mutation.isError && (
+      {(autosave.storageWarning || autosave.state?.storageError) && (
         <p role="alert" className="request-error">
-          {mutation.error.message}
+          {autosave.storageWarning ||
+            'Local recovery is unavailable. Keep this tab open until all changes are saved.'}
         </p>
       )}
-      {(conflict || mutation.isError) && (
-        <DraftRecovery loading={loading} onReload={() => void loadSaved()} />
+      {autosave.state?.message && (
+        <p role="alert" className="request-error">
+          {autosave.state.message}
+        </p>
       )}
-      {backup && (
+      {(conflict || status === 'blocked') && (
+        <DraftRecovery
+          loading={loading || saving}
+          onReload={() => void loadSaved()}
+        />
+      )}
+      {autosave.recoveries.length > 0 && (
+        <section className="definition-checks" aria-label="Local recovery">
+          <h2>Edits found on this device</h2>
+          <p>
+            Review a local copy before replacing your saved form. Older copies
+            may need conflict review.
+          </p>
+          <ul className="local-recovery-list">
+            {autosave.recoveries.map((record) => (
+              <li key={record.editorId}>
+                <button
+                  className="local-recovery-button"
+                  type="button"
+                  disabled={saving || loading}
+                  onClick={() => {
+                    const recovered = recoverDraft(form, record.definition);
+                    setRules(recovered.rules);
+                    void autosave.recover(record);
+                  }}
+                >
+                  <span>
+                    Recover local edit:{' '}
+                    {record.definition.title || 'Untitled form'}
+                  </span>
+                  <time dateTime={new Date(record.updatedAt).toISOString()}>
+                    Edited locally {new Date(record.updatedAt).toLocaleString()}
+                  </time>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {(backup || autosave.state?.record.backup) && (
         <button
           className="text-button"
           type="button"
+          disabled={saving || loading}
           onClick={() => {
-            const { rules: previousRules } = recoverDraft(form, backup);
+            const previous = backup || autosave.state?.record.backup;
+            if (!previous) return;
+            const { rules: previousRules } = recoverDraft(form, previous);
             setRules(previousRules);
             setBackup(null);
           }}

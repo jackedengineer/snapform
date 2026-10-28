@@ -123,6 +123,7 @@ export async function saveDraftRequest(
   workspaceId: string,
   id: string,
   input: SaveDraft,
+  signal?: AbortSignal,
 ) {
   const parsed = saveDraftSchema.safeParse(input);
   if (!parsed.success)
@@ -134,6 +135,7 @@ export async function saveDraftRequest(
     draftPath(workspaceId, id),
     {
       method: 'PUT',
+      signal,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(parsed.data),
     },
