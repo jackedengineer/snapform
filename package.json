@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/api && tsc --noEmit -p apps/web && tsc --noEmit -p packages/database",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/api && tsc --noEmit -p apps/web && tsc --noEmit -p packages/database && tsc --noEmit -p packages/contracts",
     "lint": "eslint apps packages scripts --max-warnings 0",
     "test:unit": "vitest run --config vitest.unit.config.ts",
     "test:api": "vitest run --config apps/api/vitest.config.ts",

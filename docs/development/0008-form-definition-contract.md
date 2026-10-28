@@ -1,0 +1,9 @@
+# Bounded form-definition contract
+
+28 October 2026. Shared strict contracts now describe nine answer types and heading/help content, stable UUIDs, typed constraints and page/card presentation. Drafts may start empty. The definition bounds are 50 answer fields, 10 pages, 20 options per choice field and 256 KiB of actual UTF-8 JSON; content has an additional 100-block cap. IDs are unique across pages, fields and options, so renamed labels never become identities. Arbitrary JavaScript, regex and unknown properties are rejected. Plain text is preserved for safe text rendering rather than interpreted as HTML.
+
+Numbers carry explicit unit metadata; native Intl currency data rejects unknown codes. Dates validate real ISO local dates, including leap years. Files cannot opt into AI reading. TypeScript now explicitly checks the contracts package and its tests, in addition to consuming application imports. Existing Zod and native APIs are sufficient; no dependency was added.
+
+Tests were written before implementation. Further negative tests first exposed acceptance of an unknown currency and file AI opt-in; both were corrected. The contract tests cover all types, malformed Unicode/nulls, unsupported keys, duplicate IDs, aggregate limits, choice constraints and multibyte size. Pure contracts have 100% measured coverage in this increment. A workerd test independently checks native Intl/Unicode behavior in the actual target runtime.
+
+This is an internal contract increment. It adds no visible builder or public collector yet and does not claim their browser gates. Rules/compiler, save revisions, publishing and private/public projections are separate subsequent increments. Existing workspace browser evidence remains in 0007. The source technical overview was corrected to match the user's one-database decision; no extra database was created.
