@@ -18,6 +18,7 @@ Established 28 October 2026 from the user's production, testing, native-first an
 | Types | Zero owned-source type errors; strict TS, no explicit any | `pnpm typecheck` |
 | Lint | Zero configured errors or warnings in owned source | `pnpm lint` |
 | Domain behavior | Focused tests must fail before new behavior and pass afterward | `pnpm test:unit` |
+| Database identity | Real restricted Neon login, rollback-only synthetic writes, privilege/session checks; no second database | `pnpm test:db`, `pnpm test:auth:integration` |
 | Boundary behavior | Actual workerd tests for expected/error/adversarial requests | `pnpm test:api` |
 | Core coverage | At least 90% lines/functions/statements and 85% branches in implemented pure contracts | `pnpm test:unit --coverage` |
 | Build | Web production build and API Worker dry-run bundle succeed | `pnpm build` |

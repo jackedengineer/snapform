@@ -12,6 +12,9 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      DATABASE_URL: ${{ secrets.SNAPFORM_DATABASE_URL }}
+      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa

@@ -1,6 +1,6 @@
 # Technical foundation
 
-**Accepted platform:** 28 October 2026. React/TanStack Start frontends and a TypeScript/Express 5 API run on Cloudflare Workers. Neon PostgreSQL/Drizzle, private R2 and Razorpay remain selected. Superseded framework/deployment proposals are historical records only. Read [ADR-012](decisions/ADR-012-express-workers-native-first.md), [V1 scope](11-v1-scope-and-delivery.md) and the root quality contract.
+**Accepted platform:** 28 October 2026. React/TanStack Start frontends and a TypeScript/Express 5 API run on Cloudflare Workers. Neon PostgreSQL/Drizzle, private R2 and Razorpay remain selected. Superseded framework/deployment proposals are historical records only. Read [ADR-012](decisions/ADR-012-express-workers-native-first.md), [V1 scope](11-v1-scope-and-delivery.md) and the root quality contract. [ADR-013](decisions/ADR-013-shared-database-and-small-commits.md) records the later single-database and low-traffic decisions.
 
 ## 1. Architecture
 
@@ -12,7 +12,7 @@ flowchart LR
   U[Respondent] --> C[Separate Start collector / CDN assets]
   W --> A[Express API Worker]
   C --> A
-  A --> H[Hyperdrive / pg / Drizzle]
+  A --> H[Request-scoped Neon driver / Drizzle]
   H --> P[(Neon Postgres)]
   A --> R[Private R2 quarantine / clean objects]
   P --> O[Transactional outbox]
@@ -33,7 +33,7 @@ Business commands go through the API/domain layer; Start server functions do not
 | Forms/server state | TanStack Form and Query | Input and remote state; shared engine owns canonical rules; no broad global state for simple components |
 | Shared validation | Zod with explicit request/output schemas | Unknown keys/type/size constraints at boundaries; no arbitrary customer code/schema compilation |
 | API | Express 5 via `cloudflare:node` HTTP bridge | Small routers and native headers/URL/crypto/streams; centralized sanitized errors and explicit output DTOs |
-| Database | Neon managed Postgres, Drizzle ORM/Kit, `pg` through Hyperdrive | Request-local connection; same connection for interactive transactions; query caching off for authoritative data |
+| Database | Neon managed Postgres 18, Drizzle ORM/Kit, native WebSocket Neon driver | One shared database as requested; request-local pool/transactions; Hyperdrive deferred until measured need |
 | Auth | Better Auth + official Drizzle adapter on Neon | Verification/recovery/MFA/revocation and origin/cookie tests precede private features; do not invent auth |
 | Object storage | Private Cloudflare R2 | Native bindings; short-lived capabilities, quarantine and authorized retrieval; lightweight signing adapter only if required |
 | Jobs | Neon outbox + Cloudflare Queues + Cron | Atomic DB intent then retryable queue publish; dedupe/lease/DLQ/reconciliation; no polling daemon or durable `waitUntil` assumption |
@@ -53,7 +53,7 @@ Every new dependency records purpose, native alternative, license, exact version
 
 Use separate local/staging/production identities, keys, Neon branches/roles, R2 buckets, queues and billing modes. No production data in previews. No credentials in Git; example environment files contain names/placeholders only. The API boot path must fail safely when a required integration is unavailable; never replace production persistence with an in-memory fallback.
 
-Database: use a non-owner role with no BYPASSRLS. Set verified workspace context transaction-locally on the same client as all tenant queries; authorize first. Hyperdrive caching is disabled for identity, collection and commerce. Always end request-local connections. Migrations run once as explicit release jobs using separate credentials, not at every Worker startup. Neon remains the primary store; D1/Durable Objects do not become competing business databases.
+Database: use a non-owner role with no BYPASSRLS. Set verified workspace context transaction-locally on the same client as all tenant queries; authorize first. The initial connection uses the Neon driver directly; Hyperdrive is deferred, and any future cache must remain off for authoritative data. Always end request-local connections. Migrations run once as explicit release jobs using separate credentials, not at every Worker startup. Neon remains the primary store; D1/Durable Objects do not become competing business databases.
 
 Files: R2 objects stay private, reference an owned session/response and remain pending until checked against limits and scanner outcome. Never mark clean on scanner outage. A maintained ClamAV image may run only as an isolated Cloudflare container, not inside a Worker. If that workload cannot meet requirements, stop file-feature release and record the issue; do not silently change provider. Protected recovery copies use a separate Cloudflare account/bucket/identity with tested retention locks; database history does not include object bytes. Same-provider outage recovery is an explicit limitation, not a promised independent failover.
 
@@ -102,7 +102,7 @@ Versioned fixtures must run in browser and server and generate identical normali
 
 Tenant-aware foreign keys prevent a response referencing another workspace's form version. JSONB holds variable definitions/answers; relational columns index workspace, form, version, status and timestamps. No table per customer form. Index `(workspace_id, form_id, created_at, id)` for cursor queries; add projections only after query evidence.
 
-RLS is defense in depth, not the sole API authorization. Use dedicated non-owner roles without BYPASSRLS; after session/membership verification set tenant context transaction-locally on the same connection as tenant queries. Never retain tenant context across pooled requests. Auth/session tables have separately scoped grants, since login cannot depend on an already selected workspace. Migration/admin credentials never enter browser bundles or ordinary request paths. Workers validate outbox/event/tenant relationships; queue payloads carry IDs, not answer content. Hyperdrive query caching is off for these operations. Test cross-tenant access and pool reuse under both container and Worker transports. [PostgreSQL RLS](https://www.postgresql.org/docs/current/ddl-rowsecurity.html).
+RLS is defense in depth, not the sole API authorization. Use dedicated non-owner roles without BYPASSRLS; after session/membership verification set tenant context transaction-locally on the same connection as tenant queries. Never retain tenant context across pooled requests. Auth/session tables have separately scoped grants, since login cannot depend on an already selected workspace. Migration/admin credentials never enter browser bundles or ordinary request paths. Workers validate outbox/event/tenant relationships; queue payloads carry IDs, not answer content. Any future Hyperdrive cache stays off for these operations. Test cross-tenant access and transaction cleanup through the Worker transport. [PostgreSQL RLS](https://www.postgresql.org/docs/current/ddl-rowsecurity.html).
 
 ## 6. API and reliability contracts
 
@@ -175,7 +175,7 @@ WCAG is a conformance target requiring component and journey evidence; using a c
 - File quarantine and scanner isolated from API privileges. Outage means pending, never bypass. Threat tests include disguised files, parser exhaustion, stale signed URLs and deletion races.
 - Keep content out of metric dimensions; no session replay on respondent pages. Essential transactional counters use first-party server events. Public form owner is responsible for collection purpose/notice; platform supplies tools and contract review, not automatic compliance.
 - Backups: Neon plan with configured PITR history plus protected exports; private file copies hourly with content hashes/version manifest; quarterly timed restore and prelaunch drill; restore into isolated environment; reapply deletions before opening traffic. RPO/RTO promises require actual measured procurement and drill results.
-- Separate dev/staging/production identities, data, keys and billing. Previews never use customer data. Production migrations use expand/contract; app rollback must tolerate previous and new schema. Backups do not replace a reversible migration plan.
+- The user explicitly selected one shared development/production database; it is a shared trust boundary. Automated synthetic writes must roll back, and previews must not read customer content as test fixtures. Keep migration/runtime privileges separate and provider billing in test mode during development. Production migrations use expand/contract; app rollback must tolerate previous and new schema. Backups do not replace a reversible migration plan.
 
 ## 10. Verification and release evidence
 
@@ -208,7 +208,7 @@ tests/load/              k6 profiles
 docs/                    Product/technical/operating records
 ```
 
-Implemented scripts: `pnpm dev`, `pnpm types:generate`, `pnpm check:fast`, `pnpm test:unit`, `pnpm test:api`, `pnpm test:preview`, `pnpm test:dev-reload`, `pnpm build`, `pnpm check:bundle` and `pnpm check`. Install with `pnpm install --frozen-lockfile`. The production HTTP smoke test verifies SSR/CSP nonces and the actual web → Express service binding. Database, AI, load and automated whole-product browser scripts will be added with their implemented capabilities; they do not exist yet. Migration runs are explicit release jobs, never API startup. See [slice 1 evidence](development/0001-workers-intake-validation.md).
+Implemented scripts: `pnpm dev`, `pnpm types:generate`, `pnpm check:fast`, `pnpm test:unit`, `pnpm test:api`, `pnpm test:preview`, `pnpm test:dev-reload`, `pnpm build`, `pnpm check:bundle` and `pnpm check`. Install with `pnpm install --frozen-lockfile`. The production HTTP smoke test verifies SSR/CSP nonces and the actual web → Express service binding. Database scripts now include `pnpm db:generate`, `pnpm db:migrate`, `pnpm db:bootstrap`, `pnpm test:db` and `pnpm test:auth:integration`. AI, load and automated whole-product browser scripts remain future capabilities. Migration runs are explicit release jobs, never API startup. See [slice 1 evidence](development/0001-workers-intake-validation.md).
 
 ## 12. Scale without speculative architecture
 

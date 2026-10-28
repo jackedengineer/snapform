@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "integration/**/*.ts",
+    "*.config.ts",
+    "worker-configuration.d.ts"
+  ]
+}

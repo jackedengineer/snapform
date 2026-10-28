@@ -4,3 +4,6 @@ packages:
 onlyBuiltDependencies:
   - workerd
   - esbuild
+# Drizzle Kit's legacy transform helper must not retain the vulnerable esbuild server.
+overrides:
+  '@esbuild-kit/core-utils>esbuild': 0.25.12

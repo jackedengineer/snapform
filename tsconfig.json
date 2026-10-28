@@ -13,11 +13,6 @@
     "resolveJsonModule": true,
     "types": ["node", "vite/client", "@cloudflare/vitest-plugin/types"]
   },
-  "include": [
-    "apps/**/*.ts",
-    "apps/**/*.tsx",
-    "packages/**/*.ts",
-    "*.config.ts"
-  ],
+  "include": ["*.config.ts"],
   "exclude": ["**/dist", "**/node_modules"]
 }

@@ -24,7 +24,7 @@ This blueprint critically reviews the supplied 37-page research report and conve
 14. [V1 scope and incremental delivery contract](docs/11-v1-scope-and-delivery.md)
 15. [Accepted Express/Workers decision](docs/decisions/ADR-012-express-workers-native-first.md)
 
-Foundation 0.2 uses self-hosted DM Sans, warm ivory/ink/cobalt colors, generous display typography and restrained, optional motion. The revised application stack uses TanStack Start/Router/Query/Form, TypeScript/Express, Neon/Drizzle, private R2 and Razorpay. Cloudflare is the selected deployment platform, with no alternate-cloud fallback. Better Auth is the proposed identity replacement.
+Foundation 0.2 uses self-hosted DM Sans, warm ivory/ink/cobalt colors, generous display typography and restrained, optional motion. The revised application stack uses TanStack Start/Router/Query/Form, TypeScript/Express, Neon/Drizzle, private R2 and Razorpay. Cloudflare is the selected deployment platform, with no alternate-cloud fallback. Better Auth provides the identity foundation.
 
 The [visual design specimen](design/system.html) is a local, interactive design reference with working controls and responsive layouts. It demonstrates the proposed visual language and review states; it is not the product. [Machine-readable design tokens](design/tokens.json) and [CSS tokens](design/tokens.css) accompany it.
 
@@ -45,13 +45,19 @@ Primary input: `/Users/jackedengineer/Downloads/Typeform_Jotform_Formless_Resear
 
 ## Status
 
-The first local intake/review slice is implemented with real Express Worker validation; the market V1 is not shipped. Local framework probes do not prove hosted Neon/auth/billing integration. Product demand, conversion improvement, AI accuracy, SLOs, and unit economics have **not** been validated. No vendor accounts were provisioned, paid services purchased, or external customer messages sent.
+The first local intake/review slice is implemented with real Express Worker validation; the market V1 is not shipped. Local framework probes do not prove hosted Neon/auth/billing integration. Product demand, conversion improvement, AI accuracy, SLOs, and unit economics have **not** been validated. One Neon database and a scoped Resend sending key are configured. Auth factory tests use the real restricted Neon login, including inside workerd. Public account UI and email journeys remain in progress; no paid services were purchased or customer messages sent.
 
 
 ## Run the first slice
 
-Use Node 24.14.0 and pnpm 10.34.5. Run `pnpm install --frozen-lockfile`, `pnpm types:generate`, then `pnpm dev`. Open http://127.0.0.1:5173. A native Node launcher runs the Wrangler API and Vite frontend locally through the API service binding; no cloud credentials are required for this validation preview.
+Use Node 24.14.0 and pnpm 10.34.5. Run `pnpm install --frozen-lockfile`, `pnpm types:generate`, then `pnpm dev`. Open http://127.0.0.1:5173. A native Node launcher runs the Wrangler API and Vite frontend through the API service binding. For database/auth checks, configure the private migration/runtime files described below.
 
-`pnpm check` runs generated types, strict type/lint checks, core coverage, workerd tests, production builds, bundle budgets and isolated production HTTP and development reload checks. Stop existing servers on ports 5173/8787 before the isolated checks. The reload check briefly modifies/restores API middleware to verify real handler replacement and refuses to overwrite a concurrent edit. Run `pnpm audit --prod --audit-level high` as well. `pnpm git:hooks` enables the committed local pre-commit checks. The CI workflow repeats these checks; it has not run on a hosted remote yet.
+`pnpm check` runs generated types, strict type/lint checks, core coverage, workerd tests, real rollback-only database/auth tests, production builds, bundle budgets and isolated production HTTP and development reload checks. Stop existing servers on ports 5173/8787 before the isolated checks. The reload check briefly modifies/restores API middleware to verify real handler replacement and refuses to overwrite a concurrent edit. Run `pnpm audit --prod --audit-level high` as well. `pnpm git:hooks` enables the committed local pre-commit checks. The CI workflow repeats these checks; it has not run on a hosted remote yet.
 
 This preview checks four details and supports direct editing. It does **not** create accounts, save responses, upload files, bill customers or call AI. Those remain in the [ordered delivery contract](docs/11-v1-scope-and-delivery.md). See [first-slice verification and browser evidence](docs/development/0001-workers-intake-validation.md).
+
+## Database and identity foundation
+
+Use the single Neon `snapform` database for development and production, as requested. Keep the owner connection in ignored root `.env` as `DATABASE_MIGRATION_URL`; never deploy it. Apply checked-in migrations with `pnpm db:migrate`. Run `pnpm db:bootstrap` once to save the restricted runtime login and auth secret in ignored `apps/api/.dev.vars` (mode 0600). Existing configuration is preserved. All automated synthetic identity writes roll back; no test database, extra branch or table reset is used.
+
+See [foundation evidence](docs/development/0002-neon-auth-foundation.md) and [ADR-013](docs/decisions/ADR-013-shared-database-and-small-commits.md). The shared database is a shared trust boundary. Hosted CI still needs restricted database/auth secrets; no remote has been configured.

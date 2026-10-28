@@ -1,0 +1,18 @@
+{
+  "name": "@snapform/database",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/client.ts",
+    "./schema": "./src/schema.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.2.0",
+    "drizzle-orm": "0.45.4"
+  },
+  "scripts": {
+    "migrate": "node --env-file-if-exists=../../.env src/migrate.ts",
+    "test": "node --env-file-if-exists=../../apps/api/.dev.vars ../../node_modules/vitest/vitest.mjs run --config vitest.config.ts",
+    "bootstrap": "node --env-file-if-exists=../../.env src/bootstrap.ts"
+  }
+}
