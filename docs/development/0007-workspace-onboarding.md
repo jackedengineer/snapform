@@ -1,0 +1,18 @@
+# Workspace HTTP and onboarding evidence
+
+28 October 2026. Verified users can create and list their own workspaces through the same-origin Express Worker and Neon transaction. The server derives identity from Better Auth, repeats strict validation and returns only a workspace projection. JSON bodies are bounded to 16 KiB; unsafe cross-origin methods are denied before dispatch. Client retries keep one operation UUID while the form remains mounted; a duplicate with different content conflicts. A page reload during an uncertain creation does not preserve that UUID, which remains a recovery limitation.
+
+The native form uses TanStack Form and Query, explicit loading/failure states, disabled pending actions and authoritative confirmation. Private caches clear on logout. No third-party dependencies were added. Workspace entries currently display saved details; invitations, workspace navigation and forms are subsequent features.
+
+## Actual browser checks
+
+- Normal user: signed into the approved verified QA identity, saw an empty workspace state, submitted an empty name and received inline validation, created “Snapform QA Agency”, saw owner confirmation, and reloaded to retrieve the persisted record from Neon. The production build was then reloaded and displayed both owned QA records.
+- Power user: exercised the 80-character input limit, native segment selection, repeated submit by double-click, keyboard focus and cancel. A double-click created one additional workspace, not two. A browser reproduction found that initial focus ran while a hydration guard still disabled the field. Since this form only mounts after a client interaction, the redundant guard was removed; the same browser reproduction then focused the name field. Tab moved to the segment control. A second production-browser reproduction found that blurring an empty name inserted an error and moved Cancel between pointer-down and click, requiring two clicks. Reserving the inline-error line fixes that layout shift; the regression check clicks Cancel directly from an empty focused name and requires the form to close on the first click, returning focus to New workspace.
+- Adversarial input: created a synthetic workspace with literal HTML-shaped text and Unicode. It remained text after persistence and reload; the list contained zero injected image elements. Owned workerd requests rejected forged/missing cookies, oversized/non-JSON bodies and foreign origins on POST/PUT/PATCH/DELETE. Cross-user isolation and viewer denial were checked with rollback-only real Neon tests, not claimed as separate browser identities.
+- Responsive checks: 320, 375, 768, 1024 and 1440px; document width matched viewport, no horizontal overflow. The visible primary button measured 48px high and sign-out 44px. Manual keyboard checks passed; screen-reader and real-device review remain release gates. No captured warning/error console entries in this journey.
+
+## Verification
+
+66 unit tests, 36 workerd tests, 10 restricted-database tests and 3 auth integration tests passed. Implemented pure-contract coverage was 100%; it is not whole-product coverage. Formatting, strict types, lint, production build, SSR/CSP/service-binding checks, two API reloads/three auth cleanup cycles and production dependency audit passed. Initial emitted client JS: 167.44 KiB gzip; CSS: 3.67 KiB; primary font: 36.07 KiB. API dry-run: 707.11 KiB gzip. The existing upstream CSS sourcemap warning remains documented; no check was suppressed.
+
+Evidence: [desktop](../evidence/11-workspace-desktop.png), [mobile](../evidence/12-workspace-mobile.png). Local production-build evidence does not establish a hosted deployment, production latency, independent security review or complete V1 readiness.

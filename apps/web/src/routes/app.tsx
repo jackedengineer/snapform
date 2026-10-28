@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authPost, currentUser } from '../features/auth/api';
+import { WorkspaceHome } from '../features/workspaces/WorkspaceHome';
 export const Route = createFileRoute('/app')({
   head: () => ({
     meta: [
       { name: 'robots', content: 'noindex, nofollow' },
-      { title: 'Your account · Snapform' },
+      { title: 'Your workspaces · Snapform' },
     ],
   }),
   component: Account,
@@ -70,10 +71,7 @@ function Account() {
             <p className="intro-copy">
               You’re signed in as {profile.data.email}.
             </p>
-            <p>
-              Your account is ready. Workspace setup is the next development
-              slice.
-            </p>
+            <WorkspaceHome key={profile.data.id} userId={profile.data.id} />
             {logout.isError && (
               <p role="alert" className="request-error">
                 {logout.error.message}

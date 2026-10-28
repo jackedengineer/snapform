@@ -13,7 +13,10 @@ export function getRouter() {
       ? context.nonce
       : undefined;
   const queryClient = new QueryClient({
-    defaultOptions: { mutations: { retry: false } },
+    defaultOptions: {
+      queries: { gcTime: 0, retry: false },
+      mutations: { retry: false, gcTime: 0 },
+    },
   });
   return createRouter({
     routeTree,

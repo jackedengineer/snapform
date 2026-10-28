@@ -655,3 +655,142 @@ dd small {
   align-items: center;
   min-height: 44px;
 }
+.workspace-section {
+  margin-top: 56px;
+}
+.workspace-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.workspace-heading h2 {
+  margin-bottom: 0;
+}
+.workspace-heading .eyebrow {
+  margin-top: 0;
+  color: var(--text-secondary);
+}
+.compact-button {
+  width: auto;
+  flex-shrink: 0;
+}
+.workspace-empty {
+  padding: 48px 32px;
+  border: 1px dashed var(--border-control);
+  border-radius: 12px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.workspace-empty h3 {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+.workspace-empty p {
+  max-width: 360px;
+  margin: 8px auto 0;
+}
+.empty-symbol {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  background: var(--brand-lime);
+  border-radius: 12px;
+  margin: 0 auto;
+  font-size: 28px;
+  color: var(--text-primary);
+}
+.workspace-create {
+  border: 1px solid var(--border-default);
+  background: var(--surface-panel);
+  border-radius: 12px;
+  padding: 28px;
+  margin-bottom: 24px;
+}
+.workspace-create h3 {
+  font-size: 23px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+  margin: 0 0 8px;
+}
+.workspace-create .field-error {
+  display: block;
+  min-height: 18px;
+}
+.workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.workspace-confirmation {
+  background: var(--brand-lime);
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+.workspace-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  background: var(--surface-panel);
+}
+.workspace-list li {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid var(--border-default);
+}
+.workspace-list li:last-child {
+  border-bottom: 0;
+}
+.workspace-list h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 550;
+}
+.workspace-list p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+.workspace-monogram {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  background: var(--brand-lime);
+  border-radius: 10px;
+  font-size: 22px;
+}
+.workspace-role {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+@media (max-width: 600px) {
+  .workspace-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .workspace-create {
+    padding: 24px 20px;
+  }
+  .workspace-list li {
+    padding: 20px;
+  }
+  .workspace-role {
+    display: none;
+  }
+}
