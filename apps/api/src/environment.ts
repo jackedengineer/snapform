@@ -6,4 +6,5 @@ export interface AuthEnvironment {
   EMAIL_FROM?: string;
   AUTH_ALLOWED_RECIPIENT?: string;
   AUTH_RATE_LIMIT: RateLimit;
+  WRITE_RATE_LIMIT: RateLimit;
 }

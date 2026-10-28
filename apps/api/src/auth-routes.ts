@@ -98,6 +98,14 @@ async function handleAuth(
         return;
       }
       const { id, name, email } = session.user;
+      if (
+        ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) &&
+        !(await settings.WRITE_RATE_LIMIT.limit({ key: id })).success
+      ) {
+        res.setHeader('Retry-After', '60');
+        res.status(429).json({ error: { code: 'RATE_LIMITED' } });
+        return;
+      }
       await handlePrivateRequest(req, res, db, { id, name, email });
     } else {
       await toNodeHandler(auth)(req, res);

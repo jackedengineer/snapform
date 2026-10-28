@@ -1,0 +1,9 @@
+# Private form HTTP boundary
+
+28 October 2026. Verified account sessions can list/create forms at `/api/v1/workspaces/:workspaceId/forms` and read/update the current draft at `/api/v1/workspaces/:workspaceId/forms/:formId/draft`. The API derives actor identity from Better Auth and repeats validation/authorization. POST uses the caller’s stable creation UUID; PUT requires an operation UUID and expected revision. Responses use explicit strict DTOs. Cursors preserve database precision but convey no authority; every page still verifies workspace membership.
+
+JSON authoring bodies are bounded to 300,000 bytes, with the definition’s separate 256 KiB limit. Non-JSON, unsupported encodings and foreign origins are rejected. Native Cloudflare WRITE_RATE_LIMIT permits 120 verified-user mutations per minute; Retry-After is returned on rejection. It is an approximate edge guard, not a transactional usage/billing quota. Auth attempts retain their separate 20/minute guard. No dependency was added.
+
+Forty-one actual workerd tests pass. A bounded native HTTP probe signed in only as the owned QA identity, then verified 422 for a forged actor field, 409 for stale/identity-reused operations, 404 for a wrong workspace/form pair, 422 for an invalid cursor, 413 for an oversized body and 403 for a foreign origin. Reading afterward confirmed the revision was unchanged; the probe session was revoked. No auth capability or raw provider diagnostic was logged, and no email was sent by that sign-in probe. Cross-user/viewer isolation is separately tested through rollback-only restricted Neon transactions.
+
+The linked creator screens are delivered in the subsequent route integration slice. This endpoint work does not create a public collector, immutable publication or submitted response. Those release gates remain pending.
