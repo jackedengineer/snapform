@@ -1,0 +1,47 @@
+{
+  "name": "snapform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=24.14.0 <25"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint apps packages scripts --max-warnings 0",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:api": "vitest run --config apps/api/vitest.config.ts",
+    "test": "pnpm test:unit --coverage && pnpm test:api",
+    "build": "pnpm --filter @snapform/web build && pnpm --filter @snapform/api build",
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "check:fast": "pnpm format:check && pnpm typecheck && pnpm lint",
+    "check": "pnpm types:generate && pnpm check:fast && pnpm test && pnpm build && pnpm check:bundle && pnpm test:preview && pnpm test:dev-reload",
+    "git:hooks": "git config core.hooksPath .githooks",
+    "types:generate": "pnpm --filter @snapform/api types && wrangler types --config apps/web/wrangler.jsonc apps/web/worker-configuration.d.ts",
+    "test:preview": "node scripts/test-preview.mjs",
+    "format": "prettier --write apps packages scripts .github/workflows package.json tsconfig.json vitest.unit.config.ts eslint.config.mjs pnpm-workspace.yaml .prettierrc.json",
+    "format:check": "prettier --check apps packages scripts .github/workflows package.json tsconfig.json vitest.unit.config.ts eslint.config.mjs pnpm-workspace.yaml .prettierrc.json",
+    "test:dev-reload": "node scripts/test-dev-reload.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.65.0",
+    "@cloudflare/vitest-plugin": "1.4.9",
+    "@eslint/js": "10.0.1",
+    "@types/express": "5.0.6",
+    "@types/node": "24.10.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.1.2",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.13.0",
+    "globals": "17.4.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
+    "vitest": "5.0.5",
+    "wrangler": "4.154.0"
+  }
+}

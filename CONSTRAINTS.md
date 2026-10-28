@@ -14,6 +14,7 @@ Established 28 October 2026 from the user's production, testing, native-first an
 
 | Dimension | Rule | Check |
 |---|---|---|
+| Formatting | Consistent formatting in new source/config, without generated-file edits | `pnpm format:check` |
 | Types | Zero owned-source type errors; strict TS, no explicit any | `pnpm typecheck` |
 | Lint | Zero configured errors or warnings in owned source | `pnpm lint` |
 | Domain behavior | Focused tests must fail before new behavior and pass afterward | `pnpm test:unit` |

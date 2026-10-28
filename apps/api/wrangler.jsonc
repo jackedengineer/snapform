@@ -1,0 +1,9 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "snapform-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "send_metrics": false,
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@snapform/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local --ip 127.0.0.1 --port 8787 --inspector-port 9230",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "types": "wrangler types worker-configuration.d.ts"
+  },
+  "dependencies": {
+    "@snapform/contracts": "workspace:*",
+    "express": "5.3.0"
+  }
+}

@@ -15,7 +15,7 @@ This workspace began without Git. The initial commit preserves existing research
 
 ## Development cycle
 
-1. Select the next bounded task and acceptance criteria.
+1. Select the next bounded task and acceptance criteria. Run `pnpm format` for consistent source/config formatting.
 2. Write a failing behavior/abuse test, then the simplest implementation.
 3. Test the real Worker API and build the application.
 4. In the browser, complete the feature as a normal user, power user and adversarial user; use local/staging synthetic data.

@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+git diff --cached --check
+if git diff --cached --name-only | rg -q '(\.(ts|tsx|mjs)$|package\.json$|pnpm-lock\.yaml$)'; then
+  pnpm check:fast
+fi

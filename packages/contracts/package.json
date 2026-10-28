@@ -1,0 +1,11 @@
+{
+  "name": "@snapform/contracts",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/brief.ts"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  }
+}
