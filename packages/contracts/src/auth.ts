@@ -8,14 +8,21 @@ export const password = z
   .min(12, 'Use at least 12 characters.')
   .max(128, 'Use no more than 128 characters.');
 export const signupSchema = z.strictObject({
-  name: z.string().trim().min(1, 'Enter your name.').max(96),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Enter your name.')
+    .max(96, 'Use no more than 96 characters.'),
   email,
   password,
   callbackURL: z.literal('/login').optional(),
 });
 export const loginSchema = z.strictObject({
   email,
-  password: z.string().min(1).max(128),
+  password: z
+    .string()
+    .min(1, 'Enter your password.')
+    .max(128, 'Use no more than 128 characters.'),
 });
 export const authBodies = {
   'sign-up/email': signupSchema,

@@ -1,7 +1,10 @@
 import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
-    include: ['packages/contracts/**/*.test.ts'],
+    include: [
+      'packages/contracts/**/*.test.ts',
+      'apps/web/src/features/auth/api.test.ts',
+    ],
     allowOnly: false,
     coverage: {
       provider: 'v8',
