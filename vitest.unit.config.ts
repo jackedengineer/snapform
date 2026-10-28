@@ -19,6 +19,7 @@ export default defineConfig({
         'packages/contracts/src/rules.ts',
         'packages/contracts/src/compile.ts',
         'packages/contracts/src/evaluate.ts',
+        'packages/contracts/src/draft.ts',
       ],
       reporter: ['text', 'json-summary'],
       thresholds: { lines: 90, functions: 90, statements: 90, branches: 85 },
