@@ -77,7 +77,7 @@ export default {
   ) {
     const origin = request.headers.get('origin');
     if (
-      request.method === 'POST' &&
+      !['GET', 'HEAD', 'OPTIONS'].includes(request.method) &&
       (request.headers.get('sec-fetch-site') === 'cross-site' ||
         (origin && origin !== new URL(request.url).origin))
     ) {

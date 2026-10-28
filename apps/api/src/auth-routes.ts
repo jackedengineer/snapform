@@ -1,19 +1,35 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { Router } from 'express';
+import { Router, json } from 'express';
 import type { Request, Response } from 'express';
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
 import { openDatabase } from '@snapform/database';
 import { createAuth } from './auth.ts';
 import { makeAuthMailer } from './email.ts';
 import type { AuthEnvironment } from './environment.ts';
+import { handleWorkspaceRequest, workspacePath } from './workspaces.ts';
 
 export const requestScope = new AsyncLocalStorage<{
   environment: Env & AuthEnvironment;
   context: ExecutionContext;
 }>();
 export const authRoutes = Router();
+authRoutes.post(
+  workspacePath,
+  (req, res, next) => {
+    if (!req.is('application/json')) {
+      res.status(415).json({ error: { code: 'JSON_REQUIRED' } });
+      return;
+    }
+    next();
+  },
+  json({ limit: 16384, strict: true, inflate: false }),
+);
 authRoutes.use(async (req, res, next) => {
-  if (!(req.path.startsWith('/api/auth/') || req.path === '/api/v1/me'))
+  if (!(
+    req.path.startsWith('/api/auth/') ||
+    req.path === '/api/v1/me' ||
+    req.path === workspacePath
+  ))
     return next();
   const scope = requestScope.getStore();
   if (!scope) throw new Error('Request context is required.');
@@ -45,7 +61,10 @@ async function handleAuth(
     res.status(405).json({ error: { code: 'METHOD_NOT_ALLOWED' } });
     return;
   }
-  if (req.path === '/api/v1/me' && !req.headers.cookie) {
+  if (
+    (req.path === '/api/v1/me' || req.path === workspacePath) &&
+    !req.headers.cookie
+  ) {
     res.status(401).json({ error: { code: 'UNAUTHENTICATED' } });
     return;
   }
@@ -87,7 +106,7 @@ async function handleAuth(
       },
       backgroundTask: (promise) => scope.context.waitUntil(promise),
     });
-    if (req.path === '/api/v1/me') {
+    if (req.path === '/api/v1/me' || req.path === workspacePath) {
       const session = await auth.api.getSession({
         headers: fromNodeHeaders(req.headers),
       });
@@ -96,7 +115,9 @@ async function handleAuth(
         return;
       }
       const { id, name, email } = session.user;
-      res.json({ user: { id, name, email } });
+      if (req.path === workspacePath)
+        await handleWorkspaceRequest(req, res, db, id);
+      else res.json({ user: { id, name, email } });
     } else {
       await toNodeHandler(auth)(req, res);
     }

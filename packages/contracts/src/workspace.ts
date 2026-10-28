@@ -32,3 +32,13 @@ export const createWorkspaceSchema = z.strictObject({
   segment: z.enum(['agency', 'coach', 'consultant', 'startup']),
 });
 export type CreateWorkspace = z.infer<typeof createWorkspaceSchema>;
+export const workspaceSchema = createWorkspaceSchema.extend({
+  role: roleSchema,
+});
+export const workspaceListSchema = z.strictObject({
+  workspaces: z.array(workspaceSchema).max(100),
+});
+export const workspaceCreatedSchema = z.strictObject({
+  workspace: workspaceSchema,
+});
+export type Workspace = z.infer<typeof workspaceSchema>;
