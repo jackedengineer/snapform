@@ -16,6 +16,7 @@ export default defineConfig({
         'packages/contracts/src/text.ts',
         'packages/contracts/src/form.ts',
         'packages/contracts/src/answers.ts',
+        'packages/contracts/src/rules.ts',
       ],
       reporter: ['text', 'json-summary'],
       thresholds: { lines: 90, functions: 90, statements: 90, branches: 85 },

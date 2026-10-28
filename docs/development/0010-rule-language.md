@@ -1,0 +1,7 @@
+# Bounded rule language
+
+28 October 2026. Definitions now include explicit endings, a default ending identity and up to 30 typed rules. Conditions support answered/unanswered, typed comparisons, choice membership and AND/OR/NOT. Expression depth is at most four; a boolean group has at most eight children. A finite Zod schema rejects deeper structures before recursive interpretation. A 10,000-level adversarial input was rejected in both unit tests and actual workerd, without stack overflow.
+
+Actions are limited to field applicability, forward page navigation and selecting an ending. Priority is explicit. Arbitrary code, side effects, formulas and payment/authorization actions are not part of the language. A field with one show rule is applicable only when that condition matches; ordinary fields default to applicable. Navigation defaults to the next page and eventually the default ending; the first matching navigation rule by priority wins. Semantic dependency/type/priority checks and effective-answer evaluation are subsequent compiler/engine increments.
+
+No existing published definitions need migration because authoring/publication is not yet implemented. Definition identities now include endings and rules in their uniqueness check, and all content counts toward the existing UTF-8 byte cap. The builder and collector browser gates remain pending; this is an internal language contract, not a shipped editor.

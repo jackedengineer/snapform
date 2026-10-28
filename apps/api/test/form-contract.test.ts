@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { blockSchema } from '@snapform/contracts/form';
 import { decodeAnswer } from '@snapform/contracts/answers';
+import { conditionSchema } from '@snapform/contracts/rules';
 
 it('validates native currency and Unicode contracts inside workerd', () => {
   const value = {
@@ -28,4 +29,9 @@ it('validates native currency and Unicode contracts inside workerd', () => {
   expect(blockSchema.safeParse({ ...value, label: '\ud800' }).success).toBe(
     false,
   );
+});
+it('rejects deep condition input without overflowing the Worker stack', () => {
+  let condition: unknown = { op: 'answered', fieldId: crypto.randomUUID() };
+  for (let i = 0; i < 10000; i++) condition = { op: 'not', condition };
+  expect(conditionSchema.safeParse(condition).success).toBe(false);
 });

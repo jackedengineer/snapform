@@ -7,7 +7,8 @@
     "./auth": "./src/auth.ts",
     "./workspace": "./src/workspace.ts",
     "./form": "./src/form.ts",
-    "./answers": "./src/answers.ts"
+    "./answers": "./src/answers.ts",
+    "./rules": "./src/rules.ts"
   },
   "dependencies": {
     "zod": "4.6.7"

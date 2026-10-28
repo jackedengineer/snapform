@@ -16,11 +16,15 @@ const text = () => ({
   maxLength: 500,
 });
 const option = (label: string) => ({ id: id(), label });
+const endingId = id();
 const definition = () => ({
   contractVersion: 1,
   title: 'Project enquiry',
   description: '',
   presentation: 'page',
+  rules: [],
+  endings: [{ id: endingId, title: 'Thank you', description: '' }],
+  defaultEndingId: endingId,
   pages: [{ id: id(), title: 'About you', blocks: [text()] }],
 });
 

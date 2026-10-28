@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isStorableText } from './text.ts';
+import { ruleSchema } from './rules.ts';
 
 const identity = z.uuid().transform((value) => value.toLowerCase());
 const currencies = new Set(Intl.supportedValuesOf('currency'));
@@ -134,6 +135,18 @@ export const formDefinitionSchema = z
     ),
     description: plainText(2000),
     presentation: z.enum(['page', 'card']),
+    rules: z.array(ruleSchema).max(30),
+    endings: z
+      .array(
+        z.strictObject({
+          id: identity,
+          title: label,
+          description: plainText(2000),
+        }),
+      )
+      .min(1)
+      .max(10),
+    defaultEndingId: identity,
     pages: z
       .array(
         z.strictObject({
@@ -157,6 +170,8 @@ export const formDefinitionSchema = z
         });
       identities.add(id);
     };
+    for (const rule of definition.rules) add(rule.id);
+    for (const ending of definition.endings) add(ending.id);
     for (const page of definition.pages) {
       add(page.id);
       for (const block of page.blocks) {
