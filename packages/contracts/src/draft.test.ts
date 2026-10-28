@@ -3,6 +3,7 @@ import {
   createFormSchema,
   saveDraftSchema,
   draftReceiptSchema,
+  formCursorSchema,
 } from './draft.ts';
 import { formFixture } from '../test/form-fixture.ts';
 it('requires a typed definition, stable identity and bounded expected revision', () => {
@@ -38,5 +39,15 @@ it('never acknowledges an operation beyond the current persisted revision', () =
   expect(draftReceiptSchema.safeParse(value).success).toBe(true);
   expect(
     draftReceiptSchema.safeParse({ ...value, currentRevision: 1 }).success,
+  ).toBe(false);
+});
+it('preserves database cursor microseconds and rejects malformed cursors', () => {
+  const value = {
+    id: crypto.randomUUID(),
+    createdAt: '2026-10-28T12:34:56.123456Z',
+  };
+  expect(formCursorSchema.parse(value)).toEqual(value);
+  expect(
+    formCursorSchema.safeParse({ ...value, createdAt: 'yesterday' }).success,
   ).toBe(false);
 });

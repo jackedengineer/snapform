@@ -24,3 +24,8 @@ export const draftReceiptSchema = z
   );
 export type CreateForm = z.infer<typeof createFormSchema>;
 export type SaveDraft = z.infer<typeof saveDraftSchema>;
+export const formCursorSchema = z.strictObject({
+  createdAt: z.iso.datetime(),
+  id: identity,
+});
+export type FormCursor = z.infer<typeof formCursorSchema>;

@@ -1,0 +1,9 @@
+# Revision-safe draft operations
+
+28 October 2026. Server-side repositories create a form/draft/initial receipt atomically, read authorized snapshots and save full bounded definitions using an expected revision and stable operation UUID. Every save locks the draft before checking its receipt. A matching retry returns its applied revision and the current revision; a changed payload/actor/base revision conflicts. A stale new operation cannot overwrite a newer draft. The update explicitly checks the expected revision and requires one returned row before recording success.
+
+Receipts use native SHA-256 over the validated canonical payload. Identity comes from the caller's verified server session; tenant context and actual membership are checked before queries. Draft writes use the shared owner/editor policy. No generic patch engine, event bus, second database or dependency was added.
+
+Form listing uses a 20-item cursor page, stable creation-time/UUID ordering and a composite index. PostgreSQL microseconds are preserved as an ISO cursor string instead of round-tripping through JavaScript Date. A real database test inserts 22 tied timestamps and retrieves exactly 20 plus 2 distinct identities without loss or duplication. Other rollback-only tests verify atomic creation/retry, mismatched operation identity, stale revisions, old-retry/current-revision acknowledgment, missing resources and foreign membership denial.
+
+All 13 database tests and 104 unit tests pass; strict format/type/lint checks and the applicable production build pass. These are real restricted-login rollback tests, not a claim of independent concurrent database sessions. The subsequent HTTP/editor browser pass must include two tabs writing one owned QA draft. No visible builder, autosave/recovery buffer or publish/submission success is claimed in this internal repository increment.
