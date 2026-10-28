@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --local --ip 127.0.0.1 --port 8787 --inspector-port 9230",
+    "dev": "wrangler dev --local --ip 127.0.0.1 --port 8787 --inspector-port 9230 --log-level warn",
     "build": "wrangler deploy --dry-run --outdir dist",
     "types": "wrangler types worker-configuration.d.ts",
     "test:integration": "node --env-file-if-exists=.dev.vars ../../node_modules/vitest/vitest.mjs run --config vitest.integration.config.ts"

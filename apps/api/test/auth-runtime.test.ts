@@ -2,16 +2,18 @@ import { env } from 'cloudflare:test';
 import { expect, it } from 'vitest';
 import { openDatabase } from '@snapform/database';
 import { createAuth } from '../src/auth.ts';
+import type { AuthEnvironment } from '../src/environment.ts';
+const settings = env as AuthEnvironment;
 
 it('runs real Better Auth and Neon transactions inside workerd', async () => {
-  const { db, close } = openDatabase(env.DATABASE_URL);
+  const { db, close } = openDatabase(settings.DATABASE_URL);
   const rollback = new Error('Rollback the Worker auth fixture');
   try {
     try {
       await db.transaction(async (tx) => {
         const auth = createAuth(tx, {
           baseURL: 'https://snapform.test',
-          secret: env.BETTER_AUTH_SECRET,
+          secret: settings.BETTER_AUTH_SECRET,
         });
         const headers = new Headers({ Origin: 'https://snapform.test' });
         const email = `${crypto.randomUUID()}@example.invalid`;

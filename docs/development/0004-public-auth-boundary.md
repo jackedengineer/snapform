@@ -1,0 +1,11 @@
+# Public authentication boundary
+
+28 October 2026. Express mounts the official Better Auth Node handler before body parsers. Every auth request is checked at the original Worker boundary: enabled endpoints only, fixed recovery destinations, strict bounded fields and a 16 KiB streaming body cap. Browser mutations must be same-origin. A native Cloudflare binding limits auth mutations to 20 per minute per client IP/colo; this is approximate abuse protection, not a global quota. Request-scoped AsyncLocalStorage carries environment/execution context through the HTTP bridge; Neon pools close after use. Background mail uses `waitUntil` with sanitized failure events.
+
+`GET /api/v1/me` returns only verified user ID/name/email; no raw session record is exposed. Missing sessions return 401 and all responses prohibit caching. Unused SDK routes stay closed. The local approved-recipient guard prevents accidental sends during development. Tests override the mail key with an unusable fixture so the HTTP suite cannot send live emails. CI forwards only restricted database/auth values into workerd; these are not generated public vars.
+
+The first real sign-in HTTP test failed with a 400 missing-body validation error even though factory tests passed. Normalization had removed Content-Length, and the Node HTTP/1 adapter treated the request as bodyless. The bounded normalized body now has an accurate UTF-8 byte length. Regression tests verify actual bridge sign-in and native rate limiting. All 29 workerd tests pass, including mail, foundation and original intake tests. Core contracts remain fully covered. The in-app browser confirms the real unauthenticated profile response; complete three-persona account journeys follow with the UI.
+
+Auth request logs are suppressed in local Wrangler to avoid printing credential-bearing verification/reset query strings. Production invocation logs were already disabled. The next account UI slice still needs actual receipt/verification/recovery browser evidence; this boundary increment does not complete V1 auth.
+
+Sources: [Express mounting](https://better-auth.com/docs/integrations/express), [Cloudflare rate limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/).

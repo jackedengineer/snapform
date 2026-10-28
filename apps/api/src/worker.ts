@@ -2,6 +2,9 @@ import { httpServerHandler } from 'cloudflare:node';
 import express from 'express';
 import type { ErrorRequestHandler } from 'express';
 import { briefSchema } from '@snapform/contracts';
+import { authRoutes, requestScope } from './auth-routes.ts';
+import { authFailure, checkAuthRequest } from './auth-boundary.ts';
+import type { AuthEnvironment } from './environment.ts';
 
 const app = express();
 app.disable('x-powered-by');
@@ -15,6 +18,7 @@ app.use((req, res, next) => {
   });
   next();
 });
+app.use(authRoutes);
 app.post(
   '/api/v1/brief/review',
   (req, res, next) => {
@@ -66,9 +70,9 @@ if (!serve)
     'The Cloudflare HTTP bridge did not provide a fetch handler.',
   );
 export default {
-  fetch(
+  async fetch(
     request: Request<unknown, IncomingRequestCfProperties>,
-    environment: Env,
+    environment: Env & AuthEnvironment,
     context: ExecutionContext,
   ) {
     const origin = request.headers.get('origin');
@@ -89,6 +93,21 @@ export default {
         },
       );
     }
-    return serve(request, environment, context);
+    if (new URL(request.url).pathname.startsWith('/api/auth/')) {
+      const checked = await checkAuthRequest(
+        request,
+        environment.AUTH_ALLOWED_RECIPIENT,
+      );
+      if (checked instanceof Response) return checked;
+      if (request.method === 'POST') {
+        const key = request.headers.get('cf-connecting-ip') || 'local';
+        if (!(await environment.AUTH_RATE_LIMIT.limit({ key })).success)
+          return authFailure('RATE_LIMITED', 429);
+      }
+      request = checked;
+    }
+    return requestScope.run({ environment, context }, () =>
+      serve(request, environment, context),
+    );
   },
 };
