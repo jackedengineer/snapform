@@ -39,7 +39,9 @@ export function FormEditor({
         <button className="text-button" onClick={() => void query.refetch()}>
           Try again
         </button>
-        <Link to="/app">Back to workspaces</Link>
+        <Link to="/workspaces/$workspaceId" params={{ workspaceId }}>
+          Back to forms
+        </Link>
       </div>
     );
   return <Editor key={query.data.id} snapshot={query.data} />;
@@ -211,8 +213,12 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
       }}
     >
       <h1 className="visually-hidden">Form editor</h1>
-      <Link className="back-link" to="/app">
-        ← Back to workspaces
+      <Link
+        className="back-link"
+        to="/workspaces/$workspaceId"
+        params={{ workspaceId: snapshot.workspaceId }}
+      >
+        ← Back to forms
       </Link>
       <fieldset disabled={mutation.isPending || loading}>
         <div className="editor-header">

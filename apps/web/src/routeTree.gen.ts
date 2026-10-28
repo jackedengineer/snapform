@@ -10,21 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppRouteImport } from './routes/app'
+import { Route as AccountRouteImport } from './routes/_account'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as AccountAppRouteImport } from './routes/_account.app'
+import { Route as AccountWorkspacesWorkspaceIdRouteImport } from './routes/_account.workspaces.$workspaceId'
+import { Route as AccountWorkspacesWorkspaceIdIndexRouteImport } from './routes/_account.workspaces.$workspaceId.index'
+import { Route as AccountWorkspacesWorkspaceIdFormsFormIdRouteImport } from './routes/_account.workspaces.$workspaceId.forms.$formId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/app',
-  path: '/app',
+const AccountRoute = AccountRouteImport.update({
+  id: '/_account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -52,68 +55,109 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountAppRoute = AccountAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountWorkspacesWorkspaceIdRoute =
+  AccountWorkspacesWorkspaceIdRouteImport.update({
+    id: '/workspaces/$workspaceId',
+    path: '/workspaces/$workspaceId',
+    getParentRoute: () => AccountRoute,
+  } as any)
+const AccountWorkspacesWorkspaceIdIndexRoute =
+  AccountWorkspacesWorkspaceIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AccountWorkspacesWorkspaceIdRoute,
+  } as any)
+const AccountWorkspacesWorkspaceIdFormsFormIdRoute =
+  AccountWorkspacesWorkspaceIdFormsFormIdRouteImport.update({
+    id: '/forms/$formId',
+    path: '/forms/$formId',
+    getParentRoute: () => AccountWorkspacesWorkspaceIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/app': typeof AccountAppRoute
+  '/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdRouteWithChildren
+  '/workspaces/$workspaceId/': typeof AccountWorkspacesWorkspaceIdIndexRoute
+  '/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/app': typeof AccountAppRoute
+  '/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdIndexRoute
+  '/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
+  '/_account': typeof AccountRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/_account/app': typeof AccountAppRoute
+  '/_account/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdRouteWithChildren
+  '/_account/workspaces/$workspaceId/': typeof AccountWorkspacesWorkspaceIdIndexRoute
+  '/_account/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/app'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
     | '/signup'
     | '/verify-email'
+    | '/app'
+    | '/workspaces/$workspaceId'
+    | '/workspaces/$workspaceId/'
+    | '/workspaces/$workspaceId/forms/$formId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/app'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
     | '/signup'
     | '/verify-email'
+    | '/app'
+    | '/workspaces/$workspaceId'
+    | '/workspaces/$workspaceId/forms/$formId'
   id:
     | '__root__'
     | '/'
-    | '/app'
+    | '/_account'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
     | '/signup'
     | '/verify-email'
+    | '/_account/app'
+    | '/_account/workspaces/$workspaceId'
+    | '/_account/workspaces/$workspaceId/'
+    | '/_account/workspaces/$workspaceId/forms/$formId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AppRoute: typeof AppRoute
+  AccountRoute: typeof AccountRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -130,11 +174,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
+    '/_account': {
+      id: '/_account'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -172,12 +216,72 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_account/app': {
+      id: '/_account/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AccountAppRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/_account/workspaces/$workspaceId': {
+      id: '/_account/workspaces/$workspaceId'
+      path: '/workspaces/$workspaceId'
+      fullPath: '/workspaces/$workspaceId'
+      preLoaderRoute: typeof AccountWorkspacesWorkspaceIdRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/_account/workspaces/$workspaceId/': {
+      id: '/_account/workspaces/$workspaceId/'
+      path: '/'
+      fullPath: '/workspaces/$workspaceId/'
+      preLoaderRoute: typeof AccountWorkspacesWorkspaceIdIndexRouteImport
+      parentRoute: typeof AccountWorkspacesWorkspaceIdRoute
+    }
+    '/_account/workspaces/$workspaceId/forms/$formId': {
+      id: '/_account/workspaces/$workspaceId/forms/$formId'
+      path: '/forms/$formId'
+      fullPath: '/workspaces/$workspaceId/forms/$formId'
+      preLoaderRoute: typeof AccountWorkspacesWorkspaceIdFormsFormIdRouteImport
+      parentRoute: typeof AccountWorkspacesWorkspaceIdRoute
+    }
   }
 }
 
+interface AccountWorkspacesWorkspaceIdRouteChildren {
+  AccountWorkspacesWorkspaceIdIndexRoute: typeof AccountWorkspacesWorkspaceIdIndexRoute
+  AccountWorkspacesWorkspaceIdFormsFormIdRoute: typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
+}
+
+const AccountWorkspacesWorkspaceIdRouteChildren: AccountWorkspacesWorkspaceIdRouteChildren =
+  {
+    AccountWorkspacesWorkspaceIdIndexRoute:
+      AccountWorkspacesWorkspaceIdIndexRoute,
+    AccountWorkspacesWorkspaceIdFormsFormIdRoute:
+      AccountWorkspacesWorkspaceIdFormsFormIdRoute,
+  }
+
+const AccountWorkspacesWorkspaceIdRouteWithChildren =
+  AccountWorkspacesWorkspaceIdRoute._addFileChildren(
+    AccountWorkspacesWorkspaceIdRouteChildren,
+  )
+
+interface AccountRouteChildren {
+  AccountAppRoute: typeof AccountAppRoute
+  AccountWorkspacesWorkspaceIdRoute: typeof AccountWorkspacesWorkspaceIdRouteWithChildren
+}
+
+const AccountRouteChildren: AccountRouteChildren = {
+  AccountAppRoute: AccountAppRoute,
+  AccountWorkspacesWorkspaceIdRoute:
+    AccountWorkspacesWorkspaceIdRouteWithChildren,
+}
+
+const AccountRouteWithChildren =
+  AccountRoute._addFileChildren(AccountRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AppRoute: AppRoute,
+  AccountRoute: AccountRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,

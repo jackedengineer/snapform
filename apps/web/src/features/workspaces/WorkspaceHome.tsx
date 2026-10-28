@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createWorkspaceSchema } from '@snapform/contracts/workspace';
@@ -97,16 +98,26 @@ export function WorkspaceHome({ userId }: { userId: string }) {
         <ul className="workspace-list">
           {query.data.map((workspace) => (
             <li key={workspace.id}>
-              <span className="workspace-monogram" aria-hidden="true">
-                {[...workspace.name][0]?.toUpperCase()}
-              </span>
-              <div>
-                <h3>{workspace.name}</h3>
-                <p>
-                  {segments[workspace.segment]} · {workspace.role}
-                </p>
-              </div>
-              <span className="workspace-role">{workspace.role}</span>
+              <Link
+                className="workspace-open"
+                to="/workspaces/$workspaceId"
+                params={{ workspaceId: workspace.id }}
+                aria-label={`Open ${workspace.name}`}
+              >
+                <span className="workspace-monogram" aria-hidden="true">
+                  {[...workspace.name][0]?.toUpperCase()}
+                </span>
+                <div>
+                  <h3>{workspace.name}</h3>
+                  <p>
+                    {segments[workspace.segment]} · {workspace.role}
+                  </p>
+                </div>
+                <span className="workspace-role" aria-hidden="true">
+                  {workspace.role}
+                </span>
+                <span aria-hidden="true">↗</span>
+              </Link>
             </li>
           ))}
         </ul>
