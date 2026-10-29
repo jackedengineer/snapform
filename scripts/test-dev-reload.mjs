@@ -4,7 +4,12 @@ import { parseEnv } from 'node:util';
 import { readFile, writeFile } from 'node:fs/promises';
 import { setTimeout } from 'node:timers/promises';
 
-for (const port of [5173, 8787]) {
+const apiPort = Number(process.env.SNAPFORM_API_PORT || 8787);
+assert.ok(
+  Number.isInteger(apiPort) && apiPort >= 1024 && apiPort <= 65535,
+  'A valid local API port is required.',
+);
+for (const port of [5173, apiPort]) {
   let occupied = false;
   try {
     await fetch(`http://127.0.0.1:${port}`, {

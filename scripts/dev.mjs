@@ -2,8 +2,30 @@ import { spawn } from 'node:child_process';
 
 // Wrangler recreates the API isolate on edits, releasing the Node HTTP listener.
 // Vite keeps the frontend's fast refresh and discovers the API service binding.
-const children = ['@snapform/api', '@snapform/web'].map((name) =>
-  spawn('pnpm', ['--filter', name, 'dev'], {
+const apiPort = Number(process.env.SNAPFORM_API_PORT || 8787);
+if (!Number.isInteger(apiPort) || apiPort < 1024 || apiPort > 65535)
+  throw Error('A valid local API port is required.');
+const commands = [
+  [
+    '--filter',
+    '@snapform/api',
+    'exec',
+    'wrangler',
+    'dev',
+    '--local',
+    '--ip',
+    '127.0.0.1',
+    '--port',
+    String(apiPort),
+    '--inspector-port',
+    '0',
+    '--log-level',
+    'warn',
+  ],
+  ['--filter', '@snapform/web', 'dev'],
+];
+const children = commands.map((args) =>
+  spawn('pnpm', args, {
     stdio: 'inherit',
     detached: true,
   }),
