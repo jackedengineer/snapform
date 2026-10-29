@@ -7,6 +7,7 @@ export const webhookSendInputSchema = webhookSecretInputSchema.extend({
   expectedAttempts: z.int().min(0).max(7),
   acknowledgeDuplicateRisk: z.boolean(),
 });
+export const webhookSendReceiptSchema = z.strictObject({ id: identity });
 export const webhookToggleInputSchema = webhookSecretInputSchema.extend({
   expectedRevision: z.int().min(1).max(2147483646),
   enabled: z.boolean(),
