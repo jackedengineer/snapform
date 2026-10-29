@@ -19,9 +19,12 @@ export default createServerEntry({
       'camera=(), microphone=(), geolocation=()',
     );
     if (import.meta.env.PROD) {
+      const challenge = new URL(request.url).pathname.startsWith('/f/')
+        ? ' https://challenges.cloudflare.com'
+        : '';
       secured.headers.set(
         'Content-Security-Policy',
-        `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`,
+        `default-src 'self'; script-src 'self' 'nonce-${nonce}'${challenge}; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'${challenge}; frame-src 'self'${challenge}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`,
       );
     }
     return secured;

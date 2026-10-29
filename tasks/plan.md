@@ -1,6 +1,6 @@
 # V1 delivery plan and whole-product roadmap
 
-**Status:** Market release plan; first local intake/review slice implemented, hosted integrations pending. **Baseline:** solo founder, 30 focused engineering hours/week plus 5–10h business work; part-time design, QA/accessibility, security and legal/accounting support. Audience: agencies, coaches, consultants and small-to-medium startups. Source analysis and requirements are in `docs/`.
+**Status (29 October 2026):** Local verified accounts/workspaces, typed builder/rules, immutable publication APIs and the Neon-backed recoverable collector/durable submit are implemented and tested. Creator publication controls, files/delivery/inbox, billing/AI and hosted/market launch gates remain pending. Latest evidence: [collector verification](../docs/development/0041-durable-collector-browser.md). **Baseline:** solo founder, 30 focused engineering hours/week plus 5–10h business work; part-time design, QA/accessibility, security and legal/accounting support. Audience: agencies, coaches, consultants and small-to-medium startups. Source analysis and requirements are in `docs/`.
 
 ## 1. Development strategy
 
@@ -106,7 +106,7 @@ The cumulative windows express earliest phase start through latest phase end, no
 
 ## 5. Backlog usage and definition of done
 
-Ordered implementation units and dependency IDs are in `tasks/todo.md`. Paths are **proposed**, because there is no application yet. Each task targets a small set of files and has acceptance and verification; split any task whose implementation grows beyond ~5 files or one focused session. Parent phase estimates include integration, defects, polishing and contingency; task IDs are not hour estimates.
+Ordered implementation units and dependency IDs are in `tasks/todo.md`. Original backlog paths are **proposed**; map them to the implemented workspace before starting each remaining unit. Each task targets a small set of files and has acceptance and verification; split any task whose implementation grows beyond ~5 files or one focused session. Parent phase estimates include integration, defects, polishing and contingency; task IDs are not hour estimates.
 
 Definition of done: intended behavior and failure behavior demonstrated, no tenant/privacy regression, relevant automated checks, keyboard/mobile states where touched, safe migration/rollback, updated docs/telemetry and no secrets. Do not make passing checks meaningless with skips/suppressions. Capture build/model/data-fixture versions in evidence. Reversible documentation changes need editorial/link checks, not artificial unit tests.
 

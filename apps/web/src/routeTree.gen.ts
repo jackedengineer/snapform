@@ -17,6 +17,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AccountAppRouteImport } from './routes/_account.app'
+import { Route as FPublicIdRouteImport } from './routes/f.$publicId'
 import { Route as AccountWorkspacesWorkspaceIdRouteImport } from './routes/_account.workspaces.$workspaceId'
 import { Route as AccountWorkspacesWorkspaceIdIndexRouteImport } from './routes/_account.workspaces.$workspaceId.index'
 import { Route as AccountWorkspacesWorkspaceIdFormsFormIdRouteImport } from './routes/_account.workspaces.$workspaceId.forms.$formId'
@@ -60,6 +61,11 @@ const AccountAppRoute = AccountAppRouteImport.update({
   path: '/app',
   getParentRoute: () => AccountRoute,
 } as any)
+const FPublicIdRoute = FPublicIdRouteImport.update({
+  id: '/f/$publicId',
+  path: '/f/$publicId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountWorkspacesWorkspaceIdRoute =
   AccountWorkspacesWorkspaceIdRouteImport.update({
     id: '/workspaces/$workspaceId',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
   '/app': typeof AccountAppRoute
+  '/f/$publicId': typeof FPublicIdRoute
   '/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdRouteWithChildren
   '/workspaces/$workspaceId/': typeof AccountWorkspacesWorkspaceIdIndexRoute
   '/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
   '/app': typeof AccountAppRoute
+  '/f/$publicId': typeof FPublicIdRoute
   '/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdIndexRoute
   '/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
 }
@@ -112,6 +120,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
   '/_account/app': typeof AccountAppRoute
+  '/f/$publicId': typeof FPublicIdRoute
   '/_account/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdRouteWithChildren
   '/_account/workspaces/$workspaceId/': typeof AccountWorkspacesWorkspaceIdIndexRoute
   '/_account/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-email'
     | '/app'
+    | '/f/$publicId'
     | '/workspaces/$workspaceId'
     | '/workspaces/$workspaceId/'
     | '/workspaces/$workspaceId/forms/$formId'
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-email'
     | '/app'
+    | '/f/$publicId'
     | '/workspaces/$workspaceId'
     | '/workspaces/$workspaceId/forms/$formId'
   id:
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-email'
     | '/_account/app'
+    | '/f/$publicId'
     | '/_account/workspaces/$workspaceId'
     | '/_account/workspaces/$workspaceId/'
     | '/_account/workspaces/$workspaceId/forms/$formId'
@@ -163,6 +175,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  FPublicIdRoute: typeof FPublicIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -222,6 +235,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AccountAppRouteImport
       parentRoute: typeof AccountRoute
+    }
+    '/f/$publicId': {
+      id: '/f/$publicId'
+      path: '/f/$publicId'
+      fullPath: '/f/$publicId'
+      preLoaderRoute: typeof FPublicIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_account/workspaces/$workspaceId': {
       id: '/_account/workspaces/$workspaceId'
@@ -287,6 +307,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  FPublicIdRoute: FPublicIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
