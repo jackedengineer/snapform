@@ -13,6 +13,8 @@ import { blockNames, newBlock, duplicateBlock } from './new-form';
 import { BlockInspector } from './BlockInspector';
 import { DraftRecovery } from './DraftRecovery';
 import { recoverDraft } from './recover-draft';
+import { PageControls } from './PageControls';
+import { moveBlockToPage } from './pages';
 export function FormEditor({
   workspaceId,
   formId,
@@ -61,6 +63,9 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   const [selected, setSelected] = useState<string | null>(
     snapshot.definition.pages[0].blocks[0]?.id || null,
   );
+  const [activePageId, setActivePageId] = useState(
+    snapshot.definition.pages[0].id,
+  );
   const [type, setType] = useState<Block['type']>('short-text');
   const [loading, setLoading] = useState(false),
     [loadError, setLoadError] = useState('');
@@ -85,6 +90,16 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   const selectedPage = definition.pages.find((page) =>
     page.blocks.some((item) => item.id === selected),
   );
+  const activePage =
+    selectedPage ||
+    definition.pages.find((page) => page.id === activePageId) ||
+    definition.pages[0];
+  function selectPage(id: string) {
+    // Adding a page updates the form store before this render snapshot changes.
+    if (!form.state.values.pages.some((page) => page.id === id)) return;
+    setActivePageId(id);
+    setSelected(null);
+  }
   const selectedIndex =
     selectedPage?.blocks.findIndex((item) => item.id === selected) ?? -1;
   const answerCount = blocks.filter((item) => 'required' in item).length;
@@ -103,8 +118,10 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   function add() {
     const next = newBlock(type);
     form.setFieldValue('pages', (pages) =>
-      pages.map((page, index) =>
-        index === 0 ? { ...page, blocks: [...page.blocks, next] } : page,
+      pages.map((page) =>
+        page.id === activePage.id
+          ? { ...page, blocks: [...page.blocks, next] }
+          : page,
       ),
     );
     setSelected(next.id);
@@ -159,6 +176,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
         !autosave.accept(latest.revision, { ...nextValues, rules: nextRules })
       )
         throw new Error('Please wait for the current save, then try again.');
+      setActivePageId(latest.definition.pages[0].id);
       setSelected(latest.definition.pages[0].blocks[0]?.id || null);
     } catch (error) {
       setLoadError(
@@ -235,6 +253,13 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
             </button>
           )}
         </div>
+        <PageControls
+          definition={definition}
+          pageId={activePage.id}
+          editable={editable}
+          onChange={(pages) => form.setFieldValue('pages', pages)}
+          onSelect={selectPage}
+        />
         <div className="editor-grid">
           <aside className="form-outline" aria-label="Form outline">
             <div className="outline-heading">
@@ -243,7 +268,18 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
             </div>
             {definition.pages.map((page) => (
               <div key={page.id}>
-                <h3>{page.title || 'Untitled page'}</h3>
+                <h3>
+                  <button
+                    className="page-name-button"
+                    type="button"
+                    aria-current={
+                      activePage.id === page.id ? 'true' : undefined
+                    }
+                    onClick={() => selectPage(page.id)}
+                  >
+                    {page.title || 'Untitled page'}
+                  </button>
+                </h3>
                 <ol>
                   {page.blocks.map((item, index) => (
                     <li key={item.id}>
@@ -251,7 +287,10 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                         id={`question-${item.id}`}
                         type="button"
                         aria-pressed={selected === item.id}
-                        onClick={() => setSelected(item.id)}
+                        onClick={() => {
+                          setActivePageId(page.id);
+                          setSelected(item.id);
+                        }}
                       >
                         <span>{index + 1}</span>
                         <span>
@@ -305,6 +344,32 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                 </fieldset>
                 {editable && (
                   <div className="block-actions">
+                    {definition.pages.length > 1 && selectedPage && (
+                      <div className="field move-page-field">
+                        <label htmlFor="move-question-page">Move to page</label>
+                        <select
+                          id="move-question-page"
+                          value={selectedPage.id}
+                          onChange={(event) => {
+                            const next = moveBlockToPage(
+                              definition,
+                              block.id,
+                              event.target.value,
+                            );
+                            if (!next) return;
+                            form.setFieldValue('pages', next.pages);
+                            setActivePageId(event.target.value);
+                          }}
+                        >
+                          {definition.pages.map((page) => (
+                            <option key={page.id} value={page.id}>
+                              {page.title || 'Untitled page'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <button
                       className="text-button"
                       type="button"
@@ -357,14 +422,14 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                   ↗
                 </span>
                 <h2>
-                  {blocks.length
+                  {activePage.blocks.length
                     ? 'Keep shaping your form.'
-                    : 'Start with a good question.'}
+                    : 'This page is ready for questions.'}
                 </h2>
                 <p>
-                  {blocks.length
+                  {activePage.blocks.length
                     ? 'Choose a question from the outline to edit it.'
-                    : 'Choose a type from the outline, then make it yours.'}
+                    : 'Choose a type from the outline to add it to this page.'}
                 </p>
               </div>
             )}
@@ -410,6 +475,10 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                   onClick={() => {
                     const recovered = recoverDraft(form, record.definition);
                     setRules(recovered.rules);
+                    setActivePageId(record.definition.pages[0].id);
+                    setSelected(
+                      record.definition.pages[0].blocks[0]?.id || null,
+                    );
                     void autosave.recover(record);
                   }}
                 >
@@ -436,6 +505,8 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
             if (!previous) return;
             const { rules: previousRules } = recoverDraft(form, previous);
             setRules(previousRules);
+            setActivePageId(previous.pages[0].id);
+            setSelected(previous.pages[0].blocks[0]?.id || null);
             setBackup(null);
           }}
         >
