@@ -46,5 +46,8 @@ export const webhookSecretInputSchema = z.strictObject({
 export const webhookSecretSchema = z.strictObject({
   secret: z.string().regex(/^whsec_[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$/),
 });
+export const webhookPreviewInputSchema = webhookSecretInputSchema.extend({
+  deliveryId: webhookConfigurationInputSchema.shape.configurationId,
+});
 export type WebhookSettings = z.infer<typeof webhookSettingsSchema>;
 export type WebhookSecretInput = z.infer<typeof webhookSecretInputSchema>;
