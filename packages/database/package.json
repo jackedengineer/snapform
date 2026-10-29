@@ -12,7 +12,8 @@
     "./public-form": "./src/public-form.ts",
     "./intake": "./src/intake.ts",
     "./outbox": "./src/outbox.ts",
-    "./responses": "./src/responses.ts"
+    "./responses": "./src/responses.ts",
+    "./response-export": "./src/response-export.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

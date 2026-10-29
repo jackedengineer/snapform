@@ -8,6 +8,7 @@ import { createForm, saveDraft } from '../src/forms.ts';
 import { publishForm } from '../src/publication.ts';
 import { startIntake, mutateIntake } from '../src/intake.ts';
 import { listResponses, getResponse } from '../src/responses.ts';
+import { getResponseExport } from '../src/response-export.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
 
 it('reads only finalized tenant responses with their original published questions and stable cursors', async () => {
@@ -101,6 +102,25 @@ it('reads only finalized tenant responses with their original published question
         await expect(
           getResponse(tx, actor, workspace.id, crypto.randomUUID(), ids[0]),
         ).rejects.toThrow('RESPONSE_NOT_FOUND');
+        const exported = await getResponseExport(
+          tx,
+          actor,
+          workspace.id,
+          formId,
+          detail.versionId,
+        );
+        expect(exported.rows.map((row) => row.id)).toEqual(ids);
+        expect(exported.definition.title).toBe(definition.title);
+        expect(exported.version).toBe(1);
+        await expect(
+          getResponseExport(
+            tx,
+            actor,
+            workspace.id,
+            formId,
+            crypto.randomUUID(),
+          ),
+        ).rejects.toThrow('VERSION_NOT_FOUND');
         const viewer = crypto.randomUUID();
         await tx.insert(user).values({
           id: viewer,
@@ -120,6 +140,9 @@ it('reads only finalized tenant responses with their original published question
         expect(
           (await getResponse(tx, viewer, workspace.id, formId, ids[0])).id,
         ).toBe(ids[0]);
+        await expect(
+          getResponseExport(tx, viewer, workspace.id, formId, detail.versionId),
+        ).rejects.toThrow('FORBIDDEN');
         await tx.execute(
           sql`select set_config('snapform.user_id',${crypto.randomUUID()},true),set_config('snapform.role','owner',true),set_config('snapform.intake_hash','',true)`,
         );
