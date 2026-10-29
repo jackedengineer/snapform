@@ -9,6 +9,7 @@ export default defineConfig({
     './packages/database/src/intake-schema.ts',
     './packages/database/src/outbox-schema.ts',
     './packages/database/src/notification-schema.ts',
+    './packages/database/src/webhook-schema.ts',
   ],
   out: './packages/database/migrations',
 });

@@ -169,6 +169,13 @@
       "when": 1793293551205,
       "tag": "0023_owner-email-repair",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793299072365,
+      "tag": "0024_aromatic_lucky_pierre",
+      "breakpoints": true
     }
   ]
 }
