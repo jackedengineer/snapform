@@ -185,6 +185,117 @@ it(
   30000,
 );
 it(
+  'keeps response events scoped and denies direct runtime dispatch mutations',
+  async () =>
+    fixture(async (tx, _actor, _workspaceId, _formId, publicId) => {
+      const id = crypto.randomUUID(),
+        hash = '7'.repeat(64);
+      const session = await startIntake(tx, publicId, id, hash);
+      const fields = session.definition.pages.flatMap((page) => page.blocks);
+      const budget = fields.find((field) => field.type === 'number');
+      const contact = fields.find((field) => field.type === 'email');
+      if (!budget || !contact) throw new Error('Missing fixture fields');
+      await mutateIntake(tx, publicId, id, hash, 'submit', {
+        operationId: crypto.randomUUID(),
+        expectedRevision: 1,
+        answers: {
+          [budget.id]: { state: 'value', value: 0 },
+          [contact.id]: { state: 'value', value: 'qa@example.invalid' },
+        },
+      });
+      expect(
+        (
+          await tx.execute(
+            sql`select id from public.response_outbox where session_id=${id}::uuid`,
+          )
+        ).rows,
+      ).toHaveLength(1);
+      expect(
+        (
+          await tx.execute(sql`select has_table_privilege(current_user,'public.response_outbox','INSERT') as insert,
+      has_table_privilege(current_user,'public.response_outbox','UPDATE') as update,
+      has_table_privilege(current_user,'public.response_outbox','DELETE') as delete`)
+        ).rows,
+      ).toEqual([{ insert: false, update: false, delete: false }]);
+      const rollback = new Error('Restore owned fixture scope');
+      await expect(
+        tx.transaction(async (unscoped) => {
+          await unscoped.execute(
+            sql`select set_config('snapform.intake_hash','',true),set_config('snapform.user_id','',true),set_config('snapform.workspace_id','',true)`,
+          );
+          expect(
+            (
+              await unscoped.execute(
+                sql`select id from public.response_outbox where session_id=${id}::uuid`,
+              )
+            ).rows,
+          ).toHaveLength(0);
+          throw rollback;
+        }),
+      ).rejects.toBe(rollback);
+    }),
+  30000,
+);
+it(
+  'rolls back a submission, usage and its outbox event together',
+  async () =>
+    fixture(async (tx, actor, _workspaceId, _formId, publicId) => {
+      const id = crypto.randomUUID(),
+        hash = '6'.repeat(64);
+      const session = await startIntake(tx, publicId, id, hash);
+      const fields = session.definition.pages.flatMap((page) => page.blocks);
+      const budget = fields.find((field) => field.type === 'number');
+      const contact = fields.find((field) => field.type === 'email');
+      if (!budget || !contact) throw new Error('Missing fixture fields');
+      const rollback = new Error(
+        'Abort synthetic submission after the outbox write',
+      );
+      await expect(
+        tx.transaction(async (attempt) => {
+          await mutateIntake(attempt, publicId, id, hash, 'submit', {
+            operationId: crypto.randomUUID(),
+            expectedRevision: 1,
+            answers: {
+              [budget.id]: { state: 'value', value: 0 },
+              [contact.id]: { state: 'value', value: 'qa@example.invalid' },
+            },
+          });
+          expect(
+            (
+              await attempt.execute(
+                sql`select id from public.response_outbox where session_id=${id}::uuid`,
+              )
+            ).rows,
+          ).toHaveLength(1);
+          throw rollback;
+        }),
+      ).rejects.toBe(rollback);
+      expect(await getIntake(tx, publicId, id, hash)).toMatchObject({
+        status: 'collecting',
+        revision: 1,
+        answers: {},
+      });
+      expect(
+        (
+          await tx.execute(
+            sql`select id from public.response_outbox where session_id=${id}::uuid`,
+          )
+        ).rows,
+      ).toHaveLength(0);
+      await tx.execute(
+        sql`select set_config('snapform.user_id',${actor},true)`,
+      );
+      expect(
+        (
+          await tx.execute(
+            sql`select responses_used from public.trial_response_usage where owner_id=${actor}`,
+          )
+        ).rows,
+      ).toEqual([{ responses_used: 0 }]);
+    }),
+  30000,
+);
+it(
   'returns the same scoped intake when admission is retried',
   async () =>
     fixture(async (tx, _actor, _workspaceId, _formId, publicId) => {
@@ -264,6 +375,13 @@ it(
           },
         },
       };
+      expect(
+        (
+          await tx.execute(
+            sql`select id from public.response_outbox where session_id=${id}::uuid`,
+          )
+        ).rows,
+      ).toHaveLength(0);
       const receipt = await mutateIntake(
         tx,
         publicId,
@@ -300,6 +418,13 @@ it(
         sql`select responses_used from public.trial_response_usage where owner_id=${actor}`,
       );
       expect(used.rows[0]?.responses_used).toBe(1);
+      expect(
+        (
+          await tx.execute(
+            sql`select kind,count(*)::int as count from public.response_outbox where session_id=${id}::uuid group by kind`,
+          )
+        ).rows,
+      ).toEqual([{ kind: 'response.submitted', count: 1 }]);
       const publication = await publishForm(tx, actor, workspaceId, formId, {
         versionId: crypto.randomUUID(),
         expectedRevision: 1,
