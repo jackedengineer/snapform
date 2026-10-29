@@ -618,3 +618,28 @@
   letter-spacing: -0.4px;
   margin: 24px 0 8px;
 }
+
+.rule-card {
+  border-top: 1px solid var(--border-default);
+  padding: 8px 0;
+}
+.rule-card > fieldset,
+.condition-editor {
+  min-width: 0;
+}
+.condition-editor {
+  border-left: 2px solid var(--border-default);
+  padding: 12px 0 4px 16px;
+  margin: 16px 0;
+}
+.condition-editor legend {
+  font-size: 12px;
+  font-weight: 550;
+}
+.condition-editor .field,
+.rule-card > fieldset > .field {
+  max-width: 680px;
+}
+.condition-child {
+  margin-bottom: 16px;
+}

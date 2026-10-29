@@ -15,6 +15,7 @@ import { DraftRecovery } from './DraftRecovery';
 import { recoverDraft } from './recover-draft';
 import { PageControls } from './PageControls';
 import { FormSettings } from './FormSettings';
+import { RuleControls } from './RuleControls';
 import { moveBlockToPage } from './pages';
 export function FormEditor({
   workspaceId,
@@ -280,6 +281,12 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
             form.setFieldValue('endings', settings.endings);
             form.setFieldValue('defaultEndingId', settings.defaultEndingId);
           }}
+        />
+        <RuleControls
+          definition={definition}
+          editable={editable}
+          issues={compilation.ok ? [] : compilation.issues}
+          onChange={setRules}
         />
         <PageControls
           definition={definition}
