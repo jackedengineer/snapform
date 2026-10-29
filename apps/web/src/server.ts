@@ -1,10 +1,11 @@
 import { env } from 'cloudflare:workers';
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry';
+import { withTransportSecurity } from './transport';
 
 export default createServerEntry({
   async fetch(request, options) {
     if (new URL(request.url).pathname.startsWith('/api/'))
-      return env.API.fetch(request);
+      return withTransportSecurity(await env.API.fetch(request), request.url);
     const nonce = crypto.randomUUID();
     const response = await handler.fetch(request, {
       ...options,
@@ -27,6 +28,6 @@ export default createServerEntry({
         `default-src 'self'; script-src 'self' 'nonce-${nonce}'${challenge}; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'${challenge}; frame-src 'self'${challenge}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`,
       );
     }
-    return secured;
+    return withTransportSecurity(secured, request.url);
   },
 });

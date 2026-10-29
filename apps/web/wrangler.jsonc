@@ -5,6 +5,9 @@
   "compatibility_date": "2026-10-23",
   "compatibility_flags": ["nodejs_compat"],
   "send_metrics": false,
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "snapform.jacked.dev", "custom_domain": true }],
   "services": [{ "binding": "API", "service": "snapform-api" }],
   "observability": { "enabled": true, "logs": { "invocation_logs": false } },
 }

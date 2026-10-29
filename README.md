@@ -1,6 +1,6 @@
 # Snapform — product and development blueprint
 
-**Product blueprint and implementation workspace · Updated 28 October 2026.**
+**Product blueprint and implementation workspace · Updated 29 October 2026.**
 
 Snapform turns a service enquiry or onboarding brief into a branded intake flow, lets people answer through fields or optional guided conversation, and delivers a reviewed, usable record to the team's existing tools.
 
@@ -45,21 +45,22 @@ Primary input: `/Users/jackedengineer/Downloads/Typeform_Jotform_Formless_Resear
 
 ## Status
 
-The first local intake/review slice is implemented with real Express Worker validation; the market V1 is not shipped. Local framework probes do not prove hosted Neon/auth/billing integration. Product demand, conversion improvement, AI accuracy, SLOs, and unit economics have **not** been validated. One Neon database and a scoped Resend sending key are configured. Auth factory tests use the real restricted Neon login, including inside workerd. Core account email journeys, workspace creation and basic manual draft authoring are browser-verified against real Neon. See the [authoring browser review](docs/development/0016-basic-authoring-browser-review.md). Autosave, native local recovery and cross-tab sign-out are also [browser-verified](docs/development/0018-autosave-browser-review.md). MFA/invites, public collection, AI, billing and remaining launch gates are still in progress; no paid services were purchased or customer messages sent.
+The private preview is deployed at **https://snapform.jacked.dev**. Verified accounts/workspaces, the typed editor and conditional rules, autosave/conflict recovery, creator publish/share controls and the recoverable page/card collector with durable submission are implemented. Production browser checks include the owned QA account, a real hostname-verified Turnstile session, final review and a database-confirmed submission. See the [publishing evidence](docs/development/0044-creator-publication-controls.md) and [deployment runbook](docs/runbooks/deploy.md).
 
+The market V1 is not shipped. Outbox/delivery, response management, checked files, privacy/operating controls, teams/MFA, billing, import and AI still have open acceptance gates. Demand, conversion improvement, production SLOs and unit economics are unvalidated. No live payment is part of the preview.
 
 ## Run locally
 
 Use Node 24.14.0 and pnpm 10.34.5. Run `pnpm install --frozen-lockfile`, `pnpm types:generate`, then `pnpm dev`. Open http://127.0.0.1:5173. A native Node launcher runs the Wrangler API and Vite frontend through the API service binding. For database/auth checks, configure the private migration/runtime files described below.
 
-`pnpm check` runs generated types, strict type/lint checks, core coverage, workerd tests, real rollback-only database/auth tests, production builds, bundle budgets and isolated production HTTP and development reload checks. Stop existing servers on ports 5173/8787 before the isolated checks. The reload check briefly modifies/restores API middleware to verify real handler replacement and refuses to overwrite a concurrent edit. Run `pnpm audit --prod --audit-level high` as well. `pnpm git:hooks` enables the committed local pre-commit checks. The CI workflow repeats these checks; it has not run on a hosted remote yet.
+`pnpm check` runs generated types, strict type/lint checks, core coverage, workerd tests, real rollback-only database/auth tests, production builds, bundle budgets and isolated production HTTP and development reload checks. Stop existing servers on ports 5173/8787 before the isolated checks. The reload check briefly modifies/restores API middleware to verify real handler replacement and refuses to overwrite a concurrent edit. Run `pnpm audit --prod --audit-level high` as well. `pnpm git:hooks` enables the committed local pre-commit checks. GitHub Actions runs these checks with explicitly approved restricted runtime credentials. Its first hosted runs exposed missing configuration and overlarge remote database scenarios; passing checks on the latest revision remain required before merge.
 
-The sample intake at `/` checks four details and supports direct editing; it does not save responses. Core account flows at `/signup` and `/login` use real Neon/Better Auth and approved transactional email. `/app` opens workspaces and links to persisted form drafts; the editor automatically saves with revision/conflict handling, local recovery and an explicit save control. See the [private API boundary](docs/development/0015-private-form-http.md). A saved draft is not a published form or submitted response. File upload, billing, AI and the rest of market V1 remain in progress. Those remain in the [ordered delivery contract](docs/11-v1-scope-and-delivery.md). See [first-slice verification and browser evidence](docs/development/0001-workers-intake-validation.md).
+The homepage introduces the product. `/signup` and `/login` use Neon/Better Auth and transactional email. `/app` opens workspaces and persisted form drafts. The editor saves with revision/conflict handling and publishes validated immutable versions. `/f/:publicId` opens the public collector, with relevant questions, editable review, bounded browser recovery and duplicate-safe durable submission. File collection remains blocked until private upload and scanning exist. See the [V1 delivery contract](docs/11-v1-scope-and-delivery.md) for remaining scope.
 
 ## Database and identity foundation
 
 Use the single Neon `snapform` database for development and production, as requested. Keep the owner connection in ignored root `.env` as `DATABASE_MIGRATION_URL`; never deploy it. Apply checked-in migrations with `pnpm db:migrate`. Run `pnpm db:bootstrap` once to save the restricted runtime login and auth secret in ignored `apps/api/.dev.vars` (mode 0600). Existing configuration is preserved. All automated synthetic identity writes roll back; no test database, extra branch or table reset is used.
 
-See [foundation evidence](docs/development/0002-neon-auth-foundation.md) and [ADR-013](docs/decisions/ADR-013-shared-database-and-small-commits.md). The shared database is a shared trust boundary. Hosted CI still needs restricted database/auth secrets; no remote has been configured.
+See [foundation evidence](docs/development/0002-neon-auth-foundation.md) and [ADR-013](docs/decisions/ADR-013-shared-database-and-small-commits.md). The shared database is a shared trust boundary. The GitHub remote and approved encrypted CI secrets are configured; migration-owner access is excluded.
 
 See [account browser review](docs/development/0005-account-browser-review.md) for actual normal/power/adversarial checks and the remaining hosted-latency and password-form review limits.

@@ -11,7 +11,7 @@ Use Node 24 LTS and the exact pnpm version in package.json. Read AGENTS.md and C
 - Commit pnpm-lock.yaml and intentional generated route types. Never commit environment values, build output, node_modules or local runtime state.
 - Do not fabricate checks, skip tests or weaken constraints. A bug found in the browser gets a reproduction test and a focused fix.
 
-This workspace began without Git. The initial commit preserves existing research. Origin is configured as https://github.com/jackedengineer/snapform.git at the user’s request. No code has been pushed yet; no hosted PR, branch protection or CI run is claimed. Configure protected `main` with required checks and review when a remote is attached. Local feature commits remain available for review.
+This workspace began without Git. The initial commit preserves existing research. Origin is configured as https://github.com/jackedengineer/snapform.git at the user’s request. The initial committed history has been pushed. Hosted CI is configured; current check results and branch protection must be verified rather than assumed. Use focused pull requests for subsequent shared changes. Deployment is authorized for the private preview at https://snapform.jacked.dev; see docs/runbooks/deploy.md.
 
 ## Development cycle
 
