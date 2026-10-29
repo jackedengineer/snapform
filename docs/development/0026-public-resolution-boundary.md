@@ -1,0 +1,7 @@
+# Narrow published-form database lookup
+
+29 October 2026. The additive `resolve_published_form(uuid)` SQL function exposes only public identity, immutable version identity and the active published definition. It uses a fixed `pg_catalog` search path and fully qualified relations. PUBLIC execution is revoked; only the existing restricted Worker role receives execution permission. Its definer can perform this intentional live-publication lookup without granting unscoped reads of private tables. No caller-selected tenant context or dynamic SQL is accepted.
+
+The test first failed with the missing repository module. After reviewing and applying migration 0009 to the same Neon database, the actual restricted-role test cleared all membership context. Ordinary version-table reads stayed empty, but the live lookup returned exactly the three permitted properties. It retained the original published definition after draft edits, returned null for an unknown UUID, rejected SQL-shaped input before querying, and returned null after unpublishing. Fixtures rolled back.
+
+All 18 real database tests pass. Types, lint and formatting pass. The existing private application remains compatible. This commit adds the database boundary, not an anonymous HTTP route, respondent session or collection UI. Those are the next slices; file collection also requires its real quarantine/scanning path before release.

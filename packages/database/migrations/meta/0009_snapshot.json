@@ -1,0 +1,1179 @@
+{
+  "id": "ca75ca27-251f-4873-a1b6-623b2545a0b5",
+  "prevId": "35568d88-5be2-40ea-a729-1a2eabf1c40b",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.account": {
+      "name": "account",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "access_token_expires_at": {
+          "name": "access_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "account_user_idx": {
+          "name": "account_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "account_provider_identity_idx": {
+          "name": "account_provider_identity_idx",
+          "columns": [
+            {
+              "expression": "provider_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "account_user_id_user_id_fk": {
+          "name": "account_user_id_user_id_fk",
+          "tableFrom": "account",
+          "columnsFrom": ["user_id"],
+          "tableTo": "user",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.session": {
+      "name": "session",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "session_user_idx": {
+          "name": "session_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "session_expiry_idx": {
+          "name": "session_expiry_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "session_user_id_user_id_fk": {
+          "name": "session_user_id_user_id_fk",
+          "tableFrom": "session",
+          "columnsFrom": ["user_id"],
+          "tableTo": "user",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "session_token_unique": {
+          "name": "session_token_unique",
+          "columns": ["token"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user": {
+      "name": "user",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_email_unique": {
+          "name": "user_email_unique",
+          "columns": ["email"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.verification": {
+      "name": "verification",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "verification_identifier_idx": {
+          "name": "verification_identifier_idx",
+          "columns": [
+            {
+              "expression": "identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "verification_expiry_idx": {
+          "name": "verification_expiry_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.membership": {
+      "name": "membership",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "workspace_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "membership_user_workspace_idx": {
+          "name": "membership_user_workspace_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "membership_workspace_id_workspace_id_fk": {
+          "name": "membership_workspace_id_workspace_id_fk",
+          "tableFrom": "membership",
+          "columnsFrom": ["workspace_id"],
+          "tableTo": "workspace",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "membership_user_id_user_id_fk": {
+          "name": "membership_user_id_user_id_fk",
+          "tableFrom": "membership",
+          "columnsFrom": ["user_id"],
+          "tableTo": "user",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "membership_workspace_id_user_id_pk": {
+          "name": "membership_workspace_id_user_id_pk",
+          "columns": ["workspace_id", "user_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "membership_read": {
+          "name": "membership_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": ["snapform_runtime"],
+          "using": "case when nullif(current_setting('snapform.workspace_id', true), '') is null then \"membership\".\"user_id\" = current_setting('snapform.user_id', true) else \"membership\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true) end"
+        },
+        "membership_create": {
+          "name": "membership_create",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": ["snapform_runtime"],
+          "withCheck": "\"membership\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true) and current_setting('snapform.role', true) = 'owner'"
+        },
+        "membership_update": {
+          "name": "membership_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": ["snapform_runtime"],
+          "using": "\"membership\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true) and current_setting('snapform.role', true) = 'owner'",
+          "withCheck": "\"membership\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true) and current_setting('snapform.role', true) = 'owner'"
+        },
+        "membership_delete": {
+          "name": "membership_delete",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": ["snapform_runtime"],
+          "using": "\"membership\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true) and current_setting('snapform.role', true) = 'owner'"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.workspace": {
+      "name": "workspace",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "segment": {
+          "name": "segment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "workspace_created_by_user_id_fk": {
+          "name": "workspace_created_by_user_id_fk",
+          "tableFrom": "workspace",
+          "columnsFrom": ["created_by"],
+          "tableTo": "user",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "workspace_read": {
+          "name": "workspace_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": ["snapform_runtime"],
+          "using": "exists (select 1 from public.membership m where m.workspace_id = \"workspace\".\"id\" and m.user_id = current_setting('snapform.user_id', true))"
+        },
+        "workspace_create": {
+          "name": "workspace_create",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": ["snapform_runtime"],
+          "withCheck": "\"workspace\".\"id\"::text = current_setting('snapform.workspace_id', true) and \"workspace\".\"created_by\" = current_setting('snapform.user_id', true)"
+        },
+        "workspace_update": {
+          "name": "workspace_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": ["snapform_runtime"],
+          "using": "\"workspace\".\"id\"::text = current_setting('snapform.workspace_id', true) and current_setting('snapform.role', true) = 'owner'",
+          "withCheck": "\"workspace\".\"id\"::text = current_setting('snapform.workspace_id', true) and current_setting('snapform.role', true) = 'owner'"
+        }
+      },
+      "checkConstraints": {
+        "workspace_name_length": {
+          "name": "workspace_name_length",
+          "value": "length(trim(\"workspace\".\"name\")) between 2 and 80"
+        },
+        "workspace_segment": {
+          "name": "workspace_segment",
+          "value": "\"workspace\".\"segment\" in ('agency', 'coach', 'consultant', 'startup')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.draft_operation": {
+      "name": "draft_operation",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "form_id": {
+          "name": "form_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base_revision": {
+          "name": "base_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "result_revision": {
+          "name": "result_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "draft_operation_actor_id_user_id_fk": {
+          "name": "draft_operation_actor_id_user_id_fk",
+          "tableFrom": "draft_operation",
+          "columnsFrom": ["actor_id"],
+          "tableTo": "user",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "draft_operation_workspace_id_form_id_form_workspace_id_id_fk": {
+          "name": "draft_operation_workspace_id_form_id_form_workspace_id_id_fk",
+          "tableFrom": "draft_operation",
+          "columnsFrom": ["workspace_id", "form_id"],
+          "tableTo": "form",
+          "columnsTo": ["workspace_id", "id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "draft_operation_workspace_id_form_id_id_pk": {
+          "name": "draft_operation_workspace_id_form_id_id_pk",
+          "columns": ["workspace_id", "form_id", "id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "draft_operation_read": {
+          "name": "draft_operation_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": ["snapform_runtime"],
+          "using": "\"draft_operation\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"draft_operation\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and m.role in ('owner', 'editor'))"
+        },
+        "draft_operation_create": {
+          "name": "draft_operation_create",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": ["snapform_runtime"],
+          "withCheck": "\"draft_operation\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"draft_operation\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and m.role in ('owner', 'editor')) and \"draft_operation\".\"actor_id\" = current_setting('snapform.user_id', true)"
+        }
+      },
+      "checkConstraints": {
+        "draft_operation_revision_step": {
+          "name": "draft_operation_revision_step",
+          "value": "\"draft_operation\".\"base_revision\" >= 0 and \"draft_operation\".\"result_revision\" = \"draft_operation\".\"base_revision\" + 1"
+        },
+        "draft_operation_hash": {
+          "name": "draft_operation_hash",
+          "value": "\"draft_operation\".\"payload_hash\" ~ '^[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.form": {
+      "name": "form",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "form_workspace_created_idx": {
+          "name": "form_workspace_created_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "form_workspace_id_workspace_id_fk": {
+          "name": "form_workspace_id_workspace_id_fk",
+          "tableFrom": "form",
+          "columnsFrom": ["workspace_id"],
+          "tableTo": "workspace",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "form_created_by_user_id_fk": {
+          "name": "form_created_by_user_id_fk",
+          "tableFrom": "form",
+          "columnsFrom": ["created_by"],
+          "tableTo": "user",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "form_workspace_id_unique": {
+          "name": "form_workspace_id_unique",
+          "columns": ["workspace_id", "id"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {
+        "form_read": {
+          "name": "form_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": ["snapform_runtime"],
+          "using": "\"form\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and true)"
+        },
+        "form_create": {
+          "name": "form_create",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": ["snapform_runtime"],
+          "withCheck": "\"form\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and m.role in ('owner', 'editor')) and \"form\".\"created_by\" = current_setting('snapform.user_id', true)"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.form_draft": {
+      "name": "form_draft",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "form_id": {
+          "name": "form_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "definition": {
+          "name": "definition",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "form_draft_updated_by_user_id_fk": {
+          "name": "form_draft_updated_by_user_id_fk",
+          "tableFrom": "form_draft",
+          "columnsFrom": ["updated_by"],
+          "tableTo": "user",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "form_draft_workspace_id_form_id_form_workspace_id_id_fk": {
+          "name": "form_draft_workspace_id_form_id_form_workspace_id_id_fk",
+          "tableFrom": "form_draft",
+          "columnsFrom": ["workspace_id", "form_id"],
+          "tableTo": "form",
+          "columnsTo": ["workspace_id", "id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "form_draft_workspace_id_form_id_pk": {
+          "name": "form_draft_workspace_id_form_id_pk",
+          "columns": ["workspace_id", "form_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "form_draft_read": {
+          "name": "form_draft_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": ["snapform_runtime"],
+          "using": "\"form_draft\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form_draft\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and true)"
+        },
+        "form_draft_create": {
+          "name": "form_draft_create",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": ["snapform_runtime"],
+          "withCheck": "\"form_draft\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form_draft\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and m.role in ('owner', 'editor')) and \"form_draft\".\"updated_by\" = current_setting('snapform.user_id', true)"
+        },
+        "form_draft_update": {
+          "name": "form_draft_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": ["snapform_runtime"],
+          "using": "\"form_draft\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form_draft\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and m.role in ('owner', 'editor'))",
+          "withCheck": "\"form_draft\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form_draft\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and m.role in ('owner', 'editor')) and \"form_draft\".\"updated_by\" = current_setting('snapform.user_id', true)"
+        }
+      },
+      "checkConstraints": {
+        "form_draft_revision_positive": {
+          "name": "form_draft_revision_positive",
+          "value": "\"form_draft\".\"revision\" > 0"
+        },
+        "form_draft_definition_object": {
+          "name": "form_draft_definition_object",
+          "value": "jsonb_typeof(\"form_draft\".\"definition\") = 'object' and coalesce(\"form_draft\".\"definition\"->>'contractVersion', '') = '1'"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.form_publication": {
+      "name": "form_publication",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "form_id": {
+          "name": "form_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "public_id": {
+          "name": "public_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_id": {
+          "name": "version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "form_publication_updated_by_user_id_fk": {
+          "name": "form_publication_updated_by_user_id_fk",
+          "tableFrom": "form_publication",
+          "columnsFrom": ["updated_by"],
+          "tableTo": "user",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "form_publication_workspace_id_form_id_form_workspace_id_id_fk": {
+          "name": "form_publication_workspace_id_form_id_form_workspace_id_id_fk",
+          "tableFrom": "form_publication",
+          "columnsFrom": ["workspace_id", "form_id"],
+          "tableTo": "form",
+          "columnsTo": ["workspace_id", "id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "form_publication_workspace_id_form_id_version_id_form_version_workspace_id_form_id_id_fk": {
+          "name": "form_publication_workspace_id_form_id_version_id_form_version_workspace_id_form_id_id_fk",
+          "tableFrom": "form_publication",
+          "columnsFrom": ["workspace_id", "form_id", "version_id"],
+          "tableTo": "form_version",
+          "columnsTo": ["workspace_id", "form_id", "id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "form_publication_workspace_id_form_id_pk": {
+          "name": "form_publication_workspace_id_form_id_pk",
+          "columns": ["workspace_id", "form_id"]
+        }
+      },
+      "uniqueConstraints": {
+        "form_publication_public_identity": {
+          "name": "form_publication_public_identity",
+          "columns": ["public_id"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {
+        "form_publication_read": {
+          "name": "form_publication_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": ["snapform_runtime"],
+          "using": "\"form_publication\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form_publication\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and true)"
+        },
+        "form_publication_create": {
+          "name": "form_publication_create",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": ["snapform_runtime"],
+          "withCheck": "\"form_publication\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form_publication\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and m.role in ('owner', 'editor')) and \"form_publication\".\"updated_by\" = current_setting('snapform.user_id', true)"
+        },
+        "form_publication_update": {
+          "name": "form_publication_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": ["snapform_runtime"],
+          "using": "\"form_publication\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form_publication\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and m.role in ('owner', 'editor'))",
+          "withCheck": "\"form_publication\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form_publication\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and m.role in ('owner', 'editor')) and \"form_publication\".\"updated_by\" = current_setting('snapform.user_id', true)"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.form_version": {
+      "name": "form_version",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "form_id": {
+          "name": "form_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_revision": {
+          "name": "source_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "definition": {
+          "name": "definition",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "form_version_created_by_user_id_fk": {
+          "name": "form_version_created_by_user_id_fk",
+          "tableFrom": "form_version",
+          "columnsFrom": ["created_by"],
+          "tableTo": "user",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "form_version_workspace_id_form_id_form_workspace_id_id_fk": {
+          "name": "form_version_workspace_id_form_id_form_workspace_id_id_fk",
+          "tableFrom": "form_version",
+          "columnsFrom": ["workspace_id", "form_id"],
+          "tableTo": "form",
+          "columnsTo": ["workspace_id", "id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "form_version_tenant_identity": {
+          "name": "form_version_tenant_identity",
+          "columns": ["workspace_id", "form_id", "id"],
+          "nullsNotDistinct": false
+        },
+        "form_version_number": {
+          "name": "form_version_number",
+          "columns": ["workspace_id", "form_id", "number"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {
+        "form_version_read": {
+          "name": "form_version_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": ["snapform_runtime"],
+          "using": "\"form_version\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form_version\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and true)"
+        },
+        "form_version_create": {
+          "name": "form_version_create",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": ["snapform_runtime"],
+          "withCheck": "\"form_version\".\"workspace_id\"::text = current_setting('snapform.workspace_id', true)\n    and exists (select 1 from public.membership m\n      where m.workspace_id = \"form_version\".\"workspace_id\"\n        and m.user_id = current_setting('snapform.user_id', true)\n        and m.role in ('owner', 'editor')) and \"form_version\".\"created_by\" = current_setting('snapform.user_id', true)"
+        }
+      },
+      "checkConstraints": {
+        "form_version_positive_revisions": {
+          "name": "form_version_positive_revisions",
+          "value": "\"form_version\".\"number\" > 0 and \"form_version\".\"source_revision\" > 0"
+        },
+        "form_version_definition_object": {
+          "name": "form_version_definition_object",
+          "value": "jsonb_typeof(\"form_version\".\"definition\") = 'object' and coalesce(\"form_version\".\"definition\"->>'contractVersion', '') = '1'"
+        }
+      },
+      "isRLSEnabled": true
+    }
+  },
+  "enums": {
+    "public.workspace_role": {
+      "name": "workspace_role",
+      "schema": "public",
+      "values": ["owner", "editor", "viewer"]
+    }
+  },
+  "schemas": {},
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
