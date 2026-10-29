@@ -22,6 +22,7 @@ app.use((req, res, next) => {
   });
   next();
 });
+app.get('/api/v1/health', (_req, res) => res.json({ status: 'ok' }));
 app.use(authRoutes);
 app.use(publicFormRoutes);
 app.use(intakeRoutes);

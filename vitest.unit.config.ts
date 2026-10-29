@@ -3,6 +3,7 @@ export default defineConfig({
   test: {
     include: [
       'packages/contracts/**/*.test.ts',
+      'apps/web/src/*.test.ts',
       'apps/web/src/features/auth/api.test.ts',
       'apps/web/src/features/workspaces/api.test.ts',
       'apps/web/src/features/forms/*.test.ts',
