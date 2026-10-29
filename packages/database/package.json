@@ -20,6 +20,7 @@
   "scripts": {
     "migrate": "node --env-file-if-exists=../../.env src/migrate.ts",
     "test": "node --env-file-if-exists=../../apps/api/.dev.vars ../../node_modules/vitest/vitest.mjs run --config vitest.config.ts",
-    "bootstrap": "node --env-file-if-exists=../../.env src/bootstrap.ts"
+    "bootstrap": "node --env-file-if-exists=../../.env src/bootstrap.ts",
+    "bootstrap:jobs": "node --env-file-if-exists=../../.env src/bootstrap-jobs.ts"
   }
 }
