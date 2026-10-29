@@ -19,6 +19,7 @@ export type WebhookOutcome =
       httpStatus: number | null;
       reason:
         | 'configuration'
+        | 'payload-invalid'
         | 'redirect-blocked'
         | 'authorization'
         | 'receiver-rejected'
