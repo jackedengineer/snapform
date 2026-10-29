@@ -1,4 +1,14 @@
 import {
+  publicationEnvelopeSchema,
+  publicationReceiptSchema,
+  publishFormSchema,
+  unpublishFormSchema,
+} from '@snapform/contracts/publication';
+import type {
+  PublishForm,
+  UnpublishForm,
+} from '@snapform/contracts/publication';
+import {
   createFormSchema,
   saveDraftSchema,
   formEnvelopeSchema,
@@ -80,6 +90,11 @@ async function request<T>(
         'rate-limited',
         'Too many requests. Try again in a minute.',
       );
+    if (response.status === 422)
+      throw new FormRequestError(
+        'invalid',
+        'These changes could not be validated. Review the form settings and try again.',
+      );
     if (!response.ok) throw unavailable();
     return decode(await response.json());
   } catch (error) {
@@ -145,5 +160,49 @@ export async function saveDraftRequest(
       body: JSON.stringify(parsed.data),
     },
     (value) => draftReceiptSchema.parse(value),
+  );
+}
+
+const publicationPath = (workspaceId: string, id: string) =>
+  collectionPath(workspaceId) + '/' + encodeURIComponent(id) + '/publication';
+export function fetchPublication(
+  workspaceId: string,
+  id: string,
+  signal?: AbortSignal,
+) {
+  return request(
+    publicationPath(workspaceId, id),
+    { signal },
+    (value) => publicationEnvelopeSchema.parse(value).publication,
+  );
+}
+export function publishFormRequest(
+  workspaceId: string,
+  id: string,
+  input: PublishForm,
+) {
+  return request(
+    publicationPath(workspaceId, id),
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(publishFormSchema.parse(input)),
+    },
+    (value) => publicationReceiptSchema.parse(value),
+  );
+}
+export function stopPublicationRequest(
+  workspaceId: string,
+  id: string,
+  input: UnpublishForm,
+) {
+  return request(
+    publicationPath(workspaceId, id),
+    {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(unpublishFormSchema.parse(input)),
+    },
+    (value) => publicationEnvelopeSchema.parse(value).publication,
   );
 }

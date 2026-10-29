@@ -116,3 +116,61 @@ it('explains oversized drafts before sending a write', async () => {
   });
   expect(fetcher).not.toHaveBeenCalled();
 });
+it('preserves the publication operation on a retry and validates returned metadata', async () => {
+  const { fetchPublication, publishFormRequest, stopPublicationRequest } =
+    await import('./api');
+  const input = { versionId: crypto.randomUUID(), expectedRevision: 3 };
+  const publication = {
+    publicId: crypto.randomUUID(),
+    versionId: input.versionId,
+    number: 1,
+    sourceRevision: 3,
+    active: true,
+    updatedAt: '2026-10-29T00:00:00.000Z',
+  };
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ publication }));
+  vi.stubGlobal('fetch', fetcher);
+  expect(await fetchPublication(workspaceId, id)).toEqual(publication);
+  fetcher.mockImplementation(async () =>
+    Response.json({
+      versionId: input.versionId,
+      number: 1,
+      sourceRevision: 3,
+      publication,
+    }),
+  );
+  await publishFormRequest(workspaceId, id, input);
+  await publishFormRequest(workspaceId, id, input);
+  expect(fetcher.mock.calls[1][1].body).toBe(fetcher.mock.calls[2][1].body);
+  fetcher.mockResolvedValue(
+    Response.json({ publication: { ...publication, active: false } }),
+  );
+  expect(
+    (
+      await stopPublicationRequest(workspaceId, id, {
+        expectedVersionId: input.versionId,
+      })
+    )?.active,
+  ).toBe(false);
+  expect(fetcher.mock.calls[3][1].method).toBe('DELETE');
+});
+it('classifies a rejected publication as definite validation failure', async () => {
+  const { publishFormRequest } = await import('./api');
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json(
+          { error: { code: 'INVALID_PUBLICATION' } },
+          { status: 422 },
+        ),
+      ),
+  );
+  await expect(
+    publishFormRequest(workspaceId, id, {
+      versionId: crypto.randomUUID(),
+      expectedRevision: 1,
+    }),
+  ).rejects.toMatchObject({ code: 'invalid' });
+});
