@@ -92,3 +92,27 @@ it('rejects malformed successful responses and distinguishes expired authenticat
     code: 'unauthenticated',
   });
 });
+it('explains oversized drafts before sending a write', async () => {
+  const fetcher = vi.fn();
+  vi.stubGlobal('fetch', fetcher);
+  const definition = formFixture().definition;
+  definition.pages[0].blocks.push(
+    ...Array.from({ length: 30 }, () => ({
+      id: crypto.randomUUID(),
+      type: 'help' as const,
+      text: 'Long text.\n'.repeat(900),
+    })),
+  );
+  await expect(
+    saveDraftRequest(workspaceId, id, {
+      operationId: crypto.randomUUID(),
+      expectedRevision: 1,
+      definition,
+    }),
+  ).rejects.toMatchObject({
+    code: 'invalid',
+    message:
+      'This draft is too large. Shorten long text, then try saving again.',
+  });
+  expect(fetcher).not.toHaveBeenCalled();
+});

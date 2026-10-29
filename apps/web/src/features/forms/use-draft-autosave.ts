@@ -153,7 +153,10 @@ export function useDraftAutosave(
     (definition: FormDefinition) => queue.current?.edit(definition),
     [],
   );
-  const flush = useCallback(() => queue.current?.flush(), []);
+  const flush = useCallback(
+    () => queue.current?.flush(capture.current?.()),
+    [],
+  );
   const accept = useCallback(
     (revision: number, definition: FormDefinition) =>
       queue.current?.accept(revision, definition),

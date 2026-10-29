@@ -167,6 +167,7 @@ export const formDefinitionSchema = z
       context.addIssue({
         code: 'custom',
         message: 'The form definition exceeds 256 KiB.',
+        params: { reason: 'definition-size' },
       });
   });
 export type FormDefinition = z.infer<typeof formDefinitionSchema>;

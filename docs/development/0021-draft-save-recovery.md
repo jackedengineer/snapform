@@ -1,0 +1,17 @@
+# Explicit save and invalid-draft recovery
+
+29 October 2026. Explicit Save now captures the live Form API values before React's edit effect runs. A validation failure that occurs before HTTP is sent releases its unused operation identity; the next correction can save automatically. Uncertain network writes retain their original identity/body, and authentication, permission and missing-resource failures remain blocked. A newer edit arriving while the older candidate fails validation also remains saveable.
+
+Regression tests failed before the implementation. The suite covers immediate explicit saving, correction after preflight rejection, a correction during an older rejection, and continued blocking after access failures. Existing uncertain-write and stale-receipt tests remain passing. An additional failing API-client test required a specific oversized-draft message and zero fetch calls; the schema now attaches a stable size reason to that validation issue, allowing the client to explain how to correct it without exposing server diagnostics.
+
+Browser testing exposed two adjacent editing problems. Help content used a single-line input and lost paragraph breaks; it now uses a native textarea. Large help blocks also filled the outline with full text; captions now stop at 80 native grapheme segments, with a two-line visual clamp, while the original text is preserved. A family-emoji regression proves captions do not split grapheme clusters. The first screenshot also exposed save errors below the complete outline. Error and recovery controls now appear immediately below the save status, ahead of the editor grid; the final browser check measured both alerts above the grid.
+
+## Browser checks
+
+Normal: edited the owned scratch form's title and multiline help, immediately used Save now, and reloaded. The title and exact two paragraphs survived, with one revision increment for that save.
+
+Power and adversarial: used real editor controls to add thirty help blocks of 10,000 characters each alongside a valid answer field. The resulting draft exceeded the existing 256 KiB definition bound. The editor kept the text available, paused saving, warned that local recovery was unavailable, and did not claim that all changes were saved. Shortening seven blocks cleared the warning and resumed saving. Reload retained all 32 blocks, all seven corrections and the first help block's exact paragraph break. These are synthetic QA records in the existing shared database; no database or branch was created or reset.
+
+Strict types, lint and formatting passed. All 145 unit tests and 41 actual Worker tests passed. Pure-core coverage remains 100% lines/functions, 99.74% statements and 99.35% branches. Production web/API builds and SSR/CSP/service-binding checks passed. Client JavaScript is 186.15 KiB gzip, CSS 5.36 KiB and the primary font 36.07 KiB. No dependency, migration or API permission change was needed. The upstream CSS sourcemap warning remains visible. Full market V1 and deployed performance/accessibility certification remain unfinished.
+
+After repeating the size failure against the production build, all thirty generated long texts were shortened to concise QA markers. The revised actionable error and saved result are captured in [the size error](../evidence/25-draft-size-error.png) and [the recovered editor](../evidence/26-draft-save-recovered.png). No production browser console errors or warnings were observed during this slice.

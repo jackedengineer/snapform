@@ -248,3 +248,88 @@ it('captures the final keystroke when navigation happens before the React edit e
   );
   queue.close();
 });
+it('captures the latest form values for an explicit save before React effects run', async () => {
+  const initial = record();
+  const send = vi.fn(async (input: SaveDraft) => receipt(input));
+  const queue = new DraftAutosave(initial, {
+    persist: async () => {},
+    send,
+    changed: vi.fn(),
+  });
+  await queue.flush({
+    ...initial.definition,
+    description: 'The final explicit-save edit',
+  });
+  expect(send).toHaveBeenCalledOnce();
+  expect(send.mock.calls[0][0].definition.description).toBe(
+    'The final explicit-save edit',
+  );
+  queue.close();
+});
+it('allows a corrected local validation failure to use a fresh operation', async () => {
+  const initial = record();
+  const send = vi
+    .fn<(input: SaveDraft) => Promise<ReturnType<typeof receipt>>>()
+    .mockRejectedValueOnce(new FormRequestError('invalid', 'Unsupported draft'))
+    .mockImplementation(async (input) => receipt(input));
+  const queue = new DraftAutosave(initial, {
+    persist: async () => {},
+    send,
+    changed: vi.fn(),
+  });
+  queue.edit({ ...initial.definition, title: 'Invalid candidate' });
+  await queue.flush();
+  expect(queue.state.status).toBe('blocked');
+  queue.edit({ ...initial.definition, title: 'Corrected candidate' });
+  await queue.flush();
+  expect(send).toHaveBeenCalledTimes(2);
+  expect(send.mock.calls[1][0].operationId).not.toBe(
+    send.mock.calls[0][0].operationId,
+  );
+  expect(send.mock.calls[1][0].definition.title).toBe('Corrected candidate');
+  expect(queue.state.status).toBe('saved');
+  queue.close();
+});
+it('does not resume automatic writes after an authentication or permission failure', async () => {
+  for (const code of ['unauthenticated', 'forbidden', 'not-found'] as const) {
+    const initial = record();
+    const send = vi.fn(async () => {
+      throw new FormRequestError(code, 'Access unavailable');
+    });
+    const queue = new DraftAutosave(initial, {
+      persist: async () => {},
+      send,
+      changed: vi.fn(),
+    });
+    queue.edit({ ...initial.definition, title: 'First edit' });
+    await queue.flush();
+    queue.edit({ ...initial.definition, title: 'Later edit' });
+    await queue.flush();
+    expect(queue.state.status).toBe('blocked');
+    expect(send).toHaveBeenCalledOnce();
+    queue.close();
+  }
+});
+it('keeps a newer correction saveable when an older candidate fails local validation', async () => {
+  const initial = record();
+  const send = vi
+    .fn<(input: SaveDraft) => Promise<ReturnType<typeof receipt>>>()
+    .mockRejectedValueOnce(new FormRequestError('invalid', 'Unsupported draft'))
+    .mockImplementation(async (input) => receipt(input));
+  const queue = new DraftAutosave(initial, {
+    persist: async () => {},
+    send,
+    changed: vi.fn(),
+  });
+  queue.edit({ ...initial.definition, title: 'Invalid earlier candidate' });
+  const first = queue.flush();
+  queue.edit({ ...initial.definition, title: 'Newer corrected candidate' });
+  await first;
+  await queue.flush();
+  expect(send).toHaveBeenCalledTimes(2);
+  expect(send.mock.calls[1][0].definition.title).toBe(
+    'Newer corrected candidate',
+  );
+  expect(queue.state.status).toBe('saved');
+  queue.close();
+});

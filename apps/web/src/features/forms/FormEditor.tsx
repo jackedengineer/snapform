@@ -9,7 +9,7 @@ import { can } from '@snapform/contracts/workspace';
 import { useAccountUser } from '../auth/AccountLayout';
 import { fetchForm } from './api';
 import { useDraftAutosave } from './use-draft-autosave';
-import { blockNames, newBlock, duplicateBlock } from './new-form';
+import { blockNames, newBlock, duplicateBlock, blockCaption } from './new-form';
 import { BlockInspector } from './BlockInspector';
 import { DraftRecovery } from './DraftRecovery';
 import { recoverDraft } from './recover-draft';
@@ -253,6 +253,23 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
             </button>
           )}
         </div>
+        {(autosave.storageWarning || autosave.state?.storageError) && (
+          <p role="alert" className="request-error">
+            {autosave.storageWarning ||
+              'Local recovery is unavailable. Keep this tab open until all changes are saved.'}
+          </p>
+        )}
+        {autosave.state?.message && (
+          <p role="alert" className="request-error">
+            {autosave.state.message}
+          </p>
+        )}
+        {(conflict || status === 'blocked') && (
+          <DraftRecovery
+            loading={loading || saving}
+            onReload={() => void loadSaved()}
+          />
+        )}
         <PageControls
           definition={definition}
           pageId={activePage.id}
@@ -293,10 +310,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                         }}
                       >
                         <span>{index + 1}</span>
-                        <span>
-                          {('label' in item ? item.label : item.text).trim() ||
-                            'Untitled question'}
-                        </span>
+                        <span>{blockCaption(item)}</span>
                         <small>{blockNames[item.type]}</small>
                       </button>
                     </li>
@@ -440,23 +454,6 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
         <p className="request-error">
           Viewer access. Ask an owner or editor to make changes.
         </p>
-      )}
-      {(autosave.storageWarning || autosave.state?.storageError) && (
-        <p role="alert" className="request-error">
-          {autosave.storageWarning ||
-            'Local recovery is unavailable. Keep this tab open until all changes are saved.'}
-        </p>
-      )}
-      {autosave.state?.message && (
-        <p role="alert" className="request-error">
-          {autosave.state.message}
-        </p>
-      )}
-      {(conflict || status === 'blocked') && (
-        <DraftRecovery
-          loading={loading || saving}
-          onReload={() => void loadSaved()}
-        />
       )}
       {autosave.recoveries.length > 0 && (
         <section className="definition-checks" aria-label="Local recovery">

@@ -86,3 +86,18 @@ export function duplicateBlock(block: Block): Block {
     }));
   return copy;
 }
+
+const captionSegments = new Intl.Segmenter(undefined, {
+  granularity: 'grapheme',
+});
+export function blockCaption(block: Block) {
+  const text = ('label' in block ? block.label : block.text).trim();
+  if (!text) return 'Untitled question';
+  let caption = '',
+    count = 0;
+  for (const { segment } of captionSegments.segment(text)) {
+    if (count++ === 80) return caption.trimEnd() + '…';
+    caption += segment;
+  }
+  return caption;
+}

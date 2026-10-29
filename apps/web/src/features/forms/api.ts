@@ -6,6 +6,19 @@ import {
   draftReceiptSchema,
 } from '@snapform/contracts/draft';
 import type { CreateForm, SaveDraft } from '@snapform/contracts/draft';
+function invalidDraft(
+  issues: { code: string; params?: Record<string, unknown> }[],
+) {
+  return new FormRequestError(
+    'invalid',
+    issues.some(
+      (issue) =>
+        issue.code === 'custom' && issue.params?.reason === 'definition-size',
+    )
+      ? 'This draft is too large. Shorten long text, then try saving again.'
+      : 'This draft contains unsupported settings.',
+  );
+}
 type FailureCode =
   | 'unauthenticated'
   | 'forbidden'
@@ -104,11 +117,7 @@ export async function createFormRequest(
   input: CreateForm,
 ) {
   const parsed = createFormSchema.safeParse(input);
-  if (!parsed.success)
-    throw new FormRequestError(
-      'invalid',
-      'This draft contains unsupported settings.',
-    );
+  if (!parsed.success) throw invalidDraft(parsed.error.issues);
   return request(
     collectionPath(workspaceId),
     {
@@ -126,11 +135,7 @@ export async function saveDraftRequest(
   signal?: AbortSignal,
 ) {
   const parsed = saveDraftSchema.safeParse(input);
-  if (!parsed.success)
-    throw new FormRequestError(
-      'invalid',
-      'This draft contains unsupported settings.',
-    );
+  if (!parsed.success) throw invalidDraft(parsed.error.issues);
   return request(
     draftPath(workspaceId, id),
     {

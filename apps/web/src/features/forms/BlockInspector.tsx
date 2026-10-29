@@ -9,7 +9,7 @@ export function BlockInspector({
   block: Block;
   onChange: (block: Block) => void;
 }) {
-  const labelInput = useRef<HTMLInputElement>(null);
+  const labelInput = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   useEffect(() => labelInput.current?.focus(), [block.id]);
   const content = block.type === 'heading' || block.type === 'help';
   return (
@@ -20,19 +20,36 @@ export function BlockInspector({
         <label htmlFor={`label-${block.id}`}>
           {content ? 'Text' : 'Question label'}
         </label>
-        <input
-          ref={labelInput}
-          id={`label-${block.id}`}
-          maxLength={content && block.type === 'help' ? 10000 : 500}
-          value={content ? block.text : block.label}
-          onChange={(event) =>
-            onChange(
-              content
-                ? { ...block, text: event.target.value }
-                : { ...block, label: event.target.value },
-            )
-          }
-        />
+        {block.type === 'help' ? (
+          <textarea
+            ref={(element) => {
+              labelInput.current = element;
+            }}
+            id={`label-${block.id}`}
+            maxLength={10000}
+            rows={5}
+            value={block.text}
+            onChange={(event) =>
+              onChange({ ...block, text: event.target.value })
+            }
+          />
+        ) : (
+          <input
+            ref={(element) => {
+              labelInput.current = element;
+            }}
+            id={`label-${block.id}`}
+            maxLength={500}
+            value={content ? block.text : block.label}
+            onChange={(event) =>
+              onChange(
+                content
+                  ? { ...block, text: event.target.value }
+                  : { ...block, label: event.target.value },
+              )
+            }
+          />
+        )}
       </div>
       {!content && (
         <>

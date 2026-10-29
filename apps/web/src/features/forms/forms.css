@@ -210,6 +210,10 @@
   padding-top: 2px;
 }
 .form-outline li button > span:nth-child(2) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   font-size: 13px;
   line-height: 1.4;
   overflow-wrap: anywhere;

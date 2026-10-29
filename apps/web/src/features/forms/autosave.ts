@@ -27,6 +27,7 @@ export class DraftAutosave {
   private running: Promise<void> | null = null;
   private closed = false;
   private retryAt = 0;
+  private validationFailed = false;
   private abort = new AbortController();
   constructor(
     initial: LocalDraft,
@@ -71,6 +72,11 @@ export class DraftAutosave {
       definitionKey(definition) === definitionKey(this.state.record.definition)
     )
       return;
+    if (this.validationFailed) {
+      this.validationFailed = false;
+      this.state.status = 'waiting';
+      this.state.message = '';
+    }
     this.state.record = {
       ...this.state.record,
       definition: structuredClone(definition),
@@ -88,6 +94,7 @@ export class DraftAutosave {
   }
   async recover(record: LocalDraft, serverRevision: number) {
     if (this.closed || this.running) return;
+    this.validationFailed = false;
     this.state.record = {
       ...structuredClone(record),
       editorId: this.state.record.editorId,
@@ -105,6 +112,7 @@ export class DraftAutosave {
   }
   accept(revision: number, definition: FormDefinition) {
     if (this.closed || this.running) return false;
+    this.validationFailed = false;
     const backup = this.state.record.definition;
     this.state.record = {
       ...this.state.record,
@@ -121,7 +129,8 @@ export class DraftAutosave {
     void this.persist();
     return true;
   }
-  flush(): Promise<void> {
+  flush(definition?: FormDefinition): Promise<void> {
+    if (definition) this.edit(definition);
     clearTimeout(this.timer);
     if (
       this.closed ||
@@ -188,6 +197,21 @@ export class DraftAutosave {
         error instanceof FormRequestError
           ? error.message
           : 'We couldn’t confirm that save. Your edits are still here.';
+      if (code === 'invalid') {
+        // This code is emitted by client validation before any HTTP write is sent.
+        const newer =
+          definitionKey(this.state.record.definition) !==
+          definitionKey(operation.definition);
+        this.validationFailed = !newer;
+        this.state.record = { ...this.state.record, pending: null };
+        if (newer) {
+          this.state.status =
+            definitionKey(this.state.record.definition) === this.acknowledged
+              ? 'saved'
+              : 'waiting';
+          this.state.message = '';
+        }
+      }
       if (code === 'rate-limited') this.retryAt = Date.now() + 60000;
       await this.persist();
     }
