@@ -10,7 +10,8 @@
     "./forms": "./src/forms.ts",
     "./publication": "./src/publication.ts",
     "./public-form": "./src/public-form.ts",
-    "./intake": "./src/intake.ts"
+    "./intake": "./src/intake.ts",
+    "./outbox": "./src/outbox.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

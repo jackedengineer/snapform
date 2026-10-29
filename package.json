@@ -9,17 +9,17 @@
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/api && tsc --noEmit -p apps/web && tsc --noEmit -p packages/database && tsc --noEmit -p packages/contracts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/api && tsc --noEmit -p apps/web && tsc --noEmit -p packages/database && tsc --noEmit -p packages/contracts && tsc --noEmit -p apps/jobs",
     "lint": "eslint apps packages scripts --max-warnings 0",
     "test:unit": "vitest run --config vitest.unit.config.ts",
     "test:api": "vitest run --config apps/api/vitest.config.ts",
-    "test": "pnpm test:unit --coverage && pnpm test:api && pnpm test:db && pnpm test:auth:integration",
-    "build": "pnpm --filter @snapform/web build && pnpm --filter @snapform/api build",
+    "test": "pnpm test:unit --coverage && pnpm test:api && pnpm test:jobs && pnpm test:db && pnpm test:auth:integration",
+    "build": "pnpm --filter @snapform/web build && pnpm --filter @snapform/api build && pnpm --filter @snapform/jobs build",
     "check:bundle": "node scripts/check-bundle.mjs",
     "check:fast": "pnpm format:check && pnpm typecheck && pnpm lint",
     "check": "pnpm types:generate && pnpm check:fast && pnpm test && pnpm build && pnpm check:bundle && pnpm test:preview && pnpm test:dev-reload",
     "git:hooks": "git config core.hooksPath .githooks",
-    "types:generate": "pnpm --filter @snapform/api types && wrangler types --config apps/web/wrangler.jsonc apps/web/worker-configuration.d.ts",
+    "types:generate": "pnpm --filter @snapform/api types && wrangler types --config apps/web/wrangler.jsonc apps/web/worker-configuration.d.ts && pnpm --filter @snapform/jobs types",
     "test:preview": "node scripts/test-preview.mjs",
     "format": "prettier --write apps packages scripts .github/workflows package.json tsconfig.json vitest.unit.config.ts eslint.config.mjs pnpm-workspace.yaml .prettierrc.json drizzle.config.ts",
     "format:check": "prettier --check apps packages scripts .github/workflows package.json tsconfig.json vitest.unit.config.ts eslint.config.mjs pnpm-workspace.yaml .prettierrc.json drizzle.config.ts",
@@ -29,7 +29,8 @@
     "test:db": "pnpm --filter @snapform/database test",
     "db:bootstrap": "pnpm --filter @snapform/database bootstrap",
     "db:bootstrap:jobs": "pnpm --filter @snapform/database bootstrap:jobs",
-    "test:auth:integration": "pnpm --filter @snapform/api test:integration"
+    "test:auth:integration": "pnpm --filter @snapform/api test:integration",
+    "test:jobs": "vitest run --config apps/jobs/vitest.config.ts"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.65.0",

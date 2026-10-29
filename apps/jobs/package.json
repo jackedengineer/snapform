@@ -1,0 +1,14 @@
+{
+  "name": "@snapform/jobs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "types": "wrangler types worker-configuration.d.ts",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@snapform/contracts": "workspace:*",
+    "@snapform/database": "workspace:*"
+  }
+}
