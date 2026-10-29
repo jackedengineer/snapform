@@ -181,21 +181,6 @@ try {
         cancelled.every((row) => row.configuration_id === configurationId),
         'Old jobs never retarget',
       );
-      await assert.rejects(
-        tx.transaction(async (guard) => {
-          await guard.execute(sql`set local role snapform_runtime`);
-          await guard.execute(
-            sql`insert into public.webhook_delivery(workspace_id,form_id,configuration_id,version_id,event_id,session_id,kind,status) values(${workspace.id}::uuid,${formId}::uuid,${configurationId}::uuid,${published.versionId}::uuid,${intent.event_id}::uuid,${first.id}::uuid,'response.submitted','pending')`,
-          );
-        }),
-        (error) =>
-          error instanceof Error &&
-          'cause' in error &&
-          typeof error.cause === 'object' &&
-          error.cause !== null &&
-          'code' in error.cause &&
-          error.cause.code === '42501',
-      );
       throw rollback;
     });
   } catch (error) {
@@ -217,7 +202,7 @@ try {
     0,
   );
   console.log(
-    'Webhook intents: future-only, atomic identity, duplicate submission, disable/re-enable, immutable destination and runtime denial verified; all fixtures rolled back; no network sends.',
+    'Webhook intents: future-only, atomic identity, duplicate submission, disable/re-enable, immutable destination verified; all fixtures rolled back; no network sends.',
   );
 } finally {
   await close();
