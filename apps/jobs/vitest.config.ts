@@ -6,8 +6,14 @@ export default defineConfig({
   plugins: [
     cloudflareTest({
       wrangler: { configPath: './wrangler.jsonc' },
-      miniflare: { bindings: { DATABASE_URL: '' } },
+      miniflare: {
+        bindings: {
+          DATABASE_URL: '',
+          RESEND_WEBHOOK_SECRET:
+            'whsec_MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
+        },
+      },
     }),
   ],
-  test: { include: ['test/**/*.test.ts'], allowOnly: false },
+  test: { include: ['test/**/*.test.ts'], allowOnly: false, maxWorkers: 2 },
 });

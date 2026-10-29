@@ -101,6 +101,30 @@ export default {
         },
       );
     }
+    if (new URL(request.url).pathname === '/api/v1/hooks/resend') {
+      const key =
+        'provider-receipt:' +
+        (request.headers.get('cf-connecting-ip') || 'local');
+      if (!(await environment.PUBLIC_READ_RATE_LIMIT.limit({ key })).success)
+        return Response.json(
+          { error: { code: 'RATE_LIMITED' } },
+          {
+            status: 429,
+            headers: { 'Cache-Control': 'no-store', 'Retry-After': '60' },
+          },
+        );
+      try {
+        return await environment.JOBS.fetch(request);
+      } catch {
+        console.error(
+          JSON.stringify({ event: 'provider_receipt_forward_failed' }),
+        );
+        return Response.json(
+          { error: { code: 'UNAVAILABLE' } },
+          { status: 503, headers: { 'Cache-Control': 'no-store' } },
+        );
+      }
+    }
     if (new URL(request.url).pathname.startsWith('/api/auth/')) {
       const checked = await checkAuthRequest(
         request,

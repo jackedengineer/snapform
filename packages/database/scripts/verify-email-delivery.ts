@@ -207,6 +207,44 @@ try {
       'completion cannot be replayed',
     );
     assert.equal((await claim()).length, 0, 'accepted email is not resent');
+    const receipt = async (
+      incoming: string | null,
+      provided = provider,
+      to = email,
+    ) =>
+      (
+        await tx.execute<{ recorded: boolean }>(
+          sql`select public.record_owner_provider_status(${delivery.id}::uuid,${provided}::uuid,${to},${incoming}) as recorded`,
+        )
+      ).rows[0].recorded;
+    assert.equal(await receipt(null), false, 'NULL provider state rejected');
+    assert.equal(
+      await receipt('delivered', provider, 'other@example.invalid'),
+      false,
+      'recipient mismatch rejected',
+    );
+    assert.equal(await receipt('delivered'), true);
+    assert.equal(
+      await receipt('delivered'),
+      false,
+      'provider replay is idempotent',
+    );
+    assert.equal(
+      await receipt('accepted'),
+      false,
+      'late acceptance cannot downgrade delivery',
+    );
+    assert.equal(
+      await receipt('complained', crypto.randomUUID()),
+      false,
+      'provider identity mismatch rejected',
+    );
+    assert.equal(await receipt('complained'), true);
+    assert.equal(
+      await receipt('bounced'),
+      false,
+      'late events cannot downgrade a complaint',
+    );
 
     for (const [attempts, age, reason] of [
       [8, '1 hour', 'attempts-exhausted'],

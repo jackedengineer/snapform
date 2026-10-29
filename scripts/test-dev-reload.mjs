@@ -46,7 +46,8 @@ for (const stream of [child.stdout, child.stderr])
     output = (output + chunk.toString()).slice(-6000);
   });
 async function waitForHeader(expected) {
-  for (let attempt = 0; attempt < 60; attempt++) {
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
     if (child.exitCode !== null)
       throw new Error(`Development server exited.\n${output}`);
     try {
@@ -61,7 +62,9 @@ async function waitForHeader(expected) {
             currency: 'USD',
             targetDate: '2027-01-15',
           }),
-          signal: AbortSignal.timeout(500),
+          signal: AbortSignal.timeout(
+            Math.min(5000, Math.max(1, deadline - Date.now())),
+          ),
         },
       );
       if (
