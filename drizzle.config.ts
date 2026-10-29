@@ -8,6 +8,7 @@ export default defineConfig({
     './packages/database/src/publication-schema.ts',
     './packages/database/src/intake-schema.ts',
     './packages/database/src/outbox-schema.ts',
+    './packages/database/src/notification-schema.ts',
   ],
   out: './packages/database/migrations',
 });

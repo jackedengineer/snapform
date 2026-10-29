@@ -39,6 +39,12 @@ export const responseOutbox = pgTable(
   },
   (table) => [
     unique('response_outbox_session').on(table.sessionId),
+    unique('response_outbox_delivery_identity').on(
+      table.id,
+      table.workspaceId,
+      table.formId,
+      table.sessionId,
+    ),
     foreignKey({
       name: 'response_outbox_session_fk',
       columns: [
