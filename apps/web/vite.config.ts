@@ -19,4 +19,22 @@ export default defineConfig(({ command, isPreview }) => ({
     react(),
   ],
   server: { strictPort: true },
+  environments: {
+    client: {
+      build: {
+        rolldownOptions: {
+          output: {
+            codeSplitting: {
+              groups: [
+                {
+                  name: 'router',
+                  test: /\/@tanstack\/(?:react-router|router-core|react-start-client|start-client-core)\//,
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+  },
 }));
