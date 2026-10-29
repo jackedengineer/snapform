@@ -20,7 +20,7 @@ export default createServerEntry({
       context: { nonce },
     });
     const secured = new Response(response.body, response);
-    secured.headers.set('Cache-Control', 'no-store');
+    secured.headers.set('Cache-Control', 'no-store, no-transform');
     secured.headers.set('X-Content-Type-Options', 'nosniff');
     secured.headers.set('Referrer-Policy', 'no-referrer');
     secured.headers.set(

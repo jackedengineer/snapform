@@ -77,7 +77,7 @@ export async function formatExportDownload(
   ])
     headers.delete(name);
   headers.set('Content-Type', 'text/html; charset=utf-8');
-  headers.set('Cache-Control', 'no-store');
+  headers.set('Cache-Control', 'no-store, no-transform');
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('Referrer-Policy', 'no-referrer');
   headers.set(

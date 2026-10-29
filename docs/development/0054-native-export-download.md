@@ -32,7 +32,7 @@ actual 375×812 recovery page had no overflow, no scripts and a 48px return acti
 Back to inbox worked. At 320×812 the inbox download target stayed 44px high. A
 forged response bookmark showed no answer definitions at 375px. Screenshot
 `49-mobile-export-recovery.png` records the narrow error state without answers.
-Live production export verification remains pending.
+Live production export verification passed as recorded below.
 
 Final emitted assets: 199.70 KiB JS gzip / 200 budget, 7.66 KiB CSS / 20,
 36.07 KiB font / 40. Query modules and pure contract/request helpers are grouped;
@@ -41,3 +41,24 @@ was added. API dry-run is 727.25 KiB gzip, jobs 216.26 KiB. Strict checks, 196 p
 and 65 API tests, 36 rollback database tests, SSR/reload checks and the production
 audit passed. Core coverage remains 100% lines/functions, 99.58% statements and
 97.95% branches. These measurements are not production latency SLOs.
+
+Production smoke: the API exported the exact same 576 bytes and SHA-256 as the
+local file; one observed request took 1,696ms (not a percentile or latency SLO).
+Forged query fields returned 422 and cross-origin exports returned 403. A temporary
+owned QA auth session was signed out afterward. During the sequential deployment,
+the old web Worker briefly returned the existing JSON 401; after the web release,
+the expected HTML recovery appeared.
+
+A deployed probe then found Cloudflare Web Analytics automatically injecting its
+beacon into the otherwise script-free error page. CSP blocked it. Failing unit
+and actual preview checks now require no-transform alongside no-store; both SSR
+and export recovery set that directive, preserving CSP and caching protections.
+Cloudflare documents no-transform as preventing automatic beacon injection:
+https://developers.cloudflare.com/web-analytics/faq/ . Web version
+5cb13543-fddd-466d-aef1-b93c6f60ddcd now returns no-transform; live homepage
+and anonymous recovery probes found no injected beacon. The production browser
+saved a newly written CSV with the expected 576-byte digest, reached the real
+rate-limit page after repeated downloads, and returned to the inbox. At 1280px
+the rate page contained zero scripts, zero answer definitions and no overflow.
+Screenshot 50 records this state. Normal, power and adversarial gates pass for
+this bounded export; full mobile hardware and screen-reader runs are not claimed.
