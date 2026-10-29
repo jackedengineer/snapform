@@ -36,3 +36,11 @@ Neon serverless driver 1.2.0 and Drizzle ORM 0.45.4 supply request-scoped intera
 The audit found GHSA-67mh-4wv8-2f99 in Drizzle Kit's legacy esbuild transform helper (0.18.20). A scoped pnpm override selects already-used esbuild 0.25.12 for that helper. CLI generation and the checks validate the change rather than applying a forced blanket upgrade. The two deprecated esbuild-kit helper packages remain tooling dependencies; no esbuild development server is started by the application. [Primary advisory](https://github.com/evanw/esbuild/security/advisories/GHSA-67mh-4wv8-2f99).
 
 Better Auth uses its officially documented `better-auth/minimal` initializer with the Drizzle adapter. Standalone API upload fell from 808.68 to 704.61 KiB gzip (104.07 KiB removed); no auth code is added to the browser bundle by the server integration. Native fetch handles Resend; no additional email SDK is installed.
+
+## Response job Worker
+
+`apps/jobs` reuses the existing contracts, Drizzle and Neon driver. Native
+Cloudflare Cron/Queues and structured JSON logs add no external SDK or browser
+runtime. The standalone job artifact is 216.26 KiB gzip (deployment startup
+24 ms); client assets are unchanged by this workspace. No license or transitive
+package graph changed; the lockfile adds workspace links only.

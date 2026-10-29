@@ -1,0 +1,26 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "snapform-jobs",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "send_metrics": false,
+  "workers_dev": false,
+  "preview_urls": false,
+  "triggers": { "crons": ["* * * * *"] },
+  "queues": {
+    "producers": [{ "binding": "EVENTS", "queue": "snapform-response-events" }],
+    "consumers": [
+      {
+        "queue": "snapform-response-events",
+        "max_batch_size": 5,
+        "max_batch_timeout": 5,
+        "max_concurrency": 1,
+        "max_retries": 5,
+        "retry_delay": 60,
+        "dead_letter_queue": "snapform-response-dead",
+      },
+    ],
+  },
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
+}

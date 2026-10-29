@@ -61,3 +61,12 @@ separate release gates until their implementation and evidence are recorded.
 Sources: [Vite auxiliary Workers](https://developers.cloudflare.com/workers/vite-plugin/reference/api/),
 [custom domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/),
 [secrets](https://developers.cloudflare.com/workers/configuration/secrets/).
+
+## Response transport Worker
+
+Deploy `apps/jobs/wrangler.jsonc` separately. Its only secret is `DATABASE_URL`
+for the restricted `snapform_jobs` identity; never copy API auth secrets or the
+migration owner. Cron and Queue configuration live in Wrangler. Confirm an owned
+synthetic event reaches a durable transport receipt, then inspect queue backlog,
+retries and the `snapform-response-dead` queue. Cron propagation can take up to
+15 minutes. A transport receipt does not prove provider notification delivery.
