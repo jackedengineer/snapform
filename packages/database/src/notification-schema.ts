@@ -76,12 +76,25 @@ export const responseEmailDelivery = pgTable(
       .notNull()
       .default('pending'),
     reason: text('reason'),
+    attempts: integer('attempts').notNull().default(0),
+    firstAttemptAt: timestamp('first_attempt_at', { withTimezone: true }),
+    availableAt: timestamp('available_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    leaseToken: uuid('lease_token'),
+    leaseUntil: timestamp('lease_until', { withTimezone: true }),
+    providerId: uuid('provider_id'),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => [
     unique('response_email_event').on(table.eventId),
+    unique('response_email_provider').on(table.providerId),
     foreignKey({
       name: 'response_email_event_tenant_fk',
       columns: [
@@ -101,9 +114,14 @@ export const responseEmailDelivery = pgTable(
       .on(table.createdAt)
       .where(sql`${table.status}='pending'`),
     check('response_email_settings_revision', sql`${table.settingsRevision}>0`),
+    check('response_email_attempts', sql`${table.attempts} between 0 and 8`),
+    check(
+      'response_email_lease',
+      sql`(${table.status}='sending' and ${table.leaseToken} is not null and ${table.leaseUntil} is not null and ${table.firstAttemptAt} is not null) or (${table.status}<>'sending' and ${table.leaseToken} is null and ${table.leaseUntil} is null)`,
+    ),
     check(
       'response_email_state',
-      sql`(${table.status}='pending' and ${table.reason} is null) or (${table.status}='cancelled' and ${table.reason} is not distinct from 'disabled') or (${table.status}='needs_action' and ${table.reason} is not distinct from 'recipient-unavailable')`,
+      sql`(${table.status} in ('pending','sending','accepted','delivered','bounced','complained','failed','suppressed') and ${table.reason} is null) or (${table.status}='cancelled' and ${table.reason} is not distinct from 'disabled') or (${table.status}='needs_action' and coalesce(${table.reason},'') in ('recipient-unavailable','configuration','provider-rejected','idempotency-expired','attempts-exhausted'))`,
     ),
     pgPolicy('response_email_read', {
       for: 'select',

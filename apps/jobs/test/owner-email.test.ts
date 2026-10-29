@@ -37,7 +37,16 @@ it('sends stable minimal plaintext to the verified snapshot recipient with an id
   expect(body.text).toContain(
     `https://snapform.jacked.dev/workspaces/${delivery.workspaceId}/responses/${delivery.formId}?response=${delivery.sessionId}`,
   );
-  expect(Object.keys(body).sort()).toEqual(['from', 'subject', 'text', 'to']);
+  expect(Object.keys(body).sort()).toEqual([
+    'from',
+    'subject',
+    'tags',
+    'text',
+    'to',
+  ]);
+  expect(body.tags).toEqual([
+    { name: 'snapform_delivery', value: delivery.id },
+  ]);
   expect(body.text).not.toContain('answers');
 });
 it('never sends beyond the retry window or with missing configuration or an unauthorized test recipient', async () => {

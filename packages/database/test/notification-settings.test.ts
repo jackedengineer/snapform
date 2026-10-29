@@ -162,3 +162,24 @@ it('opts in future notifications, snapshots a verified owner and cancels pending
     await close();
   }
 }, 30000);
+
+it('keeps email delivery claims and outcomes outside application authority', async () => {
+  if (!process.env.DATABASE_URL) throw Error('Runtime database required');
+  const { db, close } = await openDatabase(process.env.DATABASE_URL);
+  try {
+    await expect(
+      db.execute(
+        sql`select * from public.claim_owner_emails(1,${crypto.randomUUID()}::uuid)`,
+      ),
+    ).rejects.toMatchObject({ cause: { code: '42501' } });
+    expect(
+      (
+        await db.execute(
+          sql`select has_function_privilege('snapform_jobs','public.claim_owner_emails(integer,uuid)','EXECUTE') as claim,has_function_privilege(current_user,'public.record_owner_email(uuid,uuid,text,uuid,text,integer)','EXECUTE') as app_write,has_table_privilege('snapform_jobs','public.response_email_delivery','UPDATE') as direct_write`,
+        )
+      ).rows,
+    ).toEqual([{ claim: true, app_write: false, direct_write: false }]);
+  } finally {
+    await close();
+  }
+});
