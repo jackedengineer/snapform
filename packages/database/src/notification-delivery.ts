@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import type { EmailOutcome } from '@snapform/contracts/notifications';
+import type { ProviderEmailReceipt } from '@snapform/contracts/provider-receipt';
 import type { Database, Transaction } from './client.ts';
 export type OwnerEmailClaim = {
   id: string;
@@ -42,5 +43,16 @@ export async function recordOwnerEmail(
   );
   if (typeof rows[0]?.recorded !== 'boolean')
     throw Error('Invalid email attempt receipt');
+  return rows[0].recorded;
+}
+export async function recordOwnerProviderStatus(
+  db: Database | Transaction,
+  receipt: ProviderEmailReceipt,
+): Promise<boolean> {
+  const { rows } = await db.execute<{ recorded: boolean }>(
+    sql`select public.record_owner_provider_status(${receipt.deliveryId}::uuid,${receipt.providerId}::uuid,${receipt.recipient},${receipt.status}) as recorded`,
+  );
+  if (typeof rows[0]?.recorded !== 'boolean')
+    throw Error('Invalid provider receipt');
   return rows[0].recorded;
 }

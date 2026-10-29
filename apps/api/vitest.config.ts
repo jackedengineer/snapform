@@ -7,6 +7,16 @@ export default defineConfig({
     cloudflareTest({
       wrangler: { configPath: './wrangler.jsonc' },
       miniflare: {
+        serviceBindings: {
+          JOBS: async (request) =>
+            new Response(
+              JSON.stringify({
+                body: await request.text(),
+                signature: request.headers.get('svix-signature'),
+              }),
+              { headers: { 'Content-Type': 'application/json' } },
+            ),
+        },
         bindings: {
           ...(process.env.DATABASE_URL
             ? { DATABASE_URL: process.env.DATABASE_URL }
@@ -24,5 +34,5 @@ export default defineConfig({
       },
     }),
   ],
-  test: { include: ['test/**/*.test.ts'], allowOnly: false },
+  test: { include: ['test/**/*.test.ts'], allowOnly: false, maxWorkers: 2 },
 });

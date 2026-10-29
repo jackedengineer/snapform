@@ -10,13 +10,16 @@ import { relayResponseEvents, consumeResponseEvents } from './transport';
 import {
   claimOwnerEmails,
   recordOwnerEmail,
+  recordOwnerProviderStatus,
 } from '@snapform/database/notification-delivery';
 import { dispatchOwnerEmails } from './email-dispatch';
 import { sendOwnerEmail } from './owner-email';
+import { handleProviderReceipt } from './provider-receipt';
 
 type JobEnvironment = {
   DATABASE_URL?: string;
   RESEND_API_KEY?: string;
+  RESEND_WEBHOOK_SECRET?: string;
   EMAIL_FROM?: string;
   EMAIL_ALLOWED_RECIPIENT?: string;
   EVENTS: Pick<Queue<ResponseEventMessage>, 'sendBatch'>;
@@ -33,7 +36,20 @@ function connect(environment: JobEnvironment) {
   return openDatabase(url);
 }
 export default {
-  fetch() {
+  async fetch(request, environment) {
+    if (new URL(request.url).pathname === '/api/v1/hooks/resend')
+      return handleProviderReceipt(
+        request,
+        environment.RESEND_WEBHOOK_SECRET || '',
+        async (receipt) => {
+          const { db, close } = await connect(environment);
+          try {
+            return await recordOwnerProviderStatus(db, receipt);
+          } finally {
+            await close();
+          }
+        },
+      );
     return new Response(null, {
       status: 404,
       headers: { 'Cache-Control': 'no-store' },

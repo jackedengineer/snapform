@@ -11,7 +11,10 @@ export default defineConfig(({ command, isPreview }) => ({
       viteEnvironment: { name: 'ssr' },
       auxiliaryWorkers:
         command === 'build' || isPreview
-          ? [{ configPath: '../api/wrangler.jsonc' }]
+          ? [
+              { configPath: '../api/wrangler.jsonc' },
+              { configPath: '../jobs/wrangler.jsonc' },
+            ]
           : [],
       remoteBindings: false,
     }),

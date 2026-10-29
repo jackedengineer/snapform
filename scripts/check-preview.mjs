@@ -75,3 +75,19 @@ assert.match(await download.text(), /Sign in to download/);
 console.log(
   'Native export authorization errors render through the real web-to-API Worker boundary.',
 );
+const receiptPath = `${base}/api/v1/hooks/resend`;
+const unsignedReceipt = await fetch(receiptPath, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: '{}',
+});
+assert.equal(unsignedReceipt.status, 401);
+assert.equal(unsignedReceipt.headers.get('Cache-Control'), 'no-store');
+assert.equal(await unsignedReceipt.text(), '');
+const receiptGet = await fetch(receiptPath);
+assert.equal(receiptGet.status, 405);
+assert.equal(receiptGet.headers.get('Allow'), 'POST');
+assert.equal(await receiptGet.text(), '');
+console.log(
+  'Provider callbacks reach the private jobs Worker and reject unsigned or wrong-method requests.',
+);

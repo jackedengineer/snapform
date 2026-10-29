@@ -39,6 +39,7 @@ jobs:
             AUTH_ALLOWED_RECIPIENT: 'runtime-check@example.invalid',
           };
           await writeFile('apps/api/.dev.vars', Object.entries(values).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join('\n') + '\n', { mode: 0o600, flag: 'wx' });
+          await writeFile('apps/jobs/.dev.vars', 'DATABASE_URL=""\nRESEND_WEBHOOK_SECRET="whsec_MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="\n', { mode: 0o600, flag: 'wx' });
           JS
       - run: pnpm types:generate
       - run: pnpm build
