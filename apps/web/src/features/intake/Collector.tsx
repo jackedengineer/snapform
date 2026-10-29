@@ -12,7 +12,9 @@ export function Collector({ publicId }: { publicId: string }) {
     [stepId, setStepId] = useState(''),
     [review, setReview] = useState(false),
     [touched, setTouched] = useState<Set<string>>(new Set()),
-    [forget, setForget] = useState(false);
+    [confirmation, setConfirmation] = useState<'forget' | 'reload' | null>(
+      null,
+    );
   const heading = useRef<HTMLHeadingElement>(null),
     dialog = useRef<HTMLDialogElement>(null);
   const session = intake.progress?.record.session;
@@ -46,9 +48,9 @@ export function Collector({ publicId }: { publicId: string }) {
     }
   }, [status]);
   useEffect(() => {
-    if (forget) dialog.current?.showModal();
+    if (confirmation) dialog.current?.showModal();
     else dialog.current?.close();
-  }, [forget]);
+  }, [confirmation]);
   useEffect(() => {
     setReview(false);
     setStepId('');
@@ -135,6 +137,15 @@ export function Collector({ publicId }: { publicId: string }) {
                     Retry loading
                   </button>
                 )}
+                {['conflict', 'blocked'].includes(status || '') && !review && (
+                  <button
+                    type="button"
+                    className="intake-text-button"
+                    onClick={() => setReview(true)}
+                  >
+                    Review my answers
+                  </button>
+                )}
                 {['offline', 'conflict', 'blocked'].includes(status || '') && (
                   <button
                     type="button"
@@ -142,7 +153,9 @@ export function Collector({ publicId }: { publicId: string }) {
                     onClick={() =>
                       status === 'offline'
                         ? void intake.controller?.flush()
-                        : intake.retry()
+                        : status === 'conflict'
+                          ? setConfirmation('reload')
+                          : intake.retry()
                     }
                   >
                     {status === 'offline'
@@ -277,8 +290,9 @@ export function Collector({ publicId }: { publicId: string }) {
                     )}
                     {review && (
                       <p className="intake-description">
-                        Make any final changes below. Only the answers relevant
-                        to your path will be sent.
+                        {frozen
+                          ? 'Your retained answers are read-only. Resolve the saved-state issue before editing.'
+                          : 'Make any final changes below. Only answers relevant to your path will be sent.'}
                       </p>
                     )}
                     <fieldset
@@ -373,7 +387,7 @@ export function Collector({ publicId }: { publicId: string }) {
                   type="button"
                   className="intake-text-button"
                   disabled={intake.busy || status === 'saving'}
-                  onClick={() => setForget(true)}
+                  onClick={() => setConfirmation('forget')}
                 >
                   Forget this browser
                 </button>
@@ -385,31 +399,37 @@ export function Collector({ publicId }: { publicId: string }) {
       <dialog
         ref={dialog}
         className="intake-dialog"
-        onCancel={() => setForget(false)}
+        onCancel={() => setConfirmation(null)}
       >
-        <h2>Forget this browser’s copy?</h2>
+        <h2>
+          {confirmation === 'reload'
+            ? 'Use the saved response?'
+            : 'Forget this browser’s copy?'}
+        </h2>
         <p>
-          This removes recovery from this browser. It does not delete a response
-          already sent. Incomplete server progress remains for its recovery
-          period.
+          {confirmation === 'reload'
+            ? 'This replaces unsent answers in this browser with the saved response. Cancel to keep your browser’s answers.'
+            : 'This removes recovery from this browser. It does not delete answers already saved for this form.'}
         </p>
         <div className="intake-actions">
           <button
             type="button"
             className="button intake-secondary"
-            onClick={() => setForget(false)}
+            onClick={() => setConfirmation(null)}
           >
-            Keep it
+            {confirmation === 'reload' ? 'Keep my answers' : 'Keep it'}
           </button>
           <button
             type="button"
             className="button primary"
             onClick={() => {
-              setForget(false);
-              void intake.forget();
+              const action = confirmation;
+              setConfirmation(null);
+              if (action === 'reload') intake.useSaved();
+              else void intake.forget();
             }}
           >
-            Forget copy
+            {confirmation === 'reload' ? 'Use saved response' : 'Forget copy'}
           </button>
         </div>
       </dialog>

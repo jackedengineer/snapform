@@ -1,3 +1,4 @@
+import { reconcileRecovery } from './reconcile';
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { PublicForm } from '@snapform/contracts/public-form';
@@ -27,6 +28,7 @@ export function useIntake(publicId: string) {
     [reload, setReload] = useState(0);
   const controller = useRef<IntakeProgress | null>(null);
   const lifecycle = useRef<Promise<unknown>>(Promise.resolve());
+  const replaceSaved = useRef(false);
   const actions = useRef<{
     start: ((token: string) => Promise<void>) | null;
     forget: (() => Promise<void>) | null;
@@ -74,6 +76,7 @@ export function useIntake(publicId: string) {
           await controller.current?.close();
           controller.current = null;
           await removeRecovery(publicId);
+          replaceSaved.current = false;
           if (active) setReload((value) => value + 1);
         } catch {
           if (active)
@@ -100,27 +103,21 @@ export function useIntake(publicId: string) {
           try {
             const session = await readIntakeRequest(publicId, record.identity);
             if (!active) return;
-            if (
-              record.session &&
-              record.session.versionId !== session.versionId
-            )
-              throw new Error('Saved form version changed.');
-            const local =
-              record.session && session.status === 'collecting'
-                ? { ...record, expiresAt: Date.parse(session.expiresAt) }
-                : {
-                    ...record,
-                    expiresAt: Date.parse(session.expiresAt),
-                    session,
-                    pending: null,
-                  };
-            const next = attach(local, session.answers);
-            if (
-              record.session &&
-              !record.pending &&
-              record.session.revision !== session.revision &&
-              session.status === 'collecting'
-            ) {
+            const recovery = reconcileRecovery(
+              record,
+              session,
+              replaceSaved.current,
+            );
+            if (replaceSaved.current) {
+              try {
+                await putRecovery(recovery.record);
+              } catch {
+                setStorageError(true);
+              }
+              replaceSaved.current = false;
+            }
+            const next = attach(recovery.record, session.answers);
+            if (recovery.conflict) {
               next.state.status = 'conflict';
               next.state.message =
                 'The saved response has newer changes. Your unsent answers remain here.';
@@ -282,5 +279,9 @@ export function useIntake(publicId: string) {
     start: (token: string) => actions.current.start?.(token),
     forget: () => actions.current.forget?.(),
     retry: () => setReload((value) => value + 1),
+    useSaved: () => {
+      replaceSaved.current = true;
+      setReload((value) => value + 1);
+    },
   };
 }
