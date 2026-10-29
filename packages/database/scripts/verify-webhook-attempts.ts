@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { sql } from 'drizzle-orm';
 import { openDatabase } from '../src/client.ts';
 import { user } from '../src/schema.ts';
-import { createWorkspace } from '../src/workspaces.ts';
+import { createWorkspace, inWorkspace } from '../src/workspaces.ts';
 import { createForm } from '../src/forms.ts';
 import { publishForm } from '../src/publication.ts';
 import { startIntake, mutateIntake } from '../src/intake.ts';
@@ -116,6 +116,24 @@ try {
             sql`select public.record_webhook_attempt(${item.id}::uuid,${item.lease_token}::uuid,${status},${http}::integer,${reason},${delay}::integer) as ok`,
           )
         ).rows[0].ok;
+      const queue = (
+        id: string,
+        attempts: number,
+        allowUnknown: boolean,
+        revision = 2,
+      ) =>
+        inWorkspace(
+          tx,
+          actor,
+          workspace.id,
+          'integrations.manage',
+          async (scoped) =>
+            (
+              await scoped.execute<{ queued: boolean }>(
+                sql`select public.queue_webhook(${workspace.id}::uuid,${formId}::uuid,${id}::uuid,${configurationId}::uuid,${revision}::integer,${attempts}::integer,${allowUnknown}::boolean) as queued`,
+              )
+            ).rows[0].queued,
+        );
       // Privileged state logic stays inside this owner rollback transaction.
       // Actual Jobs credentials/EXECUTE grants are checked separately below.
       stage = 'test claim and verification';
@@ -145,6 +163,11 @@ try {
       );
       await tx.execute(
         sql`update public.form_webhook_settings set enabled=true,revision=2 where form_id=${formId}::uuid`,
+      );
+      assert.equal(
+        await queue(testId, 1, true),
+        false,
+        'Acknowledged tests cannot be replayed',
       );
       const submit = async () => {
         const id = crypto.randomUUID(),
@@ -287,6 +310,66 @@ try {
         ).rows,
         [{ status: 'unknown', reason: 'receiver-unconfirmed', attempts: 1 }],
       );
+      stage = 'explicit unknown retry and bounded repair';
+      assert.equal(
+        await queue(old.id, 1, false),
+        false,
+        'Unknown requires duplicate-risk acknowledgment',
+      );
+      assert.equal(
+        await queue(old.id, 0, true),
+        false,
+        'Stale attempt count cannot queue',
+      );
+      assert(await queue(old.id, 1, true));
+      assert.equal(
+        await queue(old.id, 1, true),
+        false,
+        'Pending cannot be queued twice',
+      );
+      const [retried] = await claim(old.id);
+      assert(retried && retried.attempts === 2);
+      assert(await prepare(retried, expired.body));
+      assert(await record(retried, 'needs_action', 401, 'authorization'));
+      assert(await queue(old.id, 2, false));
+      const [repaired] = await claim(old.id);
+      assert(
+        repaired &&
+          repaired.attempts === 3 &&
+          repaired.payload === expired.body,
+      );
+      assert(await prepare(repaired, null));
+      assert(await record(repaired, 'needs_action', null, 'payload-invalid'));
+      assert.equal(
+        await queue(old.id, 3, false),
+        false,
+        'Invalid payloads cannot be manually replayed',
+      );
+      await tx.execute(
+        sql`update public.webhook_delivery set attempts=8,reason='attempts-exhausted' where id=${old.id}::uuid`,
+      );
+      assert.equal(
+        await queue(old.id, 8, true),
+        false,
+        'The attempt ceiling cannot be reset',
+      );
+
+      const staleId = crypto.randomUUID(),
+        staleAt = new Date(Date.parse(at) - 16 * 60000).toISOString();
+      const staleBody = createWebhookPayload(
+        { id: staleId, formId, createdAt: staleAt },
+        { ...sample, submittedAt: staleAt },
+        true,
+      );
+      await tx.execute(
+        sql`insert into public.webhook_delivery(id,workspace_id,form_id,configuration_id,version_id,kind,status,payload,created_by,created_at) values(${staleId}::uuid,${workspace.id}::uuid,${formId}::uuid,${configurationId}::uuid,${published.versionId}::uuid,'test','preview',${staleBody},${actor},${staleAt}::timestamptz)`,
+      );
+      assert.equal(
+        await queue(staleId, 0, false),
+        false,
+        'Expired previews require regeneration',
+      );
+
       stage = 'settings fence in-flight outcomes';
       const changed = await submit();
 
@@ -308,6 +391,11 @@ try {
 
       assert.equal(await prepare(lease, changed.body), false);
       assert.equal(await record(lease, 'acknowledged', 200, null), false);
+      assert.equal(
+        await queue(lease.id, 1, true, 3),
+        false,
+        'Endpoint edits never retarget old deliveries',
+      );
       throw rollback;
     });
   } catch (error) {
@@ -358,6 +446,14 @@ try {
     assert.deepEqual(
       (
         await jobConnection.db.execute(
+          sql`select has_function_privilege(current_user,'public.queue_webhook(uuid,uuid,uuid,uuid,integer,integer,boolean)','EXECUTE') as queue`,
+        )
+      ).rows,
+      [{ queue: false }],
+    );
+    assert.deepEqual(
+      (
+        await jobConnection.db.execute(
           sql`select current_user as actor,has_function_privilege(current_user,'public.claim_webhooks(integer,uuid)','EXECUTE') as claim,has_function_privilege(current_user,'public.prepare_webhook_payload(uuid,uuid,text)','EXECUTE') as prepare,has_function_privilege(current_user,'public.record_webhook_attempt(uuid,uuid,text,integer,text,integer)','EXECUTE') as record`,
         )
       ).rows,
@@ -367,7 +463,7 @@ try {
     await jobConnection.close();
   }
   console.log(
-    'Webhook attempt leases, immutable preparation, retry, verified test acknowledgement, expired Unknown and stale-result fences passed; all fixtures rolled back; no HTTP requests.',
+    'Webhook leases, immutable bytes, verified tests, explicit Unknown retry, repair/attempt/preview bounds and stale-result fences passed; all fixtures rolled back; no HTTP requests.',
   );
 } finally {
   await close();
