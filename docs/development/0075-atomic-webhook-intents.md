@@ -35,3 +35,10 @@ runbook. The one database requires a stable shared integration encryption key;
 Jobs production still needs its copy before activation. Existing settings browser
 proof remains in 0072/0074. Enabled collection, exact-byte stored attempts and
 preflight/live browser tests remain subsequent gates; the feature is not complete.
+
+Follow-up: Neon disallows SET ROLE for the operator login. The earlier scoped
+runtime-denial assertion could stop at SET ROLE rather than reaching its INSERT.
+That assertion now lives in a real snapform_runtime-login rollback test, which
+first proves that an authorized preview succeeds, then rejects a real-job insert
+and outcome update in the same workspace. No production role permission was
+expanded, and no authorization assertion was weakened or silently discarded.
