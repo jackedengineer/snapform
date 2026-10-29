@@ -158,3 +158,38 @@
 .delivery-status {
   font-weight: 600;
 }
+.webhook-settings {
+  margin-top: 1rem;
+}
+.webhook-endpoint-form {
+  max-width: 42rem;
+}
+.webhook-endpoint-form label,
+.webhook-key label {
+  display: block;
+  font-weight: 600;
+}
+.webhook-settings input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: 0.5rem;
+  background: var(--surface-panel);
+  color: inherit;
+  font: inherit;
+}
+.webhook-key {
+  margin-block: 1.5rem;
+  max-width: 42rem;
+}
+.webhook-key label {
+  margin-top: 1rem;
+}
+.webhook-key input {
+  font-family: monospace;
+  font-size: 0.875rem;
+}
