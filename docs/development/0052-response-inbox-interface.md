@@ -17,10 +17,13 @@ An unrelated UUID displayed an unavailable state with no prior answers. Stored
 HTML-like text produced zero image elements and no alert. DOM checks found no
 horizontal overflow or unnamed controls; console warnings/errors were empty.
 The response heading receives focus after selection. No screen-reader or real
-mobile-device run is claimed. The requested 375px viewport override did not alter
-actual width in either browser; native Mac control reports the Mac is locked.
-Responsive verification remains pending the user's unlock. Empty-state evidence
-is committed; screenshots containing answers remain private outside Git.
+mobile-device run is claimed. After the Mac was unlocked and browser control
+reconnected, actual 375×812 and 320×812 inbox widths were verified. Neither
+overflowed; the native download action remained 44px high and keyboard response
+selection worked. The first mobile pass found hidden version badges: computed
+display was none before the fix and visible afterward at both widths. The
+component now overrides the general mobile badge rule. Empty-state evidence is
+committed; screenshots containing answers remain private outside Git.
 
 No dependency was added. Client JS is 199.98 KiB gzip, CSS 7.58 KiB and the font
 36.07 KiB. Grouping pure contracts/request code saved enough duplicate chunk
@@ -28,5 +31,5 @@ compression overhead without pulling editor UI into the homepage. A rejected
 editor/framework grouping was discarded. The homepage's emitted static import
 and preload graph measured 117.33 KiB gzip; this is an artifact estimate, not a
 network or usability SLO. Build, strict checks, 187 pure tests, 64 API Worker tests,
-36 database tests and SSR/reload checks passed. Mobile verification and production
-smoke testing are still required before the inbox release gate is complete.
+36 database tests and SSR/reload checks passed. Mobile verification passed; production smoke testing is still required before
+the inbox release gate is complete.

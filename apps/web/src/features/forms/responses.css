@@ -40,6 +40,7 @@
   color: var(--text-secondary);
 }
 .response-list .draft-badge {
+  display: inline-block;
   justify-self: start;
 }
 .response-detail {
