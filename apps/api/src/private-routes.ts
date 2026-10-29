@@ -3,6 +3,10 @@ import {
   handleResponseExport,
 } from './response-export.ts';
 import { json } from 'express';
+import {
+  matchNotificationRoute,
+  handleNotificationRequest,
+} from './notifications.ts';
 import { matchResponsesRoute, handleResponsesRequest } from './responses.ts';
 import type { Request, Response, RequestHandler } from 'express';
 import type { Database } from '@snapform/database';
@@ -20,7 +24,8 @@ export function isPrivatePath(path: string) {
     matchFormsRoute(path) !== null ||
     matchPublicationRoute(path) !== null ||
     matchResponsesRoute(path) !== null ||
-    matchResponseExportRoute(path) !== null
+    matchResponseExportRoute(path) !== null ||
+    matchNotificationRoute(path) !== null
   );
 }
 const workspaceBody = json({ limit: 16384, strict: true, inflate: false });
@@ -31,9 +36,12 @@ export const privateBody: RequestHandler = (req, res, next) => {
   const isPublication =
     matchPublicationRoute(req.path) !== null &&
     ['POST', 'DELETE'].includes(req.method);
+  const isNotification =
+    matchNotificationRoute(req.path) !== null && req.method === 'PUT';
   if (
     !isForm &&
     !isPublication &&
+    !isNotification &&
     (req.path !== workspacePath || req.method !== 'POST')
   )
     return next();
@@ -51,6 +59,7 @@ export async function handlePrivateRequest(
 ) {
   const exportRoute = matchResponseExportRoute(req.path);
   const responseRoute = matchResponsesRoute(req.path);
+  const notificationRoute = matchNotificationRoute(req.path);
   const publicationRoute = matchPublicationRoute(req.path);
   if (req.path === '/api/v1/me') {
     if (req.method !== 'GET') {
@@ -61,6 +70,8 @@ export async function handlePrivateRequest(
     await handleWorkspaceRequest(req, res, db, user.id);
   } else if (exportRoute) {
     await handleResponseExport(req, res, db, user.id, exportRoute);
+  } else if (notificationRoute) {
+    await handleNotificationRequest(req, res, db, user.id, notificationRoute);
   } else if (responseRoute) {
     await handleResponsesRequest(req, res, db, user.id, responseRoute);
   } else if (publicationRoute) {

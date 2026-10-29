@@ -1,11 +1,14 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { emailSettingsInputSchema } from '@snapform/contracts/notifications';
 import type { EmailSettingsInput } from '@snapform/contracts/notifications';
 import type { Database, Transaction } from './client.ts';
 import { inWorkspace } from './workspaces.ts';
 import { formCursorSchema } from '@snapform/contracts/draft';
 import { formDraft } from './form-schema.ts';
-import { formEmailSettings } from './notification-schema.ts';
+import {
+  formEmailSettings,
+  responseEmailDelivery,
+} from './notification-schema.ts';
 const identity = formCursorSchema.shape.id;
 const projection = {
   enabled: formEmailSettings.enabled,
@@ -16,6 +19,24 @@ const key = (workspaceId: string, formId: string) =>
     eq(formEmailSettings.workspaceId, workspaceId),
     eq(formEmailSettings.formId, formId),
   );
+async function readSettings(
+  tx: Transaction,
+  workspaceId: string,
+  formId: string,
+) {
+  const [settings] = await tx
+    .select({
+      enabled: sql<boolean>`coalesce(${formEmailSettings.enabled},false)`,
+      revision: sql<number>`coalesce(${formEmailSettings.revision},0)`,
+    })
+    .from(formDraft)
+    .leftJoin(formEmailSettings, key(workspaceId, formId))
+    .where(
+      and(eq(formDraft.workspaceId, workspaceId), eq(formDraft.formId, formId)),
+    );
+  if (!settings) throw Error('FORM_NOT_FOUND');
+  return settings;
+}
 export async function getEmailSettings(
   db: Database | Transaction,
   actor: string,
@@ -24,22 +45,48 @@ export async function getEmailSettings(
 ) {
   workspaceId = identity.parse(workspaceId);
   formId = identity.parse(formId);
+  return inWorkspace(db, actor, workspaceId, 'responses.read', (tx) =>
+    readSettings(tx, workspaceId, formId),
+  );
+}
+export async function getEmailOverview(
+  db: Database | Transaction,
+  actor: string,
+  workspaceId: string,
+  formId: string,
+) {
+  workspaceId = identity.parse(workspaceId);
+  formId = identity.parse(formId);
   return inWorkspace(db, actor, workspaceId, 'responses.read', async (tx) => {
-    const [exists] = await tx
-      .select({ id: formDraft.formId })
-      .from(formDraft)
+    const settings = await readSettings(tx, workspaceId, formId);
+    const deliveries = await tx
+      .select({
+        id: responseEmailDelivery.id,
+        responseId: responseEmailDelivery.sessionId,
+        status: responseEmailDelivery.status,
+        attempts: responseEmailDelivery.attempts,
+        reason: responseEmailDelivery.reason,
+        createdAt: responseEmailDelivery.createdAt,
+      })
+      .from(responseEmailDelivery)
       .where(
         and(
-          eq(formDraft.workspaceId, workspaceId),
-          eq(formDraft.formId, formId),
+          eq(responseEmailDelivery.workspaceId, workspaceId),
+          eq(responseEmailDelivery.formId, formId),
         ),
-      );
-    if (!exists) throw Error('FORM_NOT_FOUND');
-    const [settings] = await tx
-      .select(projection)
-      .from(formEmailSettings)
-      .where(key(workspaceId, formId));
-    return settings ?? { enabled: false, revision: 0 };
+      )
+      .orderBy(
+        desc(responseEmailDelivery.createdAt),
+        desc(responseEmailDelivery.id),
+      )
+      .limit(20);
+    return {
+      settings,
+      deliveries: deliveries.map((row) => ({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+      })),
+    };
   });
 }
 export async function configureEmailNotifications(

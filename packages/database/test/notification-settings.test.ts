@@ -9,6 +9,7 @@ import { publishForm } from '../src/publication.ts';
 import { startIntake, mutateIntake } from '../src/intake.ts';
 import {
   getEmailSettings,
+  getEmailOverview,
   configureEmailNotifications,
 } from '../src/notification-settings.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
@@ -58,6 +59,9 @@ it('opts in future notifications, snapshots a verified owner and cancels pending
         expect(await getEmailSettings(tx, actor, workspace.id, formId)).toEqual(
           { enabled: false, revision: 0 },
         );
+        expect(await getEmailOverview(tx, actor, workspace.id, formId)).toEqual(
+          { settings: { enabled: false, revision: 0 }, deliveries: [] },
+        );
         await submit();
         expect(
           await configureEmailNotifications(tx, actor, workspace.id, formId, {
@@ -73,6 +77,27 @@ it('opts in future notifications, snapshots a verified owner and cancels pending
           ).rows,
         ).toHaveLength(0);
         const responseId = await submit();
+        const overview = await getEmailOverview(
+          tx,
+          actor,
+          workspace.id,
+          formId,
+        );
+        expect(overview.deliveries).toHaveLength(1);
+        expect(overview.deliveries[0]).toMatchObject({
+          responseId,
+          status: 'pending',
+          attempts: 0,
+          reason: null,
+        });
+        expect(Object.keys(overview.deliveries[0]).sort()).toEqual([
+          'attempts',
+          'createdAt',
+          'id',
+          'reason',
+          'responseId',
+          'status',
+        ]);
         await getEmailSettings(tx, actor, workspace.id, formId);
         const queued = (
           await tx.execute(
