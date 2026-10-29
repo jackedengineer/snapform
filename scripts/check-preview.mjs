@@ -63,3 +63,14 @@ assert.deepEqual(await review.json(), {
 console.log(
   'Production SSR, unique CSP nonces and the same-origin Express service binding passed.',
 );
+const download = await fetch(
+  `${base}/api/v1/workspaces/11111111-1111-4111-8111-111111111111/forms/22222222-2222-4222-8222-222222222222/response-export?versionId=33333333-3333-4333-8333-333333333333`,
+  { headers: { Accept: 'text/html' } },
+);
+assert.equal(download.status, 401);
+assert.match(download.headers.get('Content-Type'), /text\/html/);
+assert.equal(download.headers.get('Content-Disposition'), null);
+assert.match(await download.text(), /Sign in to download/);
+console.log(
+  'Native export authorization errors render through the real web-to-API Worker boundary.',
+);

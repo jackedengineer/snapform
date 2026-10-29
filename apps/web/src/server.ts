@@ -1,11 +1,19 @@
 import { env } from 'cloudflare:workers';
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry';
 import { withTransportSecurity } from './transport';
+import { formatExportDownload } from './export-download';
+import styles from './styles.css?url';
 
 export default createServerEntry({
   async fetch(request, options) {
-    if (new URL(request.url).pathname.startsWith('/api/'))
-      return withTransportSecurity(await env.API.fetch(request), request.url);
+    if (new URL(request.url).pathname.startsWith('/api/')) {
+      const response = await formatExportDownload(
+        request,
+        await env.API.fetch(request),
+        styles,
+      );
+      return withTransportSecurity(response, request.url);
+    }
     const nonce = crypto.randomUUID();
     const response = await handler.fetch(request, {
       ...options,
