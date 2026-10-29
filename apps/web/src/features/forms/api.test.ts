@@ -225,3 +225,37 @@ it('reads bounded notification summaries and sends strict revisioned settings wi
   ).rejects.toThrow();
   expect(fetcher).toHaveBeenCalledTimes(2);
 });
+
+it('requests a bounded retry without changing recipient or delivery identity', async () => {
+  const { retryEmailDelivery } = await import('./api');
+  const overview = { settings: { enabled: true, revision: 1 }, deliveries: [] };
+  const fetcher = vi
+    .fn()
+    .mockResolvedValue(Response.json(overview, { status: 202 }));
+  vi.stubGlobal('fetch', fetcher);
+  expect(
+    await retryEmailDelivery(workspaceId, id, {
+      deliveryId: id,
+      expectedAttempts: 1,
+    }),
+  ).toEqual(overview);
+  expect(fetcher.mock.calls[0][1].method).toBe('POST');
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
+    deliveryId: id,
+    expectedAttempts: 1,
+  });
+  await expect(
+    retryEmailDelivery(workspaceId, id, {
+      deliveryId: id,
+      expectedAttempts: 8,
+    }),
+  ).rejects.toThrow();
+  await expect(
+    retryEmailDelivery(workspaceId, id, {
+      deliveryId: id,
+      expectedAttempts: 1,
+      to: 'other@example.invalid',
+    } as unknown as Parameters<typeof retryEmailDelivery>[2]),
+  ).rejects.toThrow();
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});

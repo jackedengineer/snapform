@@ -96,6 +96,7 @@ it('opts in future notifications, snapshots a verified owner and cancels pending
           'id',
           'reason',
           'responseId',
+          'retryable',
           'status',
         ]);
         await getEmailSettings(tx, actor, workspace.id, formId);

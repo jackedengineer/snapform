@@ -1,6 +1,12 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
-import { emailSettingsInputSchema } from '@snapform/contracts/notifications';
-import type { EmailSettingsInput } from '@snapform/contracts/notifications';
+import {
+  emailSettingsInputSchema,
+  emailRetryInputSchema,
+} from '@snapform/contracts/notifications';
+import type {
+  EmailSettingsInput,
+  EmailRetryInput,
+} from '@snapform/contracts/notifications';
 import type { Database, Transaction } from './client.ts';
 import { inWorkspace } from './workspaces.ts';
 import { formCursorSchema } from '@snapform/contracts/draft';
@@ -65,6 +71,7 @@ export async function getEmailOverview(
         responseId: responseEmailDelivery.sessionId,
         status: responseEmailDelivery.status,
         attempts: responseEmailDelivery.attempts,
+        retryable: sql<boolean>`public.can_retry_owner_email(${responseEmailDelivery.id})`,
         reason: responseEmailDelivery.reason,
         createdAt: responseEmailDelivery.createdAt,
       })
@@ -88,6 +95,29 @@ export async function getEmailOverview(
       })),
     };
   });
+}
+export async function retryOwnerEmail(
+  db: Database | Transaction,
+  actor: string,
+  workspaceId: string,
+  formId: string,
+  raw: EmailRetryInput,
+) {
+  workspaceId = identity.parse(workspaceId);
+  formId = identity.parse(formId);
+  const input = emailRetryInputSchema.parse(raw);
+  return inWorkspace(
+    db,
+    actor,
+    workspaceId,
+    'integrations.manage',
+    async (tx) => {
+      const { rows } = await tx.execute<{ queued: boolean }>(
+        sql`select public.retry_owner_email(${workspaceId}::uuid,${formId}::uuid,${input.deliveryId}::uuid,${input.expectedAttempts}::integer) as queued`,
+      );
+      if (rows[0]?.queued !== true) throw Error('EMAIL_RETRY_CONFLICT');
+    },
+  );
 }
 export async function configureEmailNotifications(
   db: Database | Transaction,

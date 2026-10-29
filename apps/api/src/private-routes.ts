@@ -37,7 +37,8 @@ export const privateBody: RequestHandler = (req, res, next) => {
     matchPublicationRoute(req.path) !== null &&
     ['POST', 'DELETE'].includes(req.method);
   const isNotification =
-    matchNotificationRoute(req.path) !== null && req.method === 'PUT';
+    matchNotificationRoute(req.path) !== null &&
+    ['PUT', 'POST'].includes(req.method);
   if (
     !isForm &&
     !isPublication &&

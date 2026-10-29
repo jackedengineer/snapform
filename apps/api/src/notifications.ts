@@ -3,11 +3,13 @@ import type { Database } from '@snapform/database';
 import {
   getEmailOverview,
   configureEmailNotifications,
+  retryOwnerEmail,
 } from '@snapform/database/notification-settings';
 import {
   emailSettingsInputSchema,
   emailSettingsSchema,
   emailOverviewSchema,
+  emailRetryInputSchema,
 } from '@snapform/contracts/notifications';
 import { responseEventMessageSchema } from '@snapform/contracts/response-event';
 const identity = responseEventMessageSchema.shape.eventId;
@@ -30,8 +32,8 @@ export async function handleNotificationRequest(
   actor: string,
   route: NotificationRoute,
 ) {
-  if (!['GET', 'PUT'].includes(req.method)) {
-    res.setHeader('Allow', 'GET, PUT');
+  if (!['GET', 'PUT', 'POST'].includes(req.method)) {
+    res.setHeader('Allow', 'GET, PUT, POST');
     res.status(405).json({ error: { code: 'METHOD_NOT_ALLOWED' } });
     return;
   }
@@ -46,6 +48,28 @@ export async function handleNotificationRequest(
           await getEmailOverview(db, actor, route.workspaceId, route.formId),
         ),
       );
+      return;
+    }
+    if (req.method === 'POST') {
+      const input = emailRetryInputSchema.safeParse(req.body);
+      if (!input.success) {
+        res.status(422).json({ error: { code: 'INVALID_NOTIFICATION_RETRY' } });
+        return;
+      }
+      await retryOwnerEmail(
+        db,
+        actor,
+        route.workspaceId,
+        route.formId,
+        input.data,
+      );
+      res
+        .status(202)
+        .json(
+          emailOverviewSchema.parse(
+            await getEmailOverview(db, actor, route.workspaceId, route.formId),
+          ),
+        );
       return;
     }
     const input = emailSettingsInputSchema.safeParse(req.body);
@@ -71,7 +95,7 @@ export async function handleNotificationRequest(
     const status =
       code === 'FORBIDDEN'
         ? 403
-        : code === 'EMAIL_SETTINGS_CONFLICT'
+        : ['EMAIL_SETTINGS_CONFLICT', 'EMAIL_RETRY_CONFLICT'].includes(code)
           ? 409
           : ['WORKSPACE_NOT_FOUND', 'FORM_NOT_FOUND'].includes(code)
             ? 404

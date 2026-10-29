@@ -4,11 +4,13 @@ import { parseEnv } from 'node:util';
 import { sql } from 'drizzle-orm';
 import { openDatabase } from '../src/client.ts';
 import { user } from '../src/schema.ts';
-import { createWorkspace } from '../src/workspaces.ts';
+import { createWorkspace, inWorkspace } from '../src/workspaces.ts';
+import { membership } from '../src/workspace-schema.ts';
 import { createForm } from '../src/forms.ts';
 import { publishForm } from '../src/publication.ts';
 import { startIntake, mutateIntake } from '../src/intake.ts';
 import { configureEmailNotifications } from '../src/notification-settings.ts';
+import { retryOwnerEmail } from '../src/notification-settings.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
 
 // Operator-only verification: one database, one transaction, always rolled back.
@@ -207,6 +209,13 @@ try {
       'completion cannot be replayed',
     );
     assert.equal((await claim()).length, 0, 'accepted email is not resent');
+    await assert.rejects(
+      retryOwnerEmail(tx, actor, workspace.id, formId, {
+        deliveryId: delivery.id,
+        expectedAttempts: 3,
+      }),
+      /EMAIL_RETRY_CONFLICT/,
+    );
     const receipt = async (
       incoming: string | null,
       provided = provider,
@@ -246,6 +255,128 @@ try {
       'late events cannot downgrade a complaint',
     );
 
+    // Only this transaction's synthetic delivery is modified for repair probes.
+    await tx.execute(
+      sql`update public.response_email_delivery set status='needs_action',reason='configuration',provider_id=NULL,accepted_at=NULL where id=${delivery.id}::uuid`,
+    );
+    const repair = (
+      expectedAttempts = 3,
+      requestedForm = formId,
+      requestedActor = actor,
+    ) =>
+      retryOwnerEmail(tx, requestedActor, workspace.id, requestedForm, {
+        deliveryId: delivery.id,
+        expectedAttempts,
+      });
+    const viewer = crypto.randomUUID();
+    await tx.insert(user).values({
+      id: viewer,
+      name: 'Repair viewer QA',
+      email: `${viewer}@example.invalid`,
+      emailVerified: true,
+    });
+    await tx
+      .insert(membership)
+      .values({ workspaceId: workspace.id, userId: viewer, role: 'viewer' });
+    await inWorkspace(
+      tx,
+      viewer,
+      workspace.id,
+      'responses.read',
+      async (scoped) => {
+        await scoped.execute(
+          sql`select set_config('snapform.role','owner',true)`,
+        );
+        assert.deepEqual(
+          (
+            await scoped.execute(
+              sql`select public.can_retry_owner_email(${delivery.id}::uuid) as eligible,public.retry_owner_email(${workspace.id}::uuid,${formId}::uuid,${delivery.id}::uuid,3) as queued`,
+            )
+          ).rows,
+          [{ eligible: false, queued: false }],
+          'forged role context cannot replace actual membership',
+        );
+      },
+    );
+    await assert.rejects(
+      repair(2),
+      /EMAIL_RETRY_CONFLICT/,
+      'stale attempt count is rejected',
+    );
+    await assert.rejects(
+      repair(3, crypto.randomUUID()),
+      /EMAIL_RETRY_CONFLICT/,
+      'form boundary is enforced',
+    );
+    await assert.rejects(
+      repair(3, formId, crypto.randomUUID()),
+      /WORKSPACE_NOT_FOUND/,
+      'foreign actor is denied',
+    );
+    const original = (
+      await tx.execute(
+        sql`select id,recipient_email,first_attempt_at,attempts from public.response_email_delivery where id=${delivery.id}::uuid`,
+      )
+    ).rows;
+    await tx.execute(
+      sql`update public.response_email_delivery set first_attempt_at=now()-interval '24 hours' where id=${delivery.id}::uuid`,
+    );
+    await assert.rejects(
+      repair(),
+      /EMAIL_RETRY_CONFLICT/,
+      'expired idempotency window is not restarted',
+    );
+    await tx.execute(
+      sql`update public.response_email_delivery set first_attempt_at=${first.first_attempt_at}::timestamptz where id=${delivery.id}::uuid`,
+    );
+    await tx.execute(
+      sql`update public."user" set email_verified=false where id=${actor}`,
+    );
+    await assert.rejects(
+      repair(),
+      /EMAIL_RETRY_CONFLICT/,
+      'recipient must still be verified',
+    );
+    await tx.execute(
+      sql`update public."user" set email_verified=true where id=${actor}`,
+    );
+    await repair();
+    assert.deepEqual(
+      (
+        await tx.execute(
+          sql`select id,recipient_email,first_attempt_at,attempts from public.response_email_delivery where id=${delivery.id}::uuid`,
+        )
+      ).rows,
+      original,
+      'repair preserves payload, identity and retry window',
+    );
+    await assert.rejects(
+      repair(),
+      /EMAIL_RETRY_CONFLICT/,
+      'duplicate repair cannot queue twice',
+    );
+    const [repaired] = await claim();
+    assert.equal(repaired.id, delivery.id);
+    assert.equal(
+      new Date(repaired.first_attempt_at).getTime(),
+      new Date(first.first_attempt_at).getTime(),
+    );
+    assert.equal(
+      await record(
+        repaired.lease_token,
+        'accepted',
+        crypto.randomUUID(),
+        null,
+        0,
+      ),
+      true,
+    );
+    await assert.rejects(
+      repair(4),
+      /EMAIL_RETRY_CONFLICT/,
+      'accepted repair is not resent',
+    );
+
     for (const [attempts, age, reason] of [
       [8, '1 hour', 'attempts-exhausted'],
       [1, '24 hours', 'idempotency-expired'],
@@ -262,6 +393,11 @@ try {
           )
         ).rows,
         [{ status: 'needs_action', reason }],
+      );
+      await assert.rejects(
+        repair(Math.min(attempts, 7)),
+        /EMAIL_RETRY_CONFLICT/,
+        'exhausted/expired work cannot be repaired',
       );
     }
     await tx.execute(
