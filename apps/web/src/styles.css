@@ -1,5 +1,6 @@
 @import '../../../design/tokens.css';
 @import './features/forms/forms.css';
+@import './features/intake/intake.css';
 * {
   box-sizing: border-box;
 }

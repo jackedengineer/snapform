@@ -1,0 +1,7 @@
+# Collector visual system
+
+29 October 2026. The public collector uses the existing self-hosted DM Sans, warm canvas, cobalt action and lime completion tokens. Responsive page and question-card layouts use native controls, visible saved/error states, editable review and restrained entrance motion governed by the existing reduced-motion tokens. The card title is the current question; its native label/legend remains accessible. Required/optional status stays visible.
+
+The 375 px browser review has no horizontal overflow, duplicate IDs or unlabeled native controls. Native keyboard selection, heading/error focus, dialog cancellation/focus return and 44 px-or-larger option labels were checked in the actual form. This is a limited DOM/keyboard audit, not a screen-reader, real-device or complete WCAG certification. The original doubled checkbox focus rings were reduced to one clear option-level indicator. Date/number units and help remain associated with the controls.
+
+Evidence includes the welcome, durable receipt, mobile branch receipt and polished question card in docs/evidence/31–35. These screenshots contain synthetic QA data and Cloudflare's visibly labeled local test widget. No new font, animation library or UI kit was added. Current complete application assets remain within the unchanged 200 KiB JS, 20 KiB CSS and 40 KiB primary-font budgets; the final collector integration record gives measured totals and limitations.
