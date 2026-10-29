@@ -1,0 +1,15 @@
+# Form settings and completion messages
+
+29 October 2026. A native disclosure in the editor now exposes the form description, page/card presentation and up to ten completion messages. Creators can edit message titles/descriptions and choose the default. Removing the default, final message or a message referenced by an end rule is blocked. Other form content, stable identities and rules are preserved; no rule is silently rewritten. The existing typed draft, private API and autosave path persist the settings.
+
+Three tests failed before the ending helpers existed, then passed: independent identities/ten-message cap, final/default/unknown/rule-reference protection, and default replacement before removal. All 148 units passed, with unchanged passing pure-core coverage. Types, lint, formatting, production builds and SSR/CSP/service-binding checks passed. No package, migration or endpoint was added. Client JavaScript is 186.80 KiB gzip, CSS 5.38 KiB and the primary font 36.07 KiB. The upstream CSS sourcemap warning remains visible.
+
+## Actual browser review
+
+Normal: added a realistic agency form description, selected one question at a time, edited the default completion title and two-paragraph description, and saved. Reload retained every setting and both paragraphs. Added a second completion message; selection/focus moved to its own title, and edits affected that message. Both messages remain available in the QA agency form.
+
+Power: selected a new default with Enter, then restored the original. The first check found focus fell to the document after the button became disabled. The handler now returns focus to the message selector; repeating the keyboard journey verified that target. Added messages up to ten, confirmed further creation was disabled, and removed the eight temporary messages. Removal returned focus to the selector and stopped on the protected default. The final saved form contains two messages.
+
+Adversarial: an HTML-shaped title remained literal in the input and native option, with zero image elements in the settings panel. A separate owned-API probe sent six invalid definitions: overlong form description, unsupported presentation, overlong ending title/description, eleven endings and an unknown HTML property. Every request returned 422; revision and the full saved definition stayed unchanged. Its separate QA session was cleaned up. A referenced-ending removal is covered by the pure test; authoring that reference through a real rule UI remains pending.
+
+At desktop and 375px, all controls had labels, action targets measured 44px high and the document had no horizontal overflow. [Desktop](../evidence/27-form-settings-desktop.png) and [mobile](../evidence/28-form-settings-mobile.png) are native captures. The temporary viewport was reset, and the production browser console had no errors or warnings. This is a saved authoring feature; anonymous collection, immutable publication and the remaining market V1 are still unfinished. No public response was submitted or saved by these tests.

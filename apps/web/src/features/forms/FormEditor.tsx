@@ -14,6 +14,7 @@ import { BlockInspector } from './BlockInspector';
 import { DraftRecovery } from './DraftRecovery';
 import { recoverDraft } from './recover-draft';
 import { PageControls } from './PageControls';
+import { FormSettings } from './FormSettings';
 import { moveBlockToPage } from './pages';
 export function FormEditor({
   workspaceId,
@@ -270,6 +271,16 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
             onReload={() => void loadSaved()}
           />
         )}
+        <FormSettings
+          definition={definition}
+          editable={editable}
+          onChange={(settings) => {
+            form.setFieldValue('description', settings.description);
+            form.setFieldValue('presentation', settings.presentation);
+            form.setFieldValue('endings', settings.endings);
+            form.setFieldValue('defaultEndingId', settings.defaultEndingId);
+          }}
+        />
         <PageControls
           definition={definition}
           pageId={activePage.id}
