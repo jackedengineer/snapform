@@ -8,6 +8,11 @@ import { publishForm } from '../src/publication.ts';
 import { saveWebhookConfiguration } from '../src/webhook-settings.ts';
 import { createWebhookPreview } from '../src/webhook-preview.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
+import {
+  listWebhookDeliveries,
+  requestWebhookDelivery,
+} from '../src/webhook-deliveries.ts';
+import { configureWebhookDelivery } from '../src/webhook-settings.ts';
 it('queues only an authorized current preview once and rejects forged membership/context and stale tuples', async () => {
   if (!process.env.DATABASE_URL) throw Error('Runtime database required');
   const { db, close } = await openDatabase(process.env.DATABASE_URL),
@@ -65,6 +70,50 @@ it('queues only an authorized current preview once and rejects forged membership
           },
           master,
         );
+        await expect(
+          configureWebhookDelivery(
+            tx,
+            actor,
+            workspace.id,
+            formId,
+            { configurationId, expectedRevision: 1, enabled: true },
+            master,
+          ),
+        ).rejects.toThrow('WEBHOOK_TEST_REQUIRED');
+        expect(
+          (
+            await configureWebhookDelivery(
+              tx,
+              actor,
+              workspace.id,
+              formId,
+              { configurationId, expectedRevision: 1, enabled: false },
+              master,
+            )
+          ).revision,
+        ).toBe(2);
+        const history = await listWebhookDeliveries(
+          tx,
+          actor,
+          workspace.id,
+          formId,
+        );
+        expect(history.deliveries).toHaveLength(1);
+        expect(history.deliveries[0].id).toBe(preview.id);
+        expect(Object.keys(history.deliveries[0]).sort()).toEqual([
+          'acknowledgedAt',
+          'attempts',
+          'availableAt',
+          'configurationId',
+          'createdAt',
+          'httpStatus',
+          'id',
+          'kind',
+          'reason',
+          'status',
+          'updatedAt',
+          'versionId',
+        ]);
         await inWorkspace(
           tx,
           actor,
@@ -72,7 +121,7 @@ it('queues only an authorized current preview once and rejects forged membership
           'integrations.manage',
           async (scoped) => {
             const queue = async (
-              revision: number | null = 1,
+              revision: number | null = 2,
               attempts: number | null = 0,
               unknown: boolean | null = false,
               configuration = configurationId,
@@ -94,18 +143,42 @@ it('queues only an authorized current preview once and rejects forged membership
               sql`select set_config('snapform.user_id',${actor},true)`,
             );
             for (const [revision, attempts, unknown] of [
-              [2, 0, false],
+              [3, 0, false],
               [null, 0, false],
-              [1, null, false],
-              [1, 0, null],
-              [1, 1, false],
+              [2, null, false],
+              [2, 0, null],
+              [2, 1, false],
             ] as const)
               expect(await queue(revision, attempts, unknown)).toBe(false);
-            expect(await queue(1, 0, false, crypto.randomUUID())).toBe(false);
+            expect(await queue(2, 0, false, crypto.randomUUID())).toBe(false);
             expect(
-              await queue(1, 0, false, configurationId, crypto.randomUUID()),
+              await queue(2, 0, false, configurationId, crypto.randomUUID()),
             ).toBe(false);
-            expect(await queue()).toBe(true);
+            const sendInput = {
+              configurationId,
+              deliveryId: preview.id,
+              expectedRevision: 2,
+              expectedAttempts: 0,
+              acknowledgeDuplicateRisk: false,
+            };
+            expect(
+              await requestWebhookDelivery(
+                scoped,
+                actor,
+                workspace.id,
+                formId,
+                sendInput,
+              ),
+            ).toEqual({ id: preview.id });
+            await expect(
+              requestWebhookDelivery(
+                scoped,
+                actor,
+                workspace.id,
+                formId,
+                sendInput,
+              ),
+            ).rejects.toThrow('WEBHOOK_DELIVERY_CONFLICT');
             expect(await queue()).toBe(false);
             expect(
               (

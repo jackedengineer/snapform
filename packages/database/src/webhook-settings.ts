@@ -14,7 +14,66 @@ import type { Database, Transaction } from './client.ts';
 import { inWorkspace } from './workspaces.ts';
 import { formDraft } from './form-schema.ts';
 import { formWebhookSettings, webhookConfiguration } from './webhook-schema.ts';
+import { webhookToggleInputSchema } from '@snapform/contracts/webhook-deliveries';
 const identity = formCursorSchema.shape.id;
+export async function configureWebhookDelivery(
+  db: Database | Transaction,
+  actor: string,
+  workspaceId: string,
+  formId: string,
+  raw: unknown,
+  master: string,
+) {
+  workspaceId = identity.parse(workspaceId);
+  formId = identity.parse(formId);
+  const input = webhookToggleInputSchema.parse(raw);
+  return inWorkspace(
+    db,
+    actor,
+    workspaceId,
+    'integrations.manage',
+    async (tx) => {
+      const [draft] = await tx
+        .select({ id: formDraft.formId })
+        .from(formDraft)
+        .where(
+          and(
+            eq(formDraft.workspaceId, workspaceId),
+            eq(formDraft.formId, formId),
+          ),
+        )
+        .for('update');
+      if (!draft) throw Error('FORM_NOT_FOUND');
+      const current = await readSettings(tx, workspaceId, formId, master);
+      if (
+        current.revision !== input.expectedRevision ||
+        current.configurationId !== input.configurationId
+      )
+        throw Error('WEBHOOK_SETTINGS_CONFLICT');
+      if (input.enabled && !current.verifiedAt)
+        throw Error('WEBHOOK_TEST_REQUIRED');
+      const [updated] = await tx
+        .update(formWebhookSettings)
+        .set({
+          enabled: input.enabled,
+          revision: current.revision + 1,
+          updatedBy: actor,
+          updatedAt: sql`now()`,
+        })
+        .where(
+          and(
+            eq(formWebhookSettings.workspaceId, workspaceId),
+            eq(formWebhookSettings.formId, formId),
+            eq(formWebhookSettings.configurationId, input.configurationId),
+            eq(formWebhookSettings.revision, input.expectedRevision),
+          ),
+        )
+        .returning({ revision: formWebhookSettings.revision });
+      if (!updated) throw Error('WEBHOOK_SETTINGS_CONFLICT');
+      return { ...current, enabled: input.enabled, revision: updated.revision };
+    },
+  );
+}
 async function readSettings(
   tx: Transaction,
   workspaceId: string,
