@@ -135,7 +135,7 @@
   margin: 32px 0 40px;
   scroll-margin: 24px;
 }
-.intake-field > label,
+.intake-field > label:not(.intake-option),
 .intake-field > legend {
   display: block;
   font-size: 18px;
@@ -340,7 +340,7 @@
   .intake-main progress {
     margin-bottom: 32px;
   }
-  .intake-field > label,
+  .intake-field > label:not(.intake-option),
   .intake-field > legend {
     font-size: 17px;
   }
@@ -361,7 +361,7 @@
   }
 }
 
-.intake-card-question .intake-field > label,
+.intake-card-question .intake-field > label:not(.intake-option),
 .intake-card-question .intake-field > legend {
   position: absolute;
   width: 1px;
