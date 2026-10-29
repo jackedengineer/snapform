@@ -4,6 +4,7 @@ export interface AuthEnvironment {
   BETTER_AUTH_URL: string;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  WEBHOOK_ENCRYPTION_KEY?: string;
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
   AUTH_ALLOWED_RECIPIENT?: string;
