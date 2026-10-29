@@ -10,7 +10,8 @@ preview URLs. Do not add a second public API origin.
 - API variables in Wrangler: production mode, exact Better Auth origin,
   transactional sender and public Turnstile site key.
 - API secrets: `DATABASE_URL` (restricted runtime login), a dedicated
-  `BETTER_AUTH_SECRET`, `RESEND_API_KEY` and `TURNSTILE_SECRET_KEY`.
+  `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` and the stable
+  `WEBHOOK_ENCRYPTION_KEY` for encrypted endpoint settings.
 - Migration ownership remains only in ignored local configuration. Never upload
   `DATABASE_MIGRATION_URL` to an application Worker or Actions secrets.
 - The production Turnstile widget allows only `snapform.jacked.dev`, uses
@@ -88,3 +89,21 @@ processing during recovery and reconcile accepted work. Rollback cannot retract
 sent mail or undo database/provider history. Do not reset IDs, recipients or retry
 windows to make an uncertain message look new. See production evidence 0066 for
 verified versions and rollback points.
+
+## Outbound webhook configuration
+
+The API settings controls are deployed (evidence 0074). Outbound sending remains
+unconnected until preflight/attempt recovery is implemented and verified.
+`WEBHOOK_ENCRYPTION_KEY` is a 32-byte random key encoded as canonical base64.
+API, local Jobs and production must use the same value because their endpoint
+configurations live in one database. Keep it in private Worker secrets/ignored
+mode-0600 files and encrypted recovery material; never rotate it by overwriting
+configuration without an explicit re-encryption/rollback plan. Jobs still needs
+its production copy before sender activation. Template values are placeholders.
+
+Webhook delivery uses the immutable configuration and exact stored payload from
+the original attempt. Endpoint edits disable delivery and cancel old queued work;
+they never retarget it. Disabling cannot retract an in-flight request. Tests and
+2xx acknowledgements must be distinguished from real submissions/business success.
+Unknown outcomes require explicit safe replay/reconciliation, with receiver-side
+deduplication by webhook-id. Do not reset event IDs or attempt counts to replay.
