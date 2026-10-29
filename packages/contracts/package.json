@@ -20,7 +20,8 @@
     "./response-event": "./src/response-event.ts",
     "./responses": "./src/responses.ts",
     "./response-display": "./src/response-display.ts",
-    "./response-csv": "./src/response-csv.ts"
+    "./response-csv": "./src/response-csv.ts",
+    "./notifications": "./src/notifications.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
