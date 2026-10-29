@@ -28,6 +28,7 @@
     "db:migrate": "pnpm --filter @snapform/database migrate",
     "test:db": "pnpm --filter @snapform/database test",
     "db:bootstrap": "pnpm --filter @snapform/database bootstrap",
+    "db:bootstrap:jobs": "pnpm --filter @snapform/database bootstrap:jobs",
     "test:auth:integration": "pnpm --filter @snapform/api test:integration"
   },
   "devDependencies": {
