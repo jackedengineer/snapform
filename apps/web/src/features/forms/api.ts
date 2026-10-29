@@ -64,7 +64,7 @@ const unavailable = () =>
     'unavailable',
     'We couldn’t confirm that request. Please try again.',
   );
-async function request<T>(
+export async function request<T>(
   path: string,
   init: RequestInit,
   decode: (value: unknown) => T,

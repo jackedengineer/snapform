@@ -6,6 +6,7 @@ import { formatResponseAnswer } from '@snapform/contracts/response-display';
 import { useAccountUser } from '../auth/AccountLayout';
 import { fetchResponses, fetchResponse, responseExportPath } from './api';
 import './responses.css';
+import { WebhookSettings } from './WebhookSettings';
 import { EmailNotifications } from './EmailNotifications';
 const dates = new Intl.DateTimeFormat('en', {
   dateStyle: 'medium',
@@ -73,6 +74,14 @@ export function ResponseInbox({
           formId={formId}
           userId={user.id}
           canManage={can(page.data.role, 'integrations.manage')}
+        />
+      )}
+      {page.data && can(page.data.role, 'integrations.manage') && (
+        <WebhookSettings
+          key={`webhook:${workspaceId}:${formId}`}
+          workspaceId={workspaceId}
+          formId={formId}
+          userId={user.id}
         />
       )}
       {page.isPending ? (
