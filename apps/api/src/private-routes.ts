@@ -1,4 +1,5 @@
 import { json } from 'express';
+import { matchResponsesRoute, handleResponsesRequest } from './responses.ts';
 import type { Request, Response, RequestHandler } from 'express';
 import type { Database } from '@snapform/database';
 import { handleWorkspaceRequest, workspacePath } from './workspaces.ts';
@@ -13,7 +14,8 @@ export function isPrivatePath(path: string) {
     path === '/api/v1/me' ||
     path === workspacePath ||
     matchFormsRoute(path) !== null ||
-    matchPublicationRoute(path) !== null
+    matchPublicationRoute(path) !== null ||
+    matchResponsesRoute(path) !== null
   );
 }
 const workspaceBody = json({ limit: 16384, strict: true, inflate: false });
@@ -42,6 +44,7 @@ export async function handlePrivateRequest(
   db: Database,
   user: { id: string; name: string; email: string },
 ) {
+  const responseRoute = matchResponsesRoute(req.path);
   const publicationRoute = matchPublicationRoute(req.path);
   if (req.path === '/api/v1/me') {
     if (req.method !== 'GET') {
@@ -50,6 +53,8 @@ export async function handlePrivateRequest(
     } else res.json({ user });
   } else if (req.path === workspacePath) {
     await handleWorkspaceRequest(req, res, db, user.id);
+  } else if (responseRoute) {
+    await handleResponsesRequest(req, res, db, user.id, responseRoute);
   } else if (publicationRoute) {
     await handlePublicationRequest(req, res, db, user.id, publicationRoute);
   } else {

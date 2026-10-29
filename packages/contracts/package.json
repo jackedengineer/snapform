@@ -17,7 +17,8 @@
     "./public-form": "./src/public-form.ts",
     "./intake": "./src/intake.ts",
     "./intake-progress": "./src/intake-progress.ts",
-    "./response-event": "./src/response-event.ts"
+    "./response-event": "./src/response-event.ts",
+    "./responses": "./src/responses.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
