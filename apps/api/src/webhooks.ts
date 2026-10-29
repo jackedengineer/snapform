@@ -4,19 +4,37 @@ import {
   getWebhookSettings,
   saveWebhookConfiguration,
   getWebhookSigningSecret,
+  configureWebhookDelivery,
 } from '@snapform/database/webhook-settings';
 import {
   webhookConfigurationInputSchema,
   webhookSettingsSchema,
   webhookSecretInputSchema,
   webhookSecretSchema,
+  webhookPreviewInputSchema,
 } from '@snapform/contracts/webhook-settings';
+import { createWebhookPreview } from '@snapform/database/webhook-preview';
+import {
+  listWebhookDeliveries,
+  requestWebhookDelivery,
+} from '@snapform/database/webhook-deliveries';
+import {
+  webhookHistorySchema,
+  webhookPreviewSchema,
+  webhookSendInputSchema,
+  webhookToggleInputSchema,
+} from '@snapform/contracts/webhook-deliveries';
+import { requestScope } from './request-context.ts';
 import { responseEventMessageSchema } from '@snapform/contracts/response-event';
 const identity = responseEventMessageSchema.shape.eventId;
-type WebhookRoute = { workspaceId: string; formId: string; secret: boolean };
+type WebhookRoute = {
+  workspaceId: string;
+  formId: string;
+  operation: 'settings' | 'secret' | 'preview' | 'send' | 'deliveries';
+};
 export function matchWebhookRoute(path: string): WebhookRoute | null {
   const match = path.match(
-    /^\/api\/v1\/workspaces\/([A-Fa-f0-9-]{36})\/forms\/([A-Fa-f0-9-]{36})\/webhook(\/secret)?$/,
+    /^\/api\/v1\/workspaces\/([A-Fa-f0-9-]{36})\/forms\/([A-Fa-f0-9-]{36})\/webhook(?:\/(secret|preview|send|deliveries))?$/,
   );
   if (!match) return null;
   const workspace = identity.safeParse(match[1]),
@@ -25,7 +43,7 @@ export function matchWebhookRoute(path: string): WebhookRoute | null {
     ? {
         workspaceId: workspace.data,
         formId: form.data,
-        secret: Boolean(match[3]),
+        operation: (match[3] || 'settings') as WebhookRoute['operation'],
       }
     : null;
 }
@@ -37,8 +55,14 @@ export async function handleWebhookRequest(
   route: WebhookRoute,
   master: string,
 ) {
-  if (!(route.secret ? ['POST'] : ['GET', 'PUT']).includes(req.method)) {
-    res.setHeader('Allow', route.secret ? 'POST' : 'GET, PUT');
+  const methods =
+    route.operation === 'settings'
+      ? ['GET', 'PUT', 'PATCH']
+      : route.operation === 'deliveries'
+        ? ['GET']
+        : ['POST'];
+  if (!methods.includes(req.method)) {
+    res.setHeader('Allow', methods.join(', '));
     res.status(405).json({ error: { code: 'METHOD_NOT_ALLOWED' } });
     return;
   }
@@ -51,7 +75,61 @@ export async function handleWebhookRequest(
     return;
   }
   try {
-    if (route.secret) {
+    if (route.operation === 'deliveries') {
+      res.json(
+        webhookHistorySchema.parse(
+          await listWebhookDeliveries(
+            db,
+            actor,
+            route.workspaceId,
+            route.formId,
+          ),
+        ),
+      );
+      return;
+    }
+    if (route.operation === 'preview') {
+      const input = webhookPreviewInputSchema.safeParse(req.body);
+      if (!input.success) {
+        res.status(422).json({ error: { code: 'INVALID_WEBHOOK_SETTINGS' } });
+        return;
+      }
+      res.json(
+        webhookPreviewSchema.parse(
+          await createWebhookPreview(
+            db,
+            actor,
+            route.workspaceId,
+            route.formId,
+            input.data,
+            master,
+          ),
+        ),
+      );
+      return;
+    }
+    if (route.operation === 'send') {
+      const input = webhookSendInputSchema.safeParse(req.body);
+      if (!input.success) {
+        res.status(422).json({ error: { code: 'INVALID_WEBHOOK_SETTINGS' } });
+        return;
+      }
+      const receipt = await requestWebhookDelivery(
+        db,
+        actor,
+        route.workspaceId,
+        route.formId,
+        input.data,
+      );
+      const scope = requestScope.getStore();
+      if (scope)
+        scope.context.waitUntil(
+          wakeWebhookDelivery(scope.environment.JOBS, receipt.id),
+        );
+      res.status(202).json(receipt);
+      return;
+    }
+    if (route.operation === 'secret') {
       const input = webhookSecretInputSchema.safeParse(req.body);
       if (!input.success) {
         res.status(422).json({ error: { code: 'INVALID_WEBHOOK_SETTINGS' } });
@@ -60,6 +138,26 @@ export async function handleWebhookRequest(
       res.json(
         webhookSecretSchema.parse(
           await getWebhookSigningSecret(
+            db,
+            actor,
+            route.workspaceId,
+            route.formId,
+            input.data,
+            master,
+          ),
+        ),
+      );
+      return;
+    }
+    if (req.method === 'PATCH') {
+      const input = webhookToggleInputSchema.safeParse(req.body);
+      if (!input.success) {
+        res.status(422).json({ error: { code: 'INVALID_WEBHOOK_SETTINGS' } });
+        return;
+      }
+      res.json(
+        webhookSettingsSchema.parse(
+          await configureWebhookDelivery(
             db,
             actor,
             route.workspaceId,
@@ -107,13 +205,21 @@ export async function handleWebhookRequest(
     const status =
       code === 'FORBIDDEN'
         ? 403
-        : code === 'WEBHOOK_SETTINGS_CONFLICT'
+        : [
+              'WEBHOOK_SETTINGS_CONFLICT',
+              'WEBHOOK_DELIVERY_CONFLICT',
+              'OPERATION_CONFLICT',
+              'PUBLICATION_REQUIRED',
+              'WEBHOOK_TEST_REQUIRED',
+            ].includes(code)
           ? 409
           : ['WORKSPACE_NOT_FOUND', 'FORM_NOT_FOUND'].includes(code)
             ? 404
-            : code === 'WEBHOOK_DESTINATION_UNAVAILABLE'
-              ? 503
-              : undefined;
+            : code === 'INVALID_WEBHOOK_TEST'
+              ? 422
+              : code === 'WEBHOOK_DESTINATION_UNAVAILABLE'
+                ? 503
+                : undefined;
     if (!status) throw error;
     res.status(status).json({
       error: {
@@ -125,5 +231,26 @@ export async function handleWebhookRequest(
               : code,
       },
     });
+  }
+}
+export async function wakeWebhookDelivery(
+  service: Pick<Fetcher, 'fetch'>,
+  id: string,
+) {
+  try {
+    const response = await service.fetch(
+      new Request('https://jobs.internal/dispatch/webhooks', {
+        method: 'POST',
+        redirect: 'manual',
+        signal: AbortSignal.timeout(25000),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version: 1, eventId: identity.parse(id) }),
+      }),
+    );
+    await response.body?.cancel();
+    if (!response.ok) throw Error('Wake unavailable');
+  } catch {
+    // The committed pending row remains recoverable by Cron.
+    console.error(JSON.stringify({ event: 'webhook_wake_unavailable' }));
   }
 }

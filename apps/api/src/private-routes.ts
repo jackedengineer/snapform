@@ -44,7 +44,7 @@ export const privateBody: RequestHandler = (req, res, next) => {
     ['PUT', 'POST'].includes(req.method);
   const isWebhook =
     matchWebhookRoute(req.path) !== null &&
-    ['PUT', 'POST'].includes(req.method);
+    ['PUT', 'POST', 'PATCH'].includes(req.method);
   if (
     !isWebhook &&
     !isForm &&
