@@ -15,7 +15,8 @@
     "./draft": "./src/draft.ts",
     "./publication": "./src/publication.ts",
     "./public-form": "./src/public-form.ts",
-    "./intake": "./src/intake.ts"
+    "./intake": "./src/intake.ts",
+    "./intake-progress": "./src/intake-progress.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
