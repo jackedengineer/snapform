@@ -2,6 +2,10 @@
 
 Use Node 24 LTS and the exact pnpm version in package.json. Read AGENTS.md and CONSTRAINTS.md first.
 
+If another project owns the API's local port, use `SNAPFORM_API_PORT=8797 pnpm dev`
+and the same override for `pnpm test:dev-reload`. The web/auth origin remains port
+5173; the API inspector uses an available ephemeral port. Do not stop unrelated servers.
+
 ## Git
 
 - `main` is the integration branch. Work on short-lived `feat/`, `fix/`, `docs/` or `chore/` branches.
