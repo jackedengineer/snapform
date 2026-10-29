@@ -8,6 +8,8 @@ import { compileDefinition } from '@snapform/contracts/compile';
 import { can } from '@snapform/contracts/workspace';
 import { useAccountUser } from '../auth/AccountLayout';
 import { fetchForm } from './api';
+import { PublicationControls } from './PublicationControls';
+import { preparePublication } from './prepare-publication';
 import { useDraftAutosave } from './use-draft-autosave';
 import { blockNames, newBlock, duplicateBlock, blockCaption } from './new-form';
 import { BlockInspector } from './BlockInspector';
@@ -55,6 +57,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   const { rules: initialRules, ...initialValues } = snapshot.definition;
   const [rules, setRules] = useState(initialRules);
   const [role, setRole] = useState(snapshot.role);
+  const [publishing, setPublishing] = useState(false);
   const user = useAccountUser();
   const autosave = useDraftAutosave(snapshot, user.id);
   const ready = autosave.state !== null;
@@ -207,7 +210,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
       >
         ← Back to forms
       </Link>
-      <fieldset disabled={loading || (editable && !ready)}>
+      <fieldset disabled={publishing || loading || (editable && !ready)}>
         <div className="editor-header">
           <div>
             <p className="eyebrow">FORM DRAFT</p>
@@ -272,6 +275,28 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
             onReload={() => void loadSaved()}
           />
         )}
+        <PublicationControls
+          workspaceId={snapshot.workspaceId}
+          formId={snapshot.id}
+          editable={editable && ready && !conflict && status !== 'blocked'}
+          revision={revision}
+          dirty={dirty}
+          onBusy={setPublishing}
+          blocked={
+            !compilation.ok
+              ? 'Fix the form’s validation issues before publishing.'
+              : blocks.some((block) => block.type === 'file')
+                ? 'File collection is not ready. Remove file questions before sharing this form.'
+                : ''
+          }
+          prepare={() =>
+            preparePublication(
+              { ...form.state.values, rules },
+              autosave.flush,
+              () => fetchForm(snapshot.workspaceId, snapshot.id),
+            )
+          }
+        />
         <FormSettings
           definition={definition}
           editable={editable}
