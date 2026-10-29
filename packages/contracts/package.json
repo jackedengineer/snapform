@@ -23,7 +23,9 @@
     "./response-csv": "./src/response-csv.ts",
     "./notifications": "./src/notifications.ts",
     "./provider-signature": "./src/provider-signature.ts",
-    "./provider-receipt": "./src/provider-receipt.ts"
+    "./provider-receipt": "./src/provider-receipt.ts",
+    "./webhook-target": "./src/webhook-target.ts",
+    "./webhook-crypto": "./src/webhook-crypto.ts"
   },
   "dependencies": {
     "zod": "4.6.7"

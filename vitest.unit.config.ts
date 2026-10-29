@@ -32,6 +32,8 @@ export default defineConfig({
         'packages/contracts/src/notifications.ts',
         'packages/contracts/src/provider-signature.ts',
         'packages/contracts/src/provider-receipt.ts',
+        'packages/contracts/src/webhook-target.ts',
+        'packages/contracts/src/webhook-crypto.ts',
       ],
       reporter: ['text', 'json-summary'],
       thresholds: { lines: 90, functions: 90, statements: 90, branches: 85 },
