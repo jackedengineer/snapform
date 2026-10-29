@@ -21,6 +21,13 @@ it('keeps delivery outcomes outside application authority and hides unscoped row
       },
     ]);
     expect(
+      (
+        await db.execute(
+          sql`select has_function_privilege(current_user,'public.seed_response_webhook()','EXECUTE') as seed,has_function_privilege(current_user,'public.cancel_form_webhooks()','EXECUTE') as cancel,has_function_privilege('snapform_jobs','public.seed_response_webhook()','EXECUTE') as job_seed`,
+        )
+      ).rows,
+    ).toEqual([{ seed: false, cancel: false, job_seed: false }]);
+    expect(
       (await db.execute(sql`select id from public.webhook_delivery`)).rows,
     ).toEqual([]);
     await expect(

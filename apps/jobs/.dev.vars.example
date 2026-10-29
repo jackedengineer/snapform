@@ -1,0 +1,8 @@
+# Restricted job identity only. Never use the migration owner or API runtime login.
+DATABASE_URL="postgresql://snapform_jobs:replace@your-host.neon.tech/snapform?sslmode=require"
+RESEND_API_KEY="replace-with-a-domain-scoped-sending-key"
+RESEND_WEBHOOK_SECRET="replace-with-the-provider-webhook-signing-secret"
+# Must match the API/production value for the one shared database.
+WEBHOOK_ENCRYPTION_KEY="replace-with-base64-encoded-32-random-bytes"
+# Keep local sends scoped; omit the sending key until approved email tests are needed.
+EMAIL_ALLOWED_RECIPIENT="your-approved-address@example.invalid"
