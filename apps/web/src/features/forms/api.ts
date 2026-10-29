@@ -1,4 +1,10 @@
 import {
+  emailOverviewSchema,
+  emailSettingsSchema,
+  emailSettingsInputSchema,
+} from '@snapform/contracts/notifications';
+import type { EmailSettingsInput } from '@snapform/contracts/notifications';
+import {
   responsePageSchema,
   responseDetailSchema,
 } from '@snapform/contracts/responses';
@@ -249,3 +255,31 @@ export const responseExportPath = (
   formPath(workspaceId, formId) +
   '/response-export?versionId=' +
   encodeURIComponent(versionId);
+
+export function fetchEmailOverview(
+  workspaceId: string,
+  formId: string,
+  signal?: AbortSignal,
+) {
+  return request(
+    formPath(workspaceId, formId) + '/notifications',
+    { signal },
+    (value) => emailOverviewSchema.parse(value),
+  );
+}
+export async function saveEmailSettings(
+  workspaceId: string,
+  formId: string,
+  input: EmailSettingsInput,
+) {
+  const checked = emailSettingsInputSchema.parse(input);
+  return request(
+    formPath(workspaceId, formId) + '/notifications',
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(checked),
+    },
+    (value) => emailSettingsSchema.parse(value),
+  );
+}

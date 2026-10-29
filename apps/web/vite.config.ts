@@ -27,16 +27,12 @@ export default defineConfig(({ command, isPreview }) => ({
             codeSplitting: {
               groups: [
                 {
-                  name: 'query',
-                  test: /\/@tanstack\/(?:react-query|query-core)\//,
-                },
-                {
                   name: 'form-contracts',
-                  test: /\/(?:packages\/contracts\/src\/(?:form|answers|rules|compile|evaluate|intake|draft|publication|public-form|responses|response-display|response-csv)[^/]*\.ts|features\/(?:forms|intake|auth|workspaces)\/(?:api|response-export)\.ts)$/,
+                  test: /\/(?:packages\/contracts\/src\/(?:form|answers|rules|compile|evaluate|intake|draft|publication|public-form|responses|response-display|response-csv|notifications)[^/]*\.ts|features\/(?:forms|intake|auth|workspaces)\/(?:api|response-export)\.ts)$/,
                 },
                 {
-                  name: 'router',
-                  test: /\/@tanstack\/(?:react-router|router-core|react-start-client|start-client-core)\//,
+                  name: 'ui-runtime',
+                  test: /\/(?:@tanstack\/(?:react-router|router-core|react-start-client|start-client-core|react-query|query-core)|react|react-dom|scheduler)\//,
                 },
               ],
             },

@@ -192,3 +192,36 @@ it('keeps native export links on the form origin and encodes every caller-contro
   expect(path).toContain('..%2Fprivate');
   expect(path).toContain('versionId=x%26role%3Downer');
 });
+
+it('reads bounded notification summaries and sends strict revisioned settings without accepting recipients', async () => {
+  const { fetchEmailOverview, saveEmailSettings } = await import('./api');
+  const overview = {
+    settings: { enabled: false, revision: 0 },
+    deliveries: [],
+  };
+  const fetcher = vi.fn().mockResolvedValue(Response.json(overview));
+  vi.stubGlobal('fetch', fetcher);
+  expect(await fetchEmailOverview(workspaceId, id)).toEqual(overview);
+  expect(fetcher.mock.calls[0][0]).toBe(
+    `/api/v1/workspaces/${workspaceId}/forms/${id}/notifications`,
+  );
+  fetcher.mockResolvedValue(Response.json({ enabled: true, revision: 1 }));
+  expect(
+    await saveEmailSettings(workspaceId, id, {
+      enabled: true,
+      expectedRevision: 0,
+    }),
+  ).toEqual({ enabled: true, revision: 1 });
+  expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({
+    enabled: true,
+    expectedRevision: 0,
+  });
+  await expect(
+    saveEmailSettings(workspaceId, id, {
+      enabled: true,
+      expectedRevision: 0,
+      to: 'other@example.invalid',
+    } as unknown as Parameters<typeof saveEmailSettings>[2]),
+  ).rejects.toThrow();
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});

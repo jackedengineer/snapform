@@ -6,6 +6,7 @@ import { formatResponseAnswer } from '@snapform/contracts/response-display';
 import { useAccountUser } from '../auth/AccountLayout';
 import { fetchResponses, fetchResponse, responseExportPath } from './api';
 import './responses.css';
+import { EmailNotifications } from './EmailNotifications';
 const dates = new Intl.DateTimeFormat('en', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -65,6 +66,15 @@ export function ResponseInbox({
           Refresh
         </button>
       </div>
+      {page.data && (
+        <EmailNotifications
+          key={`${workspaceId}:${formId}`}
+          workspaceId={workspaceId}
+          formId={formId}
+          userId={user.id}
+          canManage={can(page.data.role, 'integrations.manage')}
+        />
+      )}
       {page.isPending ? (
         <p role="status">Loading responses…</p>
       ) : page.isError ? (

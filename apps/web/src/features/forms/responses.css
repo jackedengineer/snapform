@@ -100,3 +100,61 @@
   color: var(--text-secondary);
   max-width: 45ch;
 }
+.email-notifications {
+  margin-top: 2rem;
+  border: 1px solid var(--border-default);
+  border-radius: 1rem;
+  background: var(--surface-panel);
+}
+.email-notifications summary {
+  padding: 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.delivery-setting {
+  margin-inline-start: 1rem;
+  color: var(--text-secondary);
+}
+.notification-content {
+  padding: 0 1.25rem 1.25rem;
+  overflow-wrap: anywhere;
+}
+.notification-content p {
+  max-width: 65ch;
+  line-height: 1.6;
+}
+.notification-note {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.notification-actions {
+  margin-block: 1.5rem;
+}
+.notification-content button[aria-disabled='true'] {
+  opacity: 0.65;
+  cursor: wait;
+}
+.notification-content h2 {
+  margin-top: 2rem;
+  font-size: 1.25rem;
+}
+.notification-list {
+  padding: 0;
+  list-style: none;
+}
+.notification-list li {
+  display: grid;
+  gap: 0.6rem;
+  padding-block: 1.25rem;
+  border-top: 1px solid var(--border-default);
+}
+.notification-list a {
+  color: inherit;
+  font-weight: 600;
+}
+.notification-list p {
+  margin: 0;
+}
+.delivery-status {
+  font-weight: 600;
+}
