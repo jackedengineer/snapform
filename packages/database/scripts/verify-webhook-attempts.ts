@@ -10,6 +10,11 @@ import { publishForm } from '../src/publication.ts';
 import { startIntake, mutateIntake } from '../src/intake.ts';
 import { saveWebhookConfiguration } from '../src/webhook-settings.ts';
 import { createWebhookPayload } from '../../contracts/src/webhook-payload.ts';
+import {
+  claimWebhooks,
+  prepareWebhookPayload,
+  recordWebhookAttempt,
+} from '../src/webhook-attempts.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
 if (!process.env.DATABASE_MIGRATION_URL)
   throw Error('Local operator configuration required');
@@ -115,11 +120,20 @@ try {
       // Actual Jobs credentials/EXECUTE grants are checked separately below.
       stage = 'test claim and verification';
 
-      const [test] = await claim(testId);
-      assert(test);
+      const [mappedTest] = await claimWebhooks(tx, testId);
+      assert(mappedTest);
+      assert.equal(mappedTest.payload, testBody);
+      assert.equal(mappedTest.snapshot, null);
+      assert.equal(mappedTest.configurationId, configurationId);
+      assert.equal(mappedTest.createdAt, at);
       assert.equal((await claim(testId)).length, 0);
-      assert(await prepare(test, null));
-      assert(await record(test, 'acknowledged', 204, null));
+      assert(await prepareWebhookPayload(tx, mappedTest, null));
+      assert(
+        await recordWebhookAttempt(tx, mappedTest, {
+          status: 'acknowledged',
+          httpStatus: 204,
+        }),
+      );
 
       assert.equal(
         (
@@ -163,8 +177,24 @@ try {
       stage = 'immutable prepare and retry';
       const delivery = await submit();
 
-      const [first] = await claim(delivery.id);
-      assert(first);
+      const [mappedFirst] = await claimWebhooks(tx, delivery.id);
+      assert(mappedFirst?.snapshot);
+      assert.equal(mappedFirst.snapshot.version, 1);
+      assert.equal(mappedFirst.snapshot.definition.title, definition.title);
+      assert.deepEqual(mappedFirst.snapshot.answers, {
+        ...answers,
+        [ids.kind]: { state: 'missing' },
+        [ids.detail]: { state: 'missing' },
+      });
+      assert.equal(
+        createWebhookPayload(
+          { id: mappedFirst.id, formId, createdAt: mappedFirst.createdAt },
+          mappedFirst.snapshot,
+          false,
+        ),
+        delivery.body,
+      );
+      const first = { ...mappedFirst, lease_token: mappedFirst.leaseToken };
       assert.equal(first.attempts, 1);
       assert.equal(await record(first, null, null, null), false);
       assert.equal(
