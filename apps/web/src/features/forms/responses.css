@@ -1,0 +1,92 @@
+.responses-entry {
+  margin-inline-start: 1.5rem;
+}
+.response-layout {
+  display: grid;
+  grid-template-columns: minmax(15rem, 0.8fr) minmax(0, 1.5fr);
+  gap: 2rem;
+  align-items: start;
+  margin-top: 2.5rem;
+}
+.response-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  border-top: 1px solid var(--border-default);
+}
+.response-list a {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.25rem;
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-default);
+  border-inline-start: 3px solid transparent;
+  transition: background 140ms;
+}
+.response-list a:hover {
+  background: var(--surface-panel);
+}
+.response-list a[aria-current] {
+  background: var(--surface-panel);
+  border-inline-start-color: var(--action-primary);
+}
+.response-reference {
+  font-weight: 600;
+}
+.response-list time,
+.response-full-reference {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.response-list .draft-badge {
+  justify-self: start;
+}
+.response-detail {
+  min-width: 0;
+  padding: 2rem;
+  border: 1px solid var(--border-default);
+  border-radius: 1rem;
+  background: var(--surface-panel);
+}
+.response-detail h2 {
+  margin: 0.5rem 0 1rem;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+}
+.response-full-reference {
+  overflow-wrap: anywhere;
+}
+.response-answers {
+  margin: 2rem 0 0;
+}
+.response-answers > div {
+  border-top: 1px solid var(--border-default);
+  padding: 1.2rem 0;
+}
+.response-answers dt {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.response-answers dd {
+  margin: 0.65rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+.response-placeholder {
+  padding-block: 3rem;
+}
+@media (max-width: 700px) {
+  .response-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .response-detail {
+    padding: 1.25rem;
+  }
+  .responses-entry {
+    margin-inline-start: 0;
+    display: block;
+  }
+}

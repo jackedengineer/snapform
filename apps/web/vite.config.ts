@@ -27,6 +27,10 @@ export default defineConfig(({ command, isPreview }) => ({
             codeSplitting: {
               groups: [
                 {
+                  name: 'form-contracts',
+                  test: /\/(?:packages\/contracts\/src\/(?:form|answers|rules|compile|evaluate|intake|draft|publication|public-form|responses)[^/]*\.ts|features\/(?:forms|intake|auth|workspaces)\/api\.ts)$/,
+                },
+                {
                   name: 'router',
                   test: /\/@tanstack\/(?:react-router|router-core|react-start-client|start-client-core)\//,
                 },

@@ -1,4 +1,8 @@
 import {
+  responsePageSchema,
+  responseDetailSchema,
+} from '@snapform/contracts/responses';
+import {
   publicationEnvelopeSchema,
   publicationReceiptSchema,
   publishFormSchema,
@@ -204,5 +208,33 @@ export function stopPublicationRequest(
       body: JSON.stringify(unpublishFormSchema.parse(input)),
     },
     (value) => publicationEnvelopeSchema.parse(value).publication,
+  );
+}
+
+const responsesPath = (workspaceId: string, formId: string) =>
+  `${collectionPath(workspaceId)}/${encodeURIComponent(formId)}/responses`;
+export function fetchResponses(
+  workspaceId: string,
+  formId: string,
+  cursor?: string,
+  signal?: AbortSignal,
+) {
+  return request(
+    responsesPath(workspaceId, formId) +
+      (cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''),
+    { signal },
+    (value) => responsePageSchema.parse(value),
+  );
+}
+export function fetchResponse(
+  workspaceId: string,
+  formId: string,
+  id: string,
+  signal?: AbortSignal,
+) {
+  return request(
+    `${responsesPath(workspaceId, formId)}/${encodeURIComponent(id)}`,
+    { signal },
+    (value) => responseDetailSchema.parse(value).response,
   );
 }
