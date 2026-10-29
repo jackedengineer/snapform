@@ -21,6 +21,7 @@ import { Route as FPublicIdRouteImport } from './routes/f.$publicId'
 import { Route as AccountWorkspacesWorkspaceIdRouteImport } from './routes/_account.workspaces.$workspaceId'
 import { Route as AccountWorkspacesWorkspaceIdIndexRouteImport } from './routes/_account.workspaces.$workspaceId.index'
 import { Route as AccountWorkspacesWorkspaceIdFormsFormIdRouteImport } from './routes/_account.workspaces.$workspaceId.forms.$formId'
+import { Route as AccountWorkspacesWorkspaceIdResponsesFormIdRouteImport } from './routes/_account.workspaces.$workspaceId.responses.$formId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -84,6 +85,12 @@ const AccountWorkspacesWorkspaceIdFormsFormIdRoute =
     path: '/forms/$formId',
     getParentRoute: () => AccountWorkspacesWorkspaceIdRoute,
   } as any)
+const AccountWorkspacesWorkspaceIdResponsesFormIdRoute =
+  AccountWorkspacesWorkspaceIdResponsesFormIdRouteImport.update({
+    id: '/responses/$formId',
+    path: '/responses/$formId',
+    getParentRoute: () => AccountWorkspacesWorkspaceIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdRouteWithChildren
   '/workspaces/$workspaceId/': typeof AccountWorkspacesWorkspaceIdIndexRoute
   '/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
+  '/workspaces/$workspaceId/responses/$formId': typeof AccountWorkspacesWorkspaceIdResponsesFormIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -109,6 +117,7 @@ export interface FileRoutesByTo {
   '/f/$publicId': typeof FPublicIdRoute
   '/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdIndexRoute
   '/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
+  '/workspaces/$workspaceId/responses/$formId': typeof AccountWorkspacesWorkspaceIdResponsesFormIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,6 +133,7 @@ export interface FileRoutesById {
   '/_account/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdRouteWithChildren
   '/_account/workspaces/$workspaceId/': typeof AccountWorkspacesWorkspaceIdIndexRoute
   '/_account/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
+  '/_account/workspaces/$workspaceId/responses/$formId': typeof AccountWorkspacesWorkspaceIdResponsesFormIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceId'
     | '/workspaces/$workspaceId/'
     | '/workspaces/$workspaceId/forms/$formId'
+    | '/workspaces/$workspaceId/responses/$formId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/f/$publicId'
     | '/workspaces/$workspaceId'
     | '/workspaces/$workspaceId/forms/$formId'
+    | '/workspaces/$workspaceId/responses/$formId'
   id:
     | '__root__'
     | '/'
@@ -165,6 +177,7 @@ export interface FileRouteTypes {
     | '/_account/workspaces/$workspaceId'
     | '/_account/workspaces/$workspaceId/'
     | '/_account/workspaces/$workspaceId/forms/$formId'
+    | '/_account/workspaces/$workspaceId/responses/$formId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -264,12 +277,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountWorkspacesWorkspaceIdFormsFormIdRouteImport
       parentRoute: typeof AccountWorkspacesWorkspaceIdRoute
     }
+    '/_account/workspaces/$workspaceId/responses/$formId': {
+      id: '/_account/workspaces/$workspaceId/responses/$formId'
+      path: '/responses/$formId'
+      fullPath: '/workspaces/$workspaceId/responses/$formId'
+      preLoaderRoute: typeof AccountWorkspacesWorkspaceIdResponsesFormIdRouteImport
+      parentRoute: typeof AccountWorkspacesWorkspaceIdRoute
+    }
   }
 }
 
 interface AccountWorkspacesWorkspaceIdRouteChildren {
   AccountWorkspacesWorkspaceIdIndexRoute: typeof AccountWorkspacesWorkspaceIdIndexRoute
   AccountWorkspacesWorkspaceIdFormsFormIdRoute: typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
+  AccountWorkspacesWorkspaceIdResponsesFormIdRoute: typeof AccountWorkspacesWorkspaceIdResponsesFormIdRoute
 }
 
 const AccountWorkspacesWorkspaceIdRouteChildren: AccountWorkspacesWorkspaceIdRouteChildren =
@@ -278,6 +299,8 @@ const AccountWorkspacesWorkspaceIdRouteChildren: AccountWorkspacesWorkspaceIdRou
       AccountWorkspacesWorkspaceIdIndexRoute,
     AccountWorkspacesWorkspaceIdFormsFormIdRoute:
       AccountWorkspacesWorkspaceIdFormsFormIdRoute,
+    AccountWorkspacesWorkspaceIdResponsesFormIdRoute:
+      AccountWorkspacesWorkspaceIdResponsesFormIdRoute,
   }
 
 const AccountWorkspacesWorkspaceIdRouteWithChildren =

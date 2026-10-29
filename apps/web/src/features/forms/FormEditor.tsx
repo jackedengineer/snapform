@@ -210,6 +210,13 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
       >
         ← Back to forms
       </Link>
+      <Link
+        className="back-link responses-entry"
+        to="/workspaces/$workspaceId/responses/$formId"
+        params={{ workspaceId: snapshot.workspaceId, formId: snapshot.id }}
+      >
+        View responses →
+      </Link>
       <fieldset disabled={publishing || loading || (editable && !ready)}>
         <div className="editor-header">
           <div>
