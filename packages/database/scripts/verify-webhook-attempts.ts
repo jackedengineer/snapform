@@ -8,7 +8,10 @@ import { createWorkspace, inWorkspace } from '../src/workspaces.ts';
 import { createForm } from '../src/forms.ts';
 import { publishForm } from '../src/publication.ts';
 import { startIntake, mutateIntake } from '../src/intake.ts';
-import { saveWebhookConfiguration } from '../src/webhook-settings.ts';
+import {
+  saveWebhookConfiguration,
+  configureWebhookDelivery,
+} from '../src/webhook-settings.ts';
 import { createWebhookPayload } from '../../contracts/src/webhook-payload.ts';
 import {
   claimWebhooks,
@@ -161,9 +164,15 @@ try {
         ).rows[0].verified,
         true,
       );
-      await tx.execute(
-        sql`update public.form_webhook_settings set enabled=true,revision=2 where form_id=${formId}::uuid`,
+      const enabled = await configureWebhookDelivery(
+        tx,
+        actor,
+        workspace.id,
+        formId,
+        { configurationId, expectedRevision: 1, enabled: true },
+        master,
       );
+      assert(enabled.enabled && enabled.revision === 2 && enabled.verifiedAt);
       assert.equal(
         await queue(testId, 1, true),
         false,
