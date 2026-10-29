@@ -1,3 +1,7 @@
+import {
+  matchResponseExportRoute,
+  handleResponseExport,
+} from './response-export.ts';
 import { json } from 'express';
 import { matchResponsesRoute, handleResponsesRequest } from './responses.ts';
 import type { Request, Response, RequestHandler } from 'express';
@@ -15,7 +19,8 @@ export function isPrivatePath(path: string) {
     path === workspacePath ||
     matchFormsRoute(path) !== null ||
     matchPublicationRoute(path) !== null ||
-    matchResponsesRoute(path) !== null
+    matchResponsesRoute(path) !== null ||
+    matchResponseExportRoute(path) !== null
   );
 }
 const workspaceBody = json({ limit: 16384, strict: true, inflate: false });
@@ -44,6 +49,7 @@ export async function handlePrivateRequest(
   db: Database,
   user: { id: string; name: string; email: string },
 ) {
+  const exportRoute = matchResponseExportRoute(req.path);
   const responseRoute = matchResponsesRoute(req.path);
   const publicationRoute = matchPublicationRoute(req.path);
   if (req.path === '/api/v1/me') {
@@ -53,6 +59,8 @@ export async function handlePrivateRequest(
     } else res.json({ user });
   } else if (req.path === workspacePath) {
     await handleWorkspaceRequest(req, res, db, user.id);
+  } else if (exportRoute) {
+    await handleResponseExport(req, res, db, user.id, exportRoute);
   } else if (responseRoute) {
     await handleResponsesRequest(req, res, db, user.id, responseRoute);
   } else if (publicationRoute) {

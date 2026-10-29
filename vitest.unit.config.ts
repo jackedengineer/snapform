@@ -28,6 +28,7 @@ export default defineConfig({
         'packages/contracts/src/response-event.ts',
         'packages/contracts/src/responses.ts',
         'packages/contracts/src/response-display.ts',
+        'packages/contracts/src/response-csv.ts',
       ],
       reporter: ['text', 'json-summary'],
       thresholds: { lines: 90, functions: 90, statements: 90, branches: 85 },

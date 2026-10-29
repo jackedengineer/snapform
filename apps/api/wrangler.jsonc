@@ -15,6 +15,11 @@
   },
   "ratelimits": [
     {
+      "name": "EXPORT_RATE_LIMIT",
+      "namespace_id": "1006",
+      "simple": { "limit": 3, "period": 60 },
+    },
+    {
       "name": "AUTH_RATE_LIMIT",
       "namespace_id": "1001",
       "simple": { "limit": 20, "period": 60 },
