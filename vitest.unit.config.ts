@@ -6,6 +6,7 @@ export default defineConfig({
       'apps/web/src/features/auth/api.test.ts',
       'apps/web/src/features/workspaces/api.test.ts',
       'apps/web/src/features/forms/*.test.ts',
+      'apps/web/src/features/intake/*.test.ts',
     ],
     allowOnly: false,
     coverage: {

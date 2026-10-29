@@ -75,7 +75,9 @@ it(
         status: 'collecting',
         answers: {},
       });
-      expect(Date.parse(first.expiresAt)).toBeGreaterThan(Date.now());
+      expect(Date.parse(first.expiresAt)).toBeGreaterThan(
+        Date.now() + 6 * 86400000,
+      );
       expect(Object.keys(first)).not.toContain('capabilityHash');
       await saveDraft(tx, actor, workspaceId, formId, {
         operationId: crypto.randomUUID(),
