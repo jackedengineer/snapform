@@ -64,9 +64,27 @@ Sources: [Vite auxiliary Workers](https://developers.cloudflare.com/workers/vite
 
 ## Response transport Worker
 
-Deploy `apps/jobs/wrangler.jsonc` separately. Its only secret is `DATABASE_URL`
-for the restricted `snapform_jobs` identity; never copy API auth secrets or the
-migration owner. Cron and Queue configuration live in Wrangler. Confirm an owned
+Deploy `apps/jobs/wrangler.jsonc` separately. Its `DATABASE_URL` uses the restricted
+`snapform_jobs` identity; never copy API auth secrets or the migration owner.
+Owner notifications also require the sending-only `RESEND_API_KEY` and dedicated
+`RESEND_WEBHOOK_SECRET`. `EMAIL_FROM` is public configuration; the private
+`EMAIL_ALLOWED_RECIPIENT` currently restricts sends to approved QA. Do not remove
+that restriction without reviewing pending deliveries and the release scope.
+Cron and Queue configuration live in Wrangler. Confirm an owned
 synthetic event reaches a durable transport receipt, then inspect queue backlog,
 retries and the `snapform-response-dead` queue. Cron propagation can take up to
 15 minutes. A transport receipt does not prove provider notification delivery.
+
+The API's private `JOBS` binding forwards only `/api/v1/hooks/resend` to the jobs
+receipt handler. Resend calls the public app hostname; Jobs has no public route.
+Deploy the receiving API before enabling the new sender on the already existing
+jobs Worker, then deploy the web controls. Verify a real signed callback and the
+matching durable status; an unsigned POST must return 401. Provider acceptance,
+mail-server delivery and human reading are distinct.
+
+For a form-specific incident, opt out from its inbox first. A jobs rollback stops
+new email claims but can also remove its receipt handler; preserve/restore callback
+processing during recovery and reconcile accepted work. Rollback cannot retract
+sent mail or undo database/provider history. Do not reset IDs, recipients or retry
+windows to make an uncertain message look new. See production evidence 0066 for
+verified versions and rollback points.
