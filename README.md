@@ -47,7 +47,9 @@ Primary input: `/Users/jackedengineer/Downloads/Typeform_Jotform_Formless_Resear
 
 The private preview is deployed at **https://snapform.jacked.dev**. Verified accounts/workspaces, the typed editor and conditional rules, autosave/conflict recovery, creator publish/share controls and the recoverable page/card collector with durable submission are implemented. Production browser checks include the owned QA account, a real hostname-verified Turnstile session, final review and a database-confirmed submission. See the [publishing evidence](docs/development/0044-creator-publication-controls.md) and [deployment runbook](docs/runbooks/deploy.md).
 
-The market V1 is not shipped. Outbox/delivery, response management, checked files, privacy/operating controls, teams/MFA, billing, import and AI still have open acceptance gates. Demand, conversion improvement, production SLOs and unit economics are unvalidated. No live payment is part of the preview.
+A separate private job Worker now relays durable response events through Cron and Queues; an owned deployed event reached its idempotent transport receipt. Hosted PR checks have passed. The inbox and bounded version-specific CSV export are implemented and tested locally; mobile and production smoke verification remain pending for their release. Email/webhook delivery is the next integration slice.
+
+The market V1 is not shipped. Provider delivery, response-management release checks, checked files, privacy/operating controls, teams/MFA, billing, import and AI still have open acceptance gates. Demand, conversion improvement, production SLOs and unit economics are unvalidated. No live payment is part of the preview.
 
 ## Run locally
 

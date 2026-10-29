@@ -90,3 +90,12 @@
     display: block;
   }
 }
+
+.response-export {
+  margin-top: 1.5rem;
+}
+.response-export p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  max-width: 45ch;
+}

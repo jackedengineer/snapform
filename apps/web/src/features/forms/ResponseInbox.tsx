@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
+import { can } from '@snapform/contracts/workspace';
 import { formatResponseAnswer } from '@snapform/contracts/response-display';
 import { useAccountUser } from '../auth/AccountLayout';
-import { fetchResponses, fetchResponse } from './api';
+import { fetchResponses, fetchResponse, responseExportPath } from './api';
 import './responses.css';
 const dates = new Intl.DateTimeFormat('en', {
   dateStyle: 'medium',
@@ -174,6 +175,27 @@ export function ResponseInbox({
                   <p className="response-full-reference">
                     Reference {detail.data.id}
                   </p>
+                  {can(page.data.role, 'responses.export') && (
+                    <div className="response-export">
+                      <a
+                        className="text-button"
+                        href={responseExportPath(
+                          workspaceId,
+                          formId,
+                          detail.data.versionId,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Download version ${detail.data.version} CSV (opens in a new tab)`}
+                      >
+                        Download version {detail.data.version} CSV
+                      </a>
+                      <p>
+                        All completed responses for this published version.
+                        Potential formulas are exported as text.
+                      </p>
+                    </div>
+                  )}
                   <dl className="response-answers">
                     {detail.data.definition.pages
                       .flatMap((page) => page.blocks)

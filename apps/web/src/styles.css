@@ -809,3 +809,20 @@ dd small {
   white-space: nowrap;
   border: 0;
 }
+
+.export-error {
+  max-width: 640px;
+  margin: 72px auto;
+  border-style: solid;
+  background: var(--surface-panel);
+}
+.export-error h1 {
+  color: var(--text-primary);
+}
+.export-error .button {
+  display: inline-flex;
+  width: auto;
+  justify-content: center;
+  text-decoration: none;
+  margin-top: 24px;
+}
