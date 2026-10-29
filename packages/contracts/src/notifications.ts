@@ -32,3 +32,28 @@ export const emailDeliveryStates = [
   'cancelled',
   'needs_action',
 ] as const;
+export const emailOverviewSchema = z.strictObject({
+  settings: emailSettingsSchema,
+  deliveries: z
+    .array(
+      z.strictObject({
+        id: z.uuid(),
+        responseId: z.uuid(),
+        status: z.enum(emailDeliveryStates),
+        attempts: z.int().min(0).max(8),
+        reason: z
+          .enum([
+            'disabled',
+            'recipient-unavailable',
+            'configuration',
+            'provider-rejected',
+            'idempotency-expired',
+            'attempts-exhausted',
+          ])
+          .nullable(),
+        createdAt: z.iso.datetime(),
+      }),
+    )
+    .max(20),
+});
+export type EmailOverview = z.infer<typeof emailOverviewSchema>;

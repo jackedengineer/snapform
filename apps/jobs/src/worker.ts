@@ -7,9 +7,18 @@ import {
 import { responseEventMessageSchema } from '@snapform/contracts/response-event';
 import type { ResponseEventMessage } from '@snapform/contracts/response-event';
 import { relayResponseEvents, consumeResponseEvents } from './transport';
+import {
+  claimOwnerEmails,
+  recordOwnerEmail,
+} from '@snapform/database/notification-delivery';
+import { dispatchOwnerEmails } from './email-dispatch';
+import { sendOwnerEmail } from './owner-email';
 
 type JobEnvironment = {
   DATABASE_URL?: string;
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
+  EMAIL_ALLOWED_RECIPIENT?: string;
   EVENTS: Pick<Queue<ResponseEventMessage>, 'sendBatch'>;
 };
 function connect(environment: JobEnvironment) {
@@ -45,12 +54,26 @@ export default {
           console.log(
             JSON.stringify({ event: 'response_events_queued', ...result }),
           );
+        const mail = await dispatchOwnerEmails({
+          claim: () => claimOwnerEmails(db),
+          send: (claim) =>
+            sendOwnerEmail(claim, {
+              apiKey: environment.RESEND_API_KEY || '',
+              from: environment.EMAIL_FROM || '',
+              allowedRecipient: environment.EMAIL_ALLOWED_RECIPIENT,
+            }),
+          record: (claim, outcome) => recordOwnerEmail(db, claim, outcome),
+        });
+        if (mail.claimed)
+          console.log(
+            JSON.stringify({ event: 'owner_email_attempts', ...mail }),
+          );
       } finally {
         await close();
       }
     } catch {
-      console.error(JSON.stringify({ event: 'outbox_relay_failed' }));
-      throw new Error('Outbox relay failed');
+      console.error(JSON.stringify({ event: 'response_jobs_failed' }));
+      throw new Error('Response jobs failed');
     }
   },
   async queue(batch: MessageBatch<unknown>, environment: JobEnvironment) {

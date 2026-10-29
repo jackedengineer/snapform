@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import {
+  emailOverviewSchema,
   emailSettingsInputSchema,
   emailSettingsSchema,
 } from './notifications.ts';
@@ -29,4 +30,29 @@ it('cannot report enabled notifications without a saved configuration revision',
   expect(
     emailSettingsSchema.safeParse({ enabled: true, revision: 0 }).success,
   ).toBe(false);
+});
+it('bounds delivery summaries and rejects recipient details or unknown outcomes', () => {
+  const delivery = {
+    id: crypto.randomUUID(),
+    responseId: crypto.randomUUID(),
+    status: 'accepted',
+    attempts: 1,
+    reason: null,
+    createdAt: '2026-10-29T12:00:00.000Z',
+  };
+  const overview = {
+    settings: { enabled: true, revision: 1 },
+    deliveries: [delivery],
+  };
+  expect(emailOverviewSchema.parse(overview)).toEqual(overview);
+  for (const value of [
+    {
+      ...overview,
+      deliveries: [{ ...delivery, recipient: 'private@example.invalid' }],
+    },
+    { ...overview, deliveries: [{ ...delivery, status: 'sent-forever' }] },
+    { ...overview, deliveries: [{ ...delivery, attempts: 9 }] },
+    { ...overview, deliveries: Array(21).fill(delivery) },
+  ])
+    expect(emailOverviewSchema.safeParse(value).success).toBe(false);
 });
