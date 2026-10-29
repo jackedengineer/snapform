@@ -108,8 +108,10 @@ async function request<T>(
 }
 const collectionPath = (workspaceId: string) =>
   `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/forms`;
+const formPath = (workspaceId: string, id: string) =>
+  `${collectionPath(workspaceId)}/${encodeURIComponent(id)}`;
 const draftPath = (workspaceId: string, id: string) =>
-  `${collectionPath(workspaceId)}/${encodeURIComponent(id)}/draft`;
+  formPath(workspaceId, id) + '/draft';
 export function fetchForms(
   workspaceId: string,
   cursor?: string,
@@ -168,7 +170,7 @@ export async function saveDraftRequest(
 }
 
 const publicationPath = (workspaceId: string, id: string) =>
-  collectionPath(workspaceId) + '/' + encodeURIComponent(id) + '/publication';
+  formPath(workspaceId, id) + '/publication';
 export function fetchPublication(
   workspaceId: string,
   id: string,
@@ -212,7 +214,7 @@ export function stopPublicationRequest(
 }
 
 const responsesPath = (workspaceId: string, formId: string) =>
-  `${collectionPath(workspaceId)}/${encodeURIComponent(formId)}/responses`;
+  formPath(workspaceId, formId) + '/responses';
 export function fetchResponses(
   workspaceId: string,
   formId: string,
@@ -238,3 +240,12 @@ export function fetchResponse(
     (value) => responseDetailSchema.parse(value).response,
   );
 }
+
+export const responseExportPath = (
+  workspaceId: string,
+  formId: string,
+  versionId: string,
+) =>
+  formPath(workspaceId, formId) +
+  '/response-export?versionId=' +
+  encodeURIComponent(versionId);

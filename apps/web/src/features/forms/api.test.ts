@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import {
+  responseExportPath,
   fetchForms,
   fetchForm,
   createFormRequest,
@@ -173,4 +174,21 @@ it('classifies a rejected publication as definite validation failure', async () 
       expectedRevision: 1,
     }),
   ).rejects.toMatchObject({ code: 'invalid' });
+});
+
+it('keeps native export links on the form origin and encodes every caller-controlled segment', () => {
+  expect(responseExportPath(workspaceId, id, id)).toBe(
+    `/api/v1/workspaces/${workspaceId}/forms/${id}/response-export?versionId=${id}`,
+  );
+  const path = responseExportPath(
+    'https://unrelated.invalid/',
+    '../private',
+    'x&role=owner',
+  );
+  expect(new URL(path, 'https://snapform.jacked.dev').origin).toBe(
+    'https://snapform.jacked.dev',
+  );
+  expect(path).toContain('https%3A%2F%2Funrelated.invalid%2F');
+  expect(path).toContain('..%2Fprivate');
+  expect(path).toContain('versionId=x%26role%3Downer');
 });
