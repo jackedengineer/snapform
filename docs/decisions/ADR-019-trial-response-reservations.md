@@ -1,0 +1,9 @@
+# ADR-019: One bounded creator trial with response reservations
+
+Accepted 29 October 2026. Apply the existing experimental 14-day/50-response trial before enabling anonymous session creation. The trial clock uses the original creator account's registration time and the allowance is shared across its workspaces. Creating another workspace cannot restart the trial or multiply the free allowance. Paid workspace periods remain a later Razorpay integration; no paid entitlement or automatic overage is invented here.
+
+Reserve a response slot for fifteen minutes when a session starts. Count all unexpired collecting reservations, including temporarily unpublished forms, so unpublishing/republishing cannot free and then revive the same capacity. Sessions retain their separate 24-hour progress lifetime. The mutation/submission slices must renew/reacquire expired reservations under the same quota lock and honor already-valid reservations for their short completion grace; they must never silently exceed the allowance.
+
+Keep consumed response usage in a separate counter, independent of deletable answer/session rows. Only trusted database commands may change it. Touching this owner's counter row serializes admissions; under a stronger isolation mode, conflicting updates fail rather than admitting stale capacity. The start command derives owner, verified status, trial eligibility and publication from database relationships, not client fields. Existing runtime metadata/delete restrictions remain unchanged.
+
+The counter is initialized at admission but consumption is part of the upcoming durable-submit transaction. Trial/paid status, reserved/used counts, expiry and retention must be shown to the creator before launch. This policy is an initial business experiment, not a public final price or permission to charge.

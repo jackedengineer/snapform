@@ -78,6 +78,13 @@
       "when": 1793259732246,
       "tag": "0010_robust_scalphunter",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793262191210,
+      "tag": "0011_low_payback",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import type { Answer } from '@snapform/contracts/answers';
 import { formVersion } from './publication-schema.ts';
+import { user } from './schema.ts';
 const runtime = pgRole('snapform_runtime').existing();
 export const responseSession = pgTable(
   'response_session',
@@ -33,6 +34,9 @@ export const responseSession = pgTable(
       .notNull()
       .default('collecting'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    reservationUntil: timestamp('reservation_until', { withTimezone: true })
+      .notNull()
+      .default(sql`now() + interval '15 minutes'`),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -59,6 +63,15 @@ export const responseSession = pgTable(
         ],
       }).onDelete('restrict'),
       index('response_session_expiry_idx').on(table.expiresAt),
+      index('response_session_reservation_idx').on(
+        table.workspaceId,
+        table.status,
+        table.reservationUntil,
+      ),
+      check(
+        'response_session_reservation_expiry',
+        sql`${table.reservationUntil} <= ${table.expiresAt}`,
+      ),
       check(
         'response_session_hash',
         sql`${table.capabilityHash} ~ '^[0-9a-f]{64}$'`,
@@ -89,4 +102,28 @@ export const responseSession = pgTable(
       }),
     ];
   },
+).enableRLS();
+
+export const trialResponseUsage = pgTable(
+  'trial_response_usage',
+  {
+    ownerId: text('owner_id')
+      .primaryKey()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    responsesUsed: integer('responses_used').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      'trial_response_usage_bounds',
+      sql`${table.responsesUsed} >= 0 and ${table.responsesUsed} <= 50`,
+    ),
+    pgPolicy('trial_response_usage_read', {
+      for: 'select',
+      to: runtime,
+      using: sql`${table.ownerId} = current_setting('snapform.user_id',true)`,
+    }),
+  ],
 ).enableRLS();
