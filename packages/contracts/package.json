@@ -25,7 +25,8 @@
     "./provider-signature": "./src/provider-signature.ts",
     "./provider-receipt": "./src/provider-receipt.ts",
     "./webhook-target": "./src/webhook-target.ts",
-    "./webhook-crypto": "./src/webhook-crypto.ts"
+    "./webhook-crypto": "./src/webhook-crypto.ts",
+    "./webhook-settings": "./src/webhook-settings.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
