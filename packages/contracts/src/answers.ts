@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Field } from './form.ts';
 import { isStorableText } from './text.ts';
 
-const inputSchema = z.discriminatedUnion('state', [
+export const answerInputSchema = z.discriminatedUnion('state', [
   z.strictObject({ state: z.literal('missing') }),
   z.strictObject({ state: z.literal('blank') }),
   z.strictObject({ state: z.literal('refused') }),
@@ -33,7 +33,7 @@ const uuidSchema = z.uuid();
 
 // Inputs use explicit states. Applicability is computed by the engine, never by a respondent.
 export function decodeAnswer(field: Field, raw: unknown): DecodedAnswer {
-  const input = inputSchema.safeParse(
+  const input = answerInputSchema.safeParse(
     raw === undefined ? { state: 'missing' } : raw,
   );
   if (!input.success) return invalid('Use a valid answer.');
