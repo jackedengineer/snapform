@@ -1,3 +1,4 @@
+import { MAX_WEBHOOK_BYTES } from './webhook-protocol.ts';
 import { createHmac, createDecipheriv, createCipheriv } from 'node:crypto';
 import { expect, it } from 'vitest';
 import {
@@ -100,7 +101,7 @@ it('bounds signing material and UTF-8 payloads without reflecting private input'
     'INVALID_WEBHOOK_SIGNING',
   );
   await expect(
-    signWebhook(id, '🔐'.repeat(65537), secret, now),
+    signWebhook(id, '🔐'.repeat(MAX_WEBHOOK_BYTES / 4 + 1), secret, now),
   ).rejects.toThrow('INVALID_WEBHOOK_SIGNING');
   for (const time of [NaN, 0, 1, Infinity, 1e20])
     await expect(signWebhook(id, body, secret, time)).rejects.toThrow(
@@ -223,4 +224,13 @@ it('validates decrypted configuration even when encryption itself authenticates'
       openWebhookDestination(sealed, master, context),
     ).rejects.toThrow('WEBHOOK_DESTINATION_UNAVAILABLE');
   }
+});
+it('signs a full collector-sized answer body without truncating its UTF-8 bytes', async () => {
+  const raw = JSON.stringify({
+    answer: 'a'.repeat(2096652),
+    metadata: 'synthetic',
+  });
+  const signed = await signWebhook(id, raw, secret, now);
+  expect(await verifyWebhook(raw, signed, secret, now)).toBe(true);
+  expect(await verifyWebhook(raw + ' ', signed, secret, now)).toBe(false);
 });

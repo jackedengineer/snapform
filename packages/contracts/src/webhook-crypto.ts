@@ -1,3 +1,4 @@
+import { MAX_WEBHOOK_BYTES } from './webhook-protocol.ts';
 import { responseEventMessageSchema } from './response-event.ts';
 import { parseWebhookTarget } from './webhook-target.ts';
 const identity = responseEventMessageSchema.shape.eventId;
@@ -44,7 +45,7 @@ export async function signWebhook(
       !identity.safeParse(id).success ||
       !Number.isFinite(now) ||
       now <= 0 ||
-      encoder.encode(body).byteLength > 262144
+      encoder.encode(body).byteLength > MAX_WEBHOOK_BYTES
     )
       throw Error();
     const timestamp = String(Math.floor(now / 1000));
@@ -72,7 +73,7 @@ export async function verifyWebhook(
       !Number.isFinite(now) ||
       Math.abs(Number(headers.timestamp) - Math.floor(now / 1000)) > 300 ||
       headers.signature.length > 1024 ||
-      encoder.encode(body).byteLength > 262144
+      encoder.encode(body).byteLength > MAX_WEBHOOK_BYTES
     )
       return false;
     const candidates = headers.signature.split(' ');
