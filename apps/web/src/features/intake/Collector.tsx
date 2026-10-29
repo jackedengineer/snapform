@@ -288,11 +288,10 @@ export function Collector({ publicId }: { publicId: string }) {
                         {cardField.required ? 'Required' : 'Optional'}
                       </p>
                     )}
-                    {review && (
+                    {review && !frozen && (
                       <p className="intake-description">
-                        {frozen
-                          ? 'Your retained answers are read-only. Resolve the saved-state issue before editing.'
-                          : 'Make any final changes below. Only answers relevant to your path will be sent.'}
+                        Make any final changes below. Only answers relevant to
+                        your path will be sent.
                       </p>
                     )}
                     <fieldset
