@@ -2,8 +2,12 @@ import {
   emailOverviewSchema,
   emailSettingsSchema,
   emailSettingsInputSchema,
+  emailRetryInputSchema,
 } from '@snapform/contracts/notifications';
-import type { EmailSettingsInput } from '@snapform/contracts/notifications';
+import type {
+  EmailSettingsInput,
+  EmailRetryInput,
+} from '@snapform/contracts/notifications';
 import {
   responsePageSchema,
   responseDetailSchema,
@@ -281,5 +285,21 @@ export async function saveEmailSettings(
       body: JSON.stringify(checked),
     },
     (value) => emailSettingsSchema.parse(value),
+  );
+}
+export async function retryEmailDelivery(
+  workspaceId: string,
+  formId: string,
+  input: EmailRetryInput,
+) {
+  const checked = emailRetryInputSchema.parse(input);
+  return request(
+    formPath(workspaceId, formId) + '/notifications',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(checked),
+    },
+    (value) => emailOverviewSchema.parse(value),
   );
 }

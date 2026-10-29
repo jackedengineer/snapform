@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import type { EmailOverview } from '@snapform/contracts/notifications';
-import { fetchEmailOverview, saveEmailSettings } from './api';
+import {
+  fetchEmailOverview,
+  saveEmailSettings,
+  retryEmailDelivery,
+} from './api';
 const labels: Record<EmailOverview['deliveries'][number]['status'], string> = {
   pending: 'Waiting to send',
   sending: 'Sending',
@@ -16,13 +20,11 @@ const labels: Record<EmailOverview['deliveries'][number]['status'], string> = {
   needs_action: 'Needs attention',
 };
 const reasons: Record<string, string> = {
-  'recipient-unavailable': 'A verified workspace owner is required.',
-  configuration: 'Email delivery needs to be configured. Contact support.',
-  'provider-rejected':
-    'The email provider rejected this message. Contact support.',
-  'idempotency-expired':
-    'Delivery could not be confirmed. Contact support before sending again.',
-  'attempts-exhausted': 'Automatic retries stopped. Contact support.',
+  'recipient-unavailable': 'Verify the workspace owner first.',
+  configuration: 'Contact support to set up email.',
+  'provider-rejected': 'Rejected. Contact support.',
+  'idempotency-expired': 'Unconfirmed. Ask support before retrying.',
+  'attempts-exhausted': 'Retries stopped. Contact support.',
   disabled: 'A request already in progress may still arrive.',
 };
 const dates = new Intl.DateTimeFormat('en', {
@@ -41,6 +43,7 @@ export function EmailNotifications({
   canManage: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const refreshButton = useRef<HTMLButtonElement>(null);
   const overview = useQuery({
     queryKey: ['email-notifications', userId, workspaceId, formId],
     enabled: open,
@@ -51,7 +54,15 @@ export function EmailNotifications({
     retry: false,
     onSettled: () => overview.refetch(),
   });
-  const busy = overview.isFetching || change.isPending;
+  const retry = useMutation({
+    mutationFn: retryEmailDelivery.bind(null, workspaceId, formId),
+    retry: false,
+    onSettled: async () => {
+      await overview.refetch();
+      refreshButton.current?.focus();
+    },
+  });
+  const busy = overview.isFetching || change.isPending || retry.isPending;
   return (
     <details
       className="email-notifications"
@@ -68,12 +79,12 @@ export function EmailNotifications({
       {open && (
         <div className="notification-content" aria-busy={busy}>
           <p>
-            Email the verified workspace owner when a new response arrives.
-            Messages contain a response reference and a private inbox link.
+            Email the verified workspace owner a reference and private link for
+            each new response.
           </p>
           <p className="notification-note">
-            Changes apply to future submissions. Turning this off stops further
-            attempts; an email already in progress may still arrive.
+            Future submissions only. Turning this off stops retries; an email in
+            progress may still arrive.
           </p>
           {overview.isPending ? (
             <p role="status">Loading notification settings…</p>
@@ -113,9 +124,8 @@ export function EmailNotifications({
               )}
               <h2>Recent delivery activity</h2>
               <p className="notification-note">
-                The latest 20 notifications. Accepted by the provider is
-                different from delivery to a mail server; neither confirms that
-                an email was read.
+                Latest 20 notifications. Neither acceptance nor delivery
+                confirms an email was read.
               </p>
               {overview.data.deliveries.length === 0 ? (
                 <p>No notification activity yet.</p>
@@ -142,13 +152,35 @@ export function EmailNotifications({
                         {delivery.attempts === 1 ? 'attempt' : 'attempts'}
                       </span>
                       {delivery.reason && <p>{reasons[delivery.reason]}</p>}
+                      {canManage && delivery.retryable && (
+                        <button
+                          className="text-button"
+                          aria-disabled={busy}
+                          onClick={() => {
+                            if (!busy)
+                              retry.mutate({
+                                deliveryId: delivery.id,
+                                expectedAttempts: delivery.attempts,
+                              });
+                          }}
+                          aria-label={`Retry email for response ${delivery.responseId.slice(0, 8)}`}
+                        >
+                          {retry.isPending &&
+                          retry.variables.deliveryId === delivery.id
+                            ? 'Queuing…'
+                            : 'Retry email'}
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
               )}
+              {retry.isError && <p role="alert">{retry.error.message}</p>}
+              {retry.isSuccess && <p role="status">Retry queued.</p>}
             </>
           )}
           <button
+            ref={refreshButton}
             className="text-button"
             aria-disabled={busy}
             onClick={() => {

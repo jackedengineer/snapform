@@ -162,6 +162,13 @@
       "when": 1793291148452,
       "tag": "0022_owner-provider-receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793293551205,
+      "tag": "0023_owner-email-repair",
+      "breakpoints": true
     }
   ]
 }

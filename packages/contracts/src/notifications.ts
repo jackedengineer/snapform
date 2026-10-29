@@ -4,6 +4,11 @@ export const emailSettingsInputSchema = z.strictObject({
   expectedRevision: z.int().min(0).max(2147483646),
 });
 export type EmailSettingsInput = z.infer<typeof emailSettingsInputSchema>;
+export const emailRetryInputSchema = z.strictObject({
+  deliveryId: z.uuid(),
+  expectedAttempts: z.int().min(0).max(7),
+});
+export type EmailRetryInput = z.infer<typeof emailRetryInputSchema>;
 export type EmailOutcome =
   | { status: 'accepted'; providerId: string }
   | { status: 'retry'; reason: 'provider-unavailable'; delaySeconds: number }
@@ -41,6 +46,7 @@ export const emailOverviewSchema = z.strictObject({
         responseId: z.uuid(),
         status: z.enum(emailDeliveryStates),
         attempts: z.int().min(0).max(8),
+        retryable: z.boolean(),
         reason: z
           .enum([
             'disabled',
