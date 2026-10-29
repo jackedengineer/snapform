@@ -36,6 +36,7 @@ export class IntakeProgress {
   private running: Promise<void> | null = null;
   private persistence: Promise<void> = Promise.resolve();
   private closed = false;
+  private closing: Promise<void> | null = null;
   private retryAt = 0;
   private validationFailed = false;
   constructor(
@@ -220,11 +221,15 @@ export class IntakeProgress {
     await this.flush();
     return this.state.record.session?.status === 'submitted';
   }
-  async close() {
+  close(): Promise<void> {
+    if (this.closing) return this.closing;
     this.closed = true;
     clearTimeout(this.timer);
     clearTimeout(this.localTimer);
-    await this.running;
-    await this.persist();
+    this.closing = (async () => {
+      await this.running;
+      await this.persist();
+    })();
+    return this.closing;
   }
 }

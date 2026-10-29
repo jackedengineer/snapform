@@ -1,0 +1,11 @@
+# Browser session ownership and recovery lifecycle
+
+29 October 2026. The collector loads public definitions/configuration through TanStack Query and keeps respondent credentials/answers out of query caches. A native Web Lock gives one tab ownership of a form's recovery buffer. Another tab gets an explicit close-and-retry message; it recovers after the first tab closes. React teardown drains the controller before releasing its owned lock, and a retry waits for the previous lifecycle to finish.
+
+Browser-created identities are persisted before session creation, so a lost creation response can reuse the same identity. A resumed session is checked against its pinned version and server revision. Dirty/pending buffers stay intact, and a newer server revision is a conflict. A failed resume shows the retained browser copy read-only and keeps the explicit forget action available. The browser does not claim that retained answers are accepted by the server.
+
+The close path is now idempotent. A new regression test first failed because a second cleanup persisted the old copy again; repeated close calls now share one draining promise. This prevents unmount cleanup from refilling a deliberately forgotten copy. The eight progress-controller tests pass, including that regression.
+
+Actual browser evidence: project inputs survived reload; the same submitted reference survived refresh; a second tab was refused, then recovered after the first closed. Escape cancels the native forget dialog and returns focus; confirmed forgetting stays cleared after reload while the Neon submission remains. The expiry drill changed only one fresh collecting session on the dedicated owned QA form, using exact tenant/form/session identity. Subsequent save failed closed. The first reload lost the cleanup affordance; the fixed flow retains a read-only copy and lets the user forget it and start again. No runtime expiry permission was added, and no customer session was altered.
+
+Sources: [Web Locks request semantics](https://developer.mozilla.org/en-US/docs/Web/API/LockManager/request). Native IndexedDB and Web Locks add no runtime dependency. Browsers without the required lock API receive an explicit unsupported-recovery message rather than unsafe concurrent writes.

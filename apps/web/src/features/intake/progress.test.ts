@@ -217,3 +217,21 @@ it('preserves the local buffer when a retry receipt reports a newer server revis
   });
   await progress.close();
 });
+it('closes once so later cleanup cannot refill a forgotten browser copy', async () => {
+  const entry = record(),
+    persist = vi.fn().mockResolvedValue(undefined);
+  const progress = new IntakeProgress(
+    entry,
+    {},
+    {
+      persist,
+      send: async () => {
+        throw new Error('No send expected');
+      },
+      changed: () => {},
+    },
+  );
+  await progress.close();
+  await progress.close();
+  expect(persist).toHaveBeenCalledTimes(1);
+});
