@@ -12,6 +12,7 @@ import {
   index,
   pgPolicy,
   pgRole,
+  primaryKey,
 } from 'drizzle-orm/pg-core';
 import type { Answer } from '@snapform/contracts/answers';
 import { formVersion } from './publication-schema.ts';
@@ -37,6 +38,8 @@ export const responseSession = pgTable(
     reservationUntil: timestamp('reservation_until', { withTimezone: true })
       .notNull()
       .default(sql`now() + interval '15 minutes'`),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+    endingId: uuid('ending_id'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -89,6 +92,10 @@ export const responseSession = pgTable(
         'response_session_answers',
         sql`jsonb_typeof(${table.answers}) = 'object' and octet_length(${table.answers}::text) <= 2097152`,
       ),
+      check(
+        'response_session_submission',
+        sql`(${table.status} = 'collecting' and ${table.submittedAt} is null and ${table.endingId} is null) or (${table.status} = 'submitted' and ${table.submittedAt} is not null and ${table.endingId} is not null)`,
+      ),
       pgPolicy('response_session_read', {
         for: 'select',
         to: runtime,
@@ -124,6 +131,40 @@ export const trialResponseUsage = pgTable(
       for: 'select',
       to: runtime,
       using: sql`${table.ownerId} = current_setting('snapform.user_id',true)`,
+    }),
+  ],
+).enableRLS();
+
+export const intakeOperation = pgTable(
+  'intake_operation',
+  {
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => responseSession.id, { onDelete: 'cascade' }),
+    id: uuid('id').notNull(),
+    kind: text('kind', { enum: ['save', 'submit'] }).notNull(),
+    payloadHash: text('payload_hash').notNull(),
+    baseRevision: integer('base_revision').notNull(),
+    resultRevision: integer('result_revision').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.sessionId, table.id] }),
+    check('intake_operation_kind', sql`${table.kind} in ('save','submit')`),
+    check(
+      'intake_operation_hash',
+      sql`${table.payloadHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check(
+      'intake_operation_revisions',
+      sql`${table.baseRevision} > 0 and ${table.resultRevision} = ${table.baseRevision} + 1`,
+    ),
+    pgPolicy('intake_operation_read', {
+      for: 'select',
+      to: runtime,
+      using: sql`public.intake_session_access(${table.sessionId})`,
     }),
   ],
 ).enableRLS();

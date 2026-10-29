@@ -1,3 +1,10 @@
+import {
+  intakeMutationSchema,
+  intakeMutationReceiptSchema,
+  prepareIntakeProgress,
+} from '@snapform/contracts/intake-progress';
+import type { IntakeMutation } from '@snapform/contracts/intake-progress';
+import type { CompileIssue } from '@snapform/contracts/compile';
 import { sql } from 'drizzle-orm';
 import {
   capabilityHashSchema,
@@ -57,4 +64,57 @@ export async function getIntake(
     await scope(tx, publicId, id, hash);
     return read(tx, id);
   });
+}
+
+export async function mutateIntake(
+  db: Connection,
+  publicId: string,
+  id: string,
+  rawHash: string,
+  kind: 'save' | 'submit',
+  raw: IntakeMutation,
+) {
+  publicId = identity.parse(publicId);
+  id = identity.parse(id);
+  const hash = capabilityHashSchema.parse(rawHash),
+    input = intakeMutationSchema.parse(raw);
+  return db.transaction(async (tx) => {
+    await scope(tx, publicId, id, hash);
+    const current = await read(tx, id);
+    if (
+      current.definition.pages.some((page) =>
+        page.blocks.some((block) => block.type === 'file'),
+      )
+    )
+      throw new Error('FILE_COLLECTION_UNAVAILABLE');
+    const prepared = prepareIntakeProgress(
+      current.definition,
+      input.answers,
+      kind === 'submit',
+    );
+    if (!prepared.ok) throw new IntakeValidationError(prepared.issues);
+    const result = await tx.execute<{
+      outcome: string;
+      revision: number;
+      current_revision: number;
+      status: string;
+    }>(
+      sql`select * from public.mutate_response_session(${id}::uuid,${input.operationId}::uuid,${input.expectedRevision},${kind},${JSON.stringify(input.answers)}::jsonb,${JSON.stringify(prepared.answers)}::jsonb,${prepared.endingId}::uuid)`,
+    );
+    const receipt = result.rows[0];
+    if (!receipt || receipt.outcome !== 'ok')
+      throw new Error(receipt?.outcome || 'INTAKE_UNAVAILABLE');
+    return intakeMutationReceiptSchema.parse({
+      operationId: input.operationId,
+      revision: receipt.revision,
+      currentRevision: receipt.current_revision,
+      status: receipt.status,
+    });
+  });
+}
+
+export class IntakeValidationError extends Error {
+  constructor(readonly issues: CompileIssue[]) {
+    super('INVALID_INTAKE_ANSWERS');
+  }
 }

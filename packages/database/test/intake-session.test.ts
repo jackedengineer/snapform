@@ -7,7 +7,7 @@ import { createWorkspace } from '../src/workspaces.ts';
 import { createForm, saveDraft } from '../src/forms.ts';
 import { publishForm, unpublishForm } from '../src/publication.ts';
 import { responseSession } from '../src/intake-schema.ts';
-import { startIntake, getIntake } from '../src/intake.ts';
+import { startIntake, getIntake, mutateIntake } from '../src/intake.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
 async function fixture(
   run: (
@@ -151,13 +151,15 @@ it(
         sql`select set_config('snapform.intake_id','',true),set_config('snapform.intake_hash','',true),set_config('snapform.public_id','',true),set_config('snapform.role','owner',true)`,
       );
       expect(await tx.select().from(responseSession)).toHaveLength(0);
-      expect(
-        await tx
-          .update(responseSession)
-          .set({ revision: 2 })
-          .where(eq(responseSession.id, id))
-          .returning(),
-      ).toHaveLength(0);
+      await expect(
+        tx.transaction(async (nested) =>
+          nested
+            .update(responseSession)
+            .set({ revision: 2 })
+            .where(eq(responseSession.id, id))
+            .returning(),
+        ),
+      ).rejects.toMatchObject({ cause: { code: '42501' } });
       await expect(
         tx.transaction(async (nested) => {
           await nested.insert(responseSession).values({
@@ -190,6 +192,127 @@ it(
       expect(await startIntake(tx, publicId, id, hash)).toEqual(first);
       await expect(
         startIntake(tx, publicId, id, 'f'.repeat(64)),
+      ).rejects.toThrow('INTAKE_UNAVAILABLE');
+    }),
+  30000,
+);
+
+it(
+  'saves partial progress with immutable retry receipts and submits once',
+  async () =>
+    fixture(async (tx, actor, workspaceId, formId, publicId) => {
+      const id = crypto.randomUUID(),
+        hash = '8'.repeat(64);
+      const session = await startIntake(tx, publicId, id, hash);
+      const fields = session.definition.pages.flatMap((page) => page.blocks);
+      const budget = fields.find((field) => field.type === 'number');
+      const contact = fields.find((field) => field.type === 'email');
+      if (!budget || !contact) throw new Error('Missing fixture fields');
+      const progress = {
+        operationId: crypto.randomUUID(),
+        expectedRevision: 1,
+        answers: { [budget.id]: { state: 'value' as const, value: '-' } },
+      };
+      const first = await mutateIntake(
+        tx,
+        publicId,
+        id,
+        hash,
+        'save',
+        progress,
+      );
+      expect(first).toMatchObject({
+        revision: 2,
+        currentRevision: 2,
+        status: 'collecting',
+      });
+      expect((await getIntake(tx, publicId, id, hash)).answers).toEqual(
+        progress.answers,
+      );
+      expect(
+        await mutateIntake(tx, publicId, id, hash, 'save', progress),
+      ).toEqual(first);
+      await expect(
+        mutateIntake(tx, publicId, id, hash, 'save', {
+          ...progress,
+          answers: {},
+        }),
+      ).rejects.toThrow('INTAKE_OPERATION_CONFLICT');
+      await expect(
+        mutateIntake(tx, publicId, id, hash, 'save', {
+          ...progress,
+          operationId: crypto.randomUUID(),
+        }),
+      ).rejects.toThrow('INTAKE_CONFLICT');
+      await expect(
+        mutateIntake(tx, publicId, id, hash, 'submit', {
+          ...progress,
+          operationId: crypto.randomUUID(),
+          expectedRevision: 2,
+        }),
+      ).rejects.toThrow('INVALID_INTAKE_ANSWERS');
+      const submit = {
+        operationId: crypto.randomUUID(),
+        expectedRevision: 2,
+        answers: {
+          [budget.id]: { state: 'value' as const, value: '0' },
+          [contact.id]: {
+            state: 'value' as const,
+            value: 'qa@EXAMPLE.INVALID',
+          },
+        },
+      };
+      const receipt = await mutateIntake(
+        tx,
+        publicId,
+        id,
+        hash,
+        'submit',
+        submit,
+      );
+      expect(receipt).toMatchObject({ revision: 3, status: 'submitted' });
+      expect(
+        await mutateIntake(tx, publicId, id, hash, 'submit', submit),
+      ).toEqual(receipt);
+      expect(
+        await mutateIntake(tx, publicId, id, hash, 'save', progress),
+      ).toMatchObject({
+        revision: 2,
+        currentRevision: 3,
+        status: 'collecting',
+      });
+      const final = await getIntake(tx, publicId, id, hash);
+      expect(final.status).toBe('submitted');
+      expect(final.answers[budget.id]).toEqual({ state: 'value', value: 0 });
+      await expect(
+        mutateIntake(tx, publicId, id, hash, 'save', {
+          ...progress,
+          operationId: crypto.randomUUID(),
+          expectedRevision: 3,
+        }),
+      ).rejects.toThrow('INTAKE_ALREADY_SUBMITTED');
+      await tx.execute(
+        sql`select set_config('snapform.user_id',${actor},true)`,
+      );
+      const used = await tx.execute<{ responses_used: number }>(
+        sql`select responses_used from public.trial_response_usage where owner_id=${actor}`,
+      );
+      expect(used.rows[0]?.responses_used).toBe(1);
+      const publication = await publishForm(tx, actor, workspaceId, formId, {
+        versionId: crypto.randomUUID(),
+        expectedRevision: 1,
+      });
+      await unpublishForm(tx, actor, workspaceId, formId, {
+        expectedVersionId: publication.versionId,
+      });
+      expect((await getIntake(tx, publicId, id, hash)).status).toBe(
+        'submitted',
+      );
+      expect(
+        await mutateIntake(tx, publicId, id, hash, 'submit', submit),
+      ).toEqual(receipt);
+      await expect(
+        mutateIntake(tx, publicId, id, '9'.repeat(64), 'submit', submit),
       ).rejects.toThrow('INTAKE_UNAVAILABLE');
     }),
   30000,
