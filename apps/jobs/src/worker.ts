@@ -15,6 +15,15 @@ import {
 import { dispatchOwnerEmails } from './email-dispatch';
 import { sendOwnerEmail } from './owner-email';
 import { handleProviderReceipt } from './provider-receipt';
+import {
+  claimWebhooks,
+  prepareWebhookPayload,
+  recordWebhookAttempt,
+} from '@snapform/database/webhook-attempts';
+import { dispatchWebhooks } from './webhook-dispatch';
+import { sendWebhook } from './webhook-send';
+import { handleWebhookWake } from './webhook-wake';
+import type { Database } from '@snapform/database';
 
 type JobEnvironment = {
   DATABASE_URL?: string;
@@ -22,6 +31,7 @@ type JobEnvironment = {
   RESEND_WEBHOOK_SECRET?: string;
   EMAIL_FROM?: string;
   EMAIL_ALLOWED_RECIPIENT?: string;
+  WEBHOOK_ENCRYPTION_KEY?: string;
   EVENTS: Pick<Queue<ResponseEventMessage>, 'sendBatch'>;
 };
 function connect(environment: JobEnvironment) {
@@ -35,8 +45,33 @@ function connect(environment: JobEnvironment) {
   if (!valid) throw new Error('Job database configuration is unavailable');
   return openDatabase(url);
 }
+async function deliverWebhooks(
+  db: Database,
+  environment: JobEnvironment,
+  id?: string,
+) {
+  const result = await dispatchWebhooks({
+    master: environment.WEBHOOK_ENCRYPTION_KEY || '',
+    claim: () => claimWebhooks(db, id),
+    prepare: (claim, body) => prepareWebhookPayload(db, claim, body),
+    send: (delivery) => sendWebhook(delivery),
+    record: (claim, outcome) => recordWebhookAttempt(db, claim, outcome),
+  });
+  if (result.claimed)
+    console.log(JSON.stringify({ event: 'webhook_attempts', ...result }));
+  return result;
+}
 export default {
   async fetch(request, environment) {
+    if (new URL(request.url).pathname === '/dispatch/webhooks')
+      return handleWebhookWake(request, async (id) => {
+        const { db, close } = await connect(environment);
+        try {
+          return await deliverWebhooks(db, environment, id);
+        } finally {
+          await close();
+        }
+      });
     if (new URL(request.url).pathname === '/api/v1/hooks/resend')
       return handleProviderReceipt(
         request,
@@ -84,6 +119,8 @@ export default {
           console.log(
             JSON.stringify({ event: 'owner_email_attempts', ...mail }),
           );
+        const webhooks = await deliverWebhooks(db, environment);
+        if (webhooks.failed) throw Error('Webhook persistence unavailable');
       } finally {
         await close();
       }
