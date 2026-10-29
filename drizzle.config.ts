@@ -5,6 +5,7 @@ export default defineConfig({
     './packages/database/src/schema.ts',
     './packages/database/src/workspace-schema.ts',
     './packages/database/src/form-schema.ts',
+    './packages/database/src/publication-schema.ts',
   ],
   out: './packages/database/migrations',
 });
