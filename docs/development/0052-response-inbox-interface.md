@@ -31,5 +31,8 @@ compression overhead without pulling editor UI into the homepage. A rejected
 editor/framework grouping was discarded. The homepage's emitted static import
 and preload graph measured 117.33 KiB gzip; this is an artifact estimate, not a
 network or usability SLO. Build, strict checks, 187 pure tests, 64 API Worker tests,
-36 database tests and SSR/reload checks passed. Mobile verification passed; production smoke testing is still required before
-the inbox release gate is complete.
+36 database tests and SSR/reload checks passed. Mobile verification passed. Production smoke also passed: editor navigation,
+version 1/version 5 original questions, INR 0, literal markup with no image nodes,
+heading focus, refresh and a missing response without exposed answers. Anonymous
+reads return 401. PR #3 merged after required checks; API f112b0e3 and web d600cb03
+were verified before the later export release. See slice 0054 for current versions.
