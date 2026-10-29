@@ -16,6 +16,11 @@
       "namespace_id": "1002",
       "simple": { "limit": 120, "period": 60 },
     },
+    {
+      "name": "PUBLIC_READ_RATE_LIMIT",
+      "namespace_id": "1003",
+      "simple": { "limit": 60, "period": 60 },
+    },
   ],
   "observability": { "enabled": true, "logs": { "invocation_logs": false } },
 }

@@ -13,7 +13,8 @@
     "./compile": "./src/compile.ts",
     "./evaluate": "./src/evaluate.ts",
     "./draft": "./src/draft.ts",
-    "./publication": "./src/publication.ts"
+    "./publication": "./src/publication.ts",
+    "./public-form": "./src/public-form.ts"
   },
   "dependencies": {
     "zod": "4.6.7"

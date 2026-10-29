@@ -1,21 +1,16 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
 import { openDatabase } from '@snapform/database';
 import { createAuth } from './auth.ts';
 import { makeAuthMailer } from './email.ts';
-import type { AuthEnvironment } from './environment.ts';
+import { requestScope } from './request-context.ts';
 import {
   isPrivatePath,
   privateBody,
   handlePrivateRequest,
 } from './private-routes.ts';
 
-export const requestScope = new AsyncLocalStorage<{
-  environment: Env & AuthEnvironment;
-  context: ExecutionContext;
-}>();
 export const authRoutes = Router();
 authRoutes.use(privateBody);
 authRoutes.use(async (req, res, next) => {

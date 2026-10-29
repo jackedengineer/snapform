@@ -2,7 +2,9 @@ import { httpServerHandler } from 'cloudflare:node';
 import express from 'express';
 import type { ErrorRequestHandler } from 'express';
 import { briefSchema } from '@snapform/contracts';
-import { authRoutes, requestScope } from './auth-routes.ts';
+import { authRoutes } from './auth-routes.ts';
+import { requestScope } from './request-context.ts';
+import { publicFormRoutes } from './public-form.ts';
 import { authFailure, checkAuthRequest } from './auth-boundary.ts';
 import type { AuthEnvironment } from './environment.ts';
 
@@ -19,6 +21,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(authRoutes);
+app.use(publicFormRoutes);
 app.post(
   '/api/v1/brief/review',
   (req, res, next) => {
