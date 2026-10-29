@@ -54,7 +54,7 @@ async function fixture(
   }
 }
 it(
-  'publishes immutable snapshots and never reactivates or replaces a later publication on retry',
+  'publishes immutable snapshots and deduplicates the same operation',
   async () =>
     fixture(async (tx, actor, workspaceId, formId) => {
       expect(await getPublication(tx, actor, workspaceId, formId)).toBeNull();
@@ -90,10 +90,51 @@ it(
             .where(eq(formVersion.id, first.versionId)),
       );
       expect(original[0].definition.title).not.toBe(definition.title);
+    }),
+  30000,
+);
+
+it(
+  'advances version numbers across repeated publications without changing the share identity',
+  async () =>
+    fixture(async (tx, actor, workspaceId, formId) => {
+      let publicId: string | undefined;
+      let versionId = '';
+      for (let number = 1; number <= 3; number++) {
+        versionId = crypto.randomUUID();
+        const receipt = await publishForm(tx, actor, workspaceId, formId, {
+          versionId,
+          expectedRevision: 1,
+        });
+        publicId ||= receipt.publication?.publicId;
+        expect(receipt).toMatchObject({
+          number,
+          publication: { publicId, versionId, active: true },
+        });
+      }
+      expect(
+        await getPublication(tx, actor, workspaceId, formId),
+      ).toMatchObject({ number: 3, versionId, publicId });
+    }),
+  30000,
+);
+it(
+  'keeps a later live version when an older publication is retried',
+  async () =>
+    fixture(async (tx, actor, workspaceId, formId) => {
+      const first = { versionId: crypto.randomUUID(), expectedRevision: 1 };
+      const receipt = await publishForm(tx, actor, workspaceId, formId, first);
+      await saveDraft(tx, actor, workspaceId, formId, {
+        operationId: crypto.randomUUID(),
+        expectedRevision: 1,
+        definition: formFixture().definition,
+      });
       const second = { versionId: crypto.randomUUID(), expectedRevision: 2 };
-      const newer = await publishForm(tx, actor, workspaceId, formId, second);
-      expect(newer).toMatchObject({
+      expect(
+        await publishForm(tx, actor, workspaceId, formId, second),
+      ).toMatchObject({
         number: 2,
+        sourceRevision: 2,
         publication: {
           publicId: receipt.publication?.publicId,
           versionId: second.versionId,
@@ -105,30 +146,50 @@ it(
         versionId: first.versionId,
         publication: { versionId: second.versionId },
       });
+    }),
+  30000,
+);
+
+it(
+  'deduplicates stopping and never reactivates a stopped publication on retry',
+  async () =>
+    fixture(async (tx, actor, workspaceId, formId) => {
+      const input = { versionId: crypto.randomUUID(), expectedRevision: 1 };
+      await publishForm(tx, actor, workspaceId, formId, input);
+      for (let attempt = 0; attempt < 2; attempt++)
+        expect(
+          await unpublishForm(tx, actor, workspaceId, formId, {
+            expectedVersionId: input.versionId,
+          }),
+        ).toMatchObject({ active: false });
       expect(
-        await unpublishForm(tx, actor, workspaceId, formId, {
-          expectedVersionId: second.versionId,
-        }),
-      ).toMatchObject({ active: false });
-      expect(
-        await unpublishForm(tx, actor, workspaceId, formId, {
-          expectedVersionId: second.versionId,
-        }),
-      ).toMatchObject({ active: false });
+        await publishForm(tx, actor, workspaceId, formId, input),
+      ).toMatchObject({
+        publication: { active: false },
+      });
+    }),
+  30000,
+);
+
+it(
+  'reactivates only with a new publication and rejects stale stop or changed operation reuse',
+  async () =>
+    fixture(async (tx, actor, workspaceId, formId) => {
+      const first = { versionId: crypto.randomUUID(), expectedRevision: 1 };
+      const receipt = await publishForm(tx, actor, workspaceId, formId, first);
+      await unpublishForm(tx, actor, workspaceId, formId, {
+        expectedVersionId: first.versionId,
+      });
+      const second = { ...first, versionId: crypto.randomUUID() };
       expect(
         await publishForm(tx, actor, workspaceId, formId, second),
-      ).toMatchObject({ publication: { active: false } });
-      const third = await publishForm(tx, actor, workspaceId, formId, {
-        ...second,
-        versionId: crypto.randomUUID(),
-      });
-      expect(third).toMatchObject({
-        number: 3,
+      ).toMatchObject({
+        number: 2,
         publication: { active: true, publicId: receipt.publication?.publicId },
       });
       await expect(
         unpublishForm(tx, actor, workspaceId, formId, {
-          expectedVersionId: second.versionId,
+          expectedVersionId: first.versionId,
         }),
       ).rejects.toThrow('PUBLICATION_CONFLICT');
       await expect(
@@ -139,12 +200,16 @@ it(
       ).rejects.toThrow('OPERATION_CONFLICT');
       expect(
         await getPublication(tx, actor, workspaceId, formId),
-      ).toMatchObject({ versionId: third.versionId, active: true });
+      ).toMatchObject({
+        versionId: second.versionId,
+        active: true,
+      });
     }),
   30000,
 );
+
 it(
-  'rejects invalid, stale, missing and unauthorized publication without partial snapshots',
+  'rejects invalid and stale drafts without partial publication snapshots',
   async () =>
     fixture(async (tx, actor, workspaceId, formId) => {
       await saveDraft(tx, actor, workspaceId, formId, {
@@ -165,6 +230,24 @@ it(
       await expect(
         publishForm(tx, actor, workspaceId, formId, input),
       ).rejects.toThrow('DRAFT_CONFLICT');
+      expect(
+        await inWorkspace(
+          tx,
+          actor,
+          workspaceId,
+          'responses.read',
+          async (scoped) => scoped.select().from(formVersion),
+        ),
+      ).toHaveLength(0);
+    }),
+  30000,
+);
+
+it(
+  'denies missing forms and viewer publication writes',
+  async () =>
+    fixture(async (tx, actor, workspaceId, formId) => {
+      const input = { versionId: crypto.randomUUID(), expectedRevision: 1 };
       await expect(
         publishForm(tx, actor, workspaceId, crypto.randomUUID(), input),
       ).rejects.toThrow('FORM_NOT_FOUND');
@@ -181,10 +264,7 @@ it(
           .values({ workspaceId, userId: viewer, role: 'viewer' }),
       );
       await expect(
-        publishForm(tx, viewer, workspaceId, formId, {
-          ...input,
-          expectedRevision: 3,
-        }),
+        publishForm(tx, viewer, workspaceId, formId, input),
       ).rejects.toThrow('FORBIDDEN');
       await expect(
         unpublishForm(tx, viewer, workspaceId, formId, {
@@ -200,8 +280,23 @@ it(
           async (scoped) => scoped.select().from(formVersion),
         ),
       ).toHaveLength(0);
-      const valid = { ...input, expectedRevision: 3 };
-      await publishForm(tx, actor, workspaceId, formId, valid);
+    }),
+  30000,
+);
+
+it(
+  'binds publication operation identities to their original actor and form',
+  async () =>
+    fixture(async (tx, actor, workspaceId, formId) => {
+      const input = { versionId: crypto.randomUUID(), expectedRevision: 1 };
+      await publishForm(tx, actor, workspaceId, formId, input);
+      const editor = crypto.randomUUID();
+      await tx.insert(user).values({
+        id: editor,
+        name: 'Publication editor QA',
+        email: `${editor}@example.invalid`,
+        emailVerified: true,
+      });
       await inWorkspace(
         tx,
         actor,
@@ -209,12 +304,11 @@ it(
         'members.manage',
         async (scoped) =>
           scoped
-            .update(membership)
-            .set({ role: 'editor' })
-            .where(eq(membership.userId, viewer)),
+            .insert(membership)
+            .values({ workspaceId, userId: editor, role: 'editor' }),
       );
       await expect(
-        publishForm(tx, viewer, workspaceId, formId, valid),
+        publishForm(tx, editor, workspaceId, formId, input),
       ).rejects.toThrow('OPERATION_CONFLICT');
       const otherId = crypto.randomUUID();
       await createForm(tx, actor, workspaceId, {
@@ -222,10 +316,7 @@ it(
         definition: formFixture().definition,
       });
       await expect(
-        publishForm(tx, actor, workspaceId, otherId, {
-          ...valid,
-          expectedRevision: 1,
-        }),
+        publishForm(tx, actor, workspaceId, otherId, input),
       ).rejects.toThrow('OPERATION_CONFLICT');
       expect(await getPublication(tx, actor, workspaceId, otherId)).toBeNull();
     }),
