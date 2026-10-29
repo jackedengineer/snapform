@@ -22,13 +22,22 @@ Established 28 October 2026 from the user's production, testing, native-first an
 | Boundary behavior | Actual workerd tests for expected/error/adversarial requests | `pnpm test:api` |
 | Core coverage | At least 90% lines/functions/statements and 85% branches in implemented pure contracts | `pnpm test:unit --coverage` |
 | Build | Web production build and API Worker dry-run bundle succeed | `pnpm build` |
-| Initial web JS | At most 200 KiB gzip across emitted client JS; record largest chunks | `pnpm check:bundle` |
+| Route JS | Gzip entry + route/layout dependencies: home ≤125 KiB, collector ≤170 KiB, editor ≤190 KiB, inbox ≤175 KiB, other routes ≤200 KiB | `pnpm check:bundle` |
+| Total web JS | At most 230 KiB gzip across all emitted client JS, including lazy routes; record largest chunks | `pnpm check:bundle` |
 | Initial web CSS | At most 20 KiB gzip across emitted client CSS | `pnpm check:bundle` |
 | Primary font | Latin variable font at most 40 KiB; optional Extended subset recorded separately | `pnpm check:bundle` |
 | Dependency risk | No unresolved high/critical production dependency audit result | `pnpm audit --prod --audit-level high` |
 | Git hygiene | No whitespace errors, secrets/env/build outputs; focused commits | `git diff --check`, staged diff review and `.gitignore` |
 
 Coverage is scoped to the pure core, not presented as total-product coverage. Worker behavior is checked through its runtime; browser evidence is separate. Do not invent an arbitrary coverage badge for unimplemented features.
+
+The user explicitly approved these route and total-JS limits on 29 October 2026
+before the remaining V1 screens were implemented. They replace the first-slice
+200 KiB whole-app JS limit through a separate recorded decision, [ADR-022](docs/decisions/ADR-022-route-performance-budgets.md).
+The checker includes transitive imports, account layouts and non-route dynamic
+features; it defers only other known routes. Missing/ambiguous modules fail closed.
+CSS/font, coverage, correctness and security requirements are unchanged. These
+artifact checks do not replace the production performance targets below.
 
 ## Every feature's browser gate
 
