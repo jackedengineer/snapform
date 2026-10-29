@@ -27,8 +27,12 @@ A forged query field rendered an unavailable page without answer content. The
 final recovery card has a 126px action, no horizontal overflow and zero scripts.
 The first visual pass found a full-width action and it was corrected. Screenshot
 `47-export-recovery.png` contains no answers. Files containing answers stay outside
-Git. Console warnings/errors were empty. Mobile and live production checks remain
-pending; the native Mac is locked and viewport overrides did not change width.
+Git. Console warnings/errors were empty. After reconnecting browser control, the
+actual 375×812 recovery page had no overflow, no scripts and a 48px return action;
+Back to inbox worked. At 320×812 the inbox download target stayed 44px high. A
+forged response bookmark showed no answer definitions at 375px. Screenshot
+`49-mobile-export-recovery.png` records the narrow error state without answers.
+Live production export verification remains pending.
 
 Final emitted assets: 199.70 KiB JS gzip / 200 budget, 7.66 KiB CSS / 20,
 36.07 KiB font / 40. Query modules and pure contract/request helpers are grouped;
