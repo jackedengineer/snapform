@@ -15,7 +15,8 @@
     "./responses": "./src/responses.ts",
     "./notification-delivery": "./src/notification-delivery.ts",
     "./notification-settings": "./src/notification-settings.ts",
-    "./response-export": "./src/response-export.ts"
+    "./response-export": "./src/response-export.ts",
+    "./webhook-settings": "./src/webhook-settings.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",
