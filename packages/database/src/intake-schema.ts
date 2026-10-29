@@ -17,6 +17,7 @@ import {
 import type { Answer } from '@snapform/contracts/answers';
 import { formVersion } from './publication-schema.ts';
 import { user } from './schema.ts';
+import { tenantAccess } from './tenant-policy.ts';
 const runtime = pgRole('snapform_runtime').existing();
 export const responseSession = pgTable(
   'response_session',
@@ -96,6 +97,19 @@ export const responseSession = pgTable(
         'response_session_submission',
         sql`(${table.status} = 'collecting' and ${table.submittedAt} is null and ${table.endingId} is null) or (${table.status} = 'submitted' and ${table.submittedAt} is not null and ${table.endingId} is not null)`,
       ),
+      index('response_session_inbox_idx')
+        .on(
+          table.workspaceId,
+          table.formId,
+          table.submittedAt.desc(),
+          table.id.desc(),
+        )
+        .where(sql`${table.status} = 'submitted'`),
+      pgPolicy('response_session_creator_read', {
+        for: 'select',
+        to: runtime,
+        using: sql`${table.status} = 'submitted' and (${tenantAccess(table.workspaceId, 'read')})`,
+      }),
       pgPolicy('response_session_read', {
         for: 'select',
         to: runtime,
