@@ -31,3 +31,11 @@ export const intakeEnvelopeSchema = z.strictObject({
   }),
 });
 export type IntakeSession = z.infer<typeof intakeEnvelopeSchema>['session'];
+
+export const intakeConfigurationSchema = z.strictObject({
+  siteKey: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[A-Za-z0-9_-]+$/),
+});

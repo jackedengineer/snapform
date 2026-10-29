@@ -1,0 +1,11 @@
+# Progress/finalization HTTP and widget configuration
+
+29 October 2026. PATCH a scoped respondent session to save bounded partial answers; POST its `/submission` resource to finalize the reviewed revision. Both repeat strict validation and bearer authorization. Final validation issues are returned without answer values. Stable receipts are small; changed/revision/finalized conflicts and unavailable quota are explicit 409 responses. Unknown sessions remain 404. Native write limits apply independently per IP and per form/capability; foreign origins are rejected before the Express bridge. JSON is bounded at 2 MiB and compressed bodies are refused.
+
+A separate public configuration endpoint exposes only a validated Turnstile sitekey. Missing/malformed configuration fails closed, and official dummy keys work only in explicit local mode on loopback. The private local configuration now contains the official visible always-pass sitekey; production remains unconfigured. It does not expose the secret validation key. No new dependency was added.
+
+Tests were added first and failed on the missing finalization route, write limiter and configuration module. All 62 Worker tests now pass. Types, formatting, lint, production web build, Worker dry-run and bundle checks pass. Client JS remains 188.99 KiB gzip, CSS 5.46 KiB and font 36.07 KiB.
+
+The real production-preview HTTP probe passes concurrent save deduplication, changed/stale conflicts, invalid typed final-answer rejection, concurrent one-time finalization, final-state immutability and retry after unpublishing. An operator connection expired only the freshly generated scratch session's reservation, identified by exact session/form IDs; its next save reacquired a valid reservation. The runtime was never granted expiry/counter editing permissions. The probe restores the original scratch definition, leaves its publication inactive and revokes its own creator session. QA submission usage is retained, not reset to hide consumption.
+
+The collector UI is the next slice. These HTTP checks do not substitute for normal-user, power-user and adversarial respondent browser journeys. No external email/webhook delivery or production widget validation is claimed.
