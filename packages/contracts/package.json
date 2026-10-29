@@ -12,7 +12,8 @@
     "./rules": "./src/rules.ts",
     "./compile": "./src/compile.ts",
     "./evaluate": "./src/evaluate.ts",
-    "./draft": "./src/draft.ts"
+    "./draft": "./src/draft.ts",
+    "./publication": "./src/publication.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
