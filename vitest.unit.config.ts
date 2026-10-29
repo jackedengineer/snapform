@@ -16,6 +16,7 @@ export default defineConfig({
         'packages/contracts/src/workspace.ts',
         'packages/contracts/src/text.ts',
         'packages/contracts/src/form.ts',
+        'packages/contracts/src/currency.ts',
         'packages/contracts/src/answers.ts',
         'packages/contracts/src/rules.ts',
         'packages/contracts/src/compile.ts',

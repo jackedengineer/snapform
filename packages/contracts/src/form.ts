@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { isStorableText } from './text.ts';
 import { ruleSchema } from './rules.ts';
+import { supportedCurrencyCodes } from './currency.ts';
 
 const identity = z.uuid().transform((value) => value.toLowerCase());
-const currencies = new Set(Intl.supportedValuesOf('currency'));
+const currencies = new Set(supportedCurrencyCodes);
 const plainText = (max: number) =>
   z.string().max(max).refine(isStorableText, 'Use valid text characters.');
 const label = plainText(500);

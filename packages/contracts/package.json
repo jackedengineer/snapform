@@ -7,6 +7,7 @@
     "./auth": "./src/auth.ts",
     "./workspace": "./src/workspace.ts",
     "./form": "./src/form.ts",
+    "./currency": "./src/currency.ts",
     "./answers": "./src/answers.ts",
     "./rules": "./src/rules.ts",
     "./compile": "./src/compile.ts",
