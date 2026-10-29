@@ -1,3 +1,5 @@
+import { matchWebhookRoute, handleWebhookRequest } from './webhooks.ts';
+import { requestScope } from './request-context.ts';
 import {
   matchResponseExportRoute,
   handleResponseExport,
@@ -25,7 +27,8 @@ export function isPrivatePath(path: string) {
     matchPublicationRoute(path) !== null ||
     matchResponsesRoute(path) !== null ||
     matchResponseExportRoute(path) !== null ||
-    matchNotificationRoute(path) !== null
+    matchNotificationRoute(path) !== null ||
+    matchWebhookRoute(path) !== null
   );
 }
 const workspaceBody = json({ limit: 16384, strict: true, inflate: false });
@@ -39,7 +42,11 @@ export const privateBody: RequestHandler = (req, res, next) => {
   const isNotification =
     matchNotificationRoute(req.path) !== null &&
     ['PUT', 'POST'].includes(req.method);
+  const isWebhook =
+    matchWebhookRoute(req.path) !== null &&
+    ['PUT', 'POST'].includes(req.method);
   if (
+    !isWebhook &&
     !isForm &&
     !isPublication &&
     !isNotification &&
@@ -58,6 +65,7 @@ export async function handlePrivateRequest(
   db: Database,
   user: { id: string; name: string; email: string },
 ) {
+  const webhookRoute = matchWebhookRoute(req.path);
   const exportRoute = matchResponseExportRoute(req.path);
   const responseRoute = matchResponsesRoute(req.path);
   const notificationRoute = matchNotificationRoute(req.path);
@@ -69,6 +77,15 @@ export async function handlePrivateRequest(
     } else res.json({ user });
   } else if (req.path === workspacePath) {
     await handleWorkspaceRequest(req, res, db, user.id);
+  } else if (webhookRoute) {
+    await handleWebhookRequest(
+      req,
+      res,
+      db,
+      user.id,
+      webhookRoute,
+      requestScope.getStore()?.environment.WEBHOOK_ENCRYPTION_KEY || '',
+    );
   } else if (exportRoute) {
     await handleResponseExport(req, res, db, user.id, exportRoute);
   } else if (notificationRoute) {

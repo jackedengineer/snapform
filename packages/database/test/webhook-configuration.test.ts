@@ -8,6 +8,7 @@ import { createForm } from '../src/forms.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
 import {
   getWebhookSettings,
+  getWebhookSigningSecret,
   saveWebhookConfiguration,
 } from '../src/webhook-settings.ts';
 import { webhookConfiguration } from '../src/webhook-schema.ts';
@@ -101,6 +102,27 @@ it('saves immutable encrypted configurations and checks current revisions and ac
         );
         expect(destination.url).toBe('https://hooks.example.com/intake');
         expect(destination.secret.startsWith('whsec_')).toBe(true);
+        expect(
+          await getWebhookSigningSecret(
+            tx,
+            actor,
+            workspace.id,
+            formId,
+            { configurationId, expectedRevision: 1 },
+            master,
+          ),
+        ).toEqual({ secret: destination.secret });
+        await expect(
+          getWebhookSigningSecret(
+            tx,
+            actor,
+            workspace.id,
+            formId,
+            { configurationId, expectedRevision: 2 },
+            master,
+          ),
+        ).rejects.toThrow('WEBHOOK_SETTINGS_CONFLICT');
+
         const next = await saveWebhookConfiguration(
           tx,
           actor,
@@ -145,6 +167,16 @@ it('saves immutable encrypted configurations and checks current revisions and ac
             workspace.id,
             formId,
             { ...input, expectedRevision: 2 },
+            master,
+          ),
+        ).rejects.toThrow('FORBIDDEN');
+        await expect(
+          getWebhookSigningSecret(
+            tx,
+            viewer,
+            workspace.id,
+            formId,
+            { configurationId: configurationId, expectedRevision: 2 },
             master,
           ),
         ).rejects.toThrow('FORBIDDEN');

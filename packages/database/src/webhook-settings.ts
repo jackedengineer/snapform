@@ -1,5 +1,8 @@
 import { and, eq, sql } from 'drizzle-orm';
-import { webhookConfigurationInputSchema } from '@snapform/contracts/webhook-settings';
+import {
+  webhookConfigurationInputSchema,
+  webhookSecretInputSchema,
+} from '@snapform/contracts/webhook-settings';
 import type { WebhookConfigurationInput } from '@snapform/contracts/webhook-settings';
 import {
   createWebhookSecret,
@@ -146,6 +149,48 @@ export async function saveWebhookConfiguration(
           },
         });
       return readSettings(tx, workspaceId, formId, master);
+    },
+  );
+}
+export async function getWebhookSigningSecret(
+  db: Database | Transaction,
+  actor: string,
+  workspaceId: string,
+  formId: string,
+  raw: import('@snapform/contracts/webhook-settings').WebhookSecretInput,
+  master: string,
+) {
+  workspaceId = identity.parse(workspaceId);
+  formId = identity.parse(formId);
+  const input = webhookSecretInputSchema.parse(raw);
+  return inWorkspace(
+    db,
+    actor,
+    workspaceId,
+    'integrations.manage',
+    async (tx) => {
+      const [row] = await tx
+        .select({ sealed: webhookConfiguration.sealedDestination })
+        .from(formWebhookSettings)
+        .innerJoin(
+          webhookConfiguration,
+          eq(webhookConfiguration.id, formWebhookSettings.configurationId),
+        )
+        .where(
+          and(
+            eq(formWebhookSettings.workspaceId, workspaceId),
+            eq(formWebhookSettings.formId, formId),
+            eq(formWebhookSettings.revision, input.expectedRevision),
+            eq(formWebhookSettings.configurationId, input.configurationId),
+          ),
+        );
+      if (!row) throw Error('WEBHOOK_SETTINGS_CONFLICT');
+      const destination = await openWebhookDestination(row.sealed, master, {
+        workspaceId,
+        formId,
+        configurationId: input.configurationId,
+      });
+      return { secret: destination.secret };
     },
   );
 }
