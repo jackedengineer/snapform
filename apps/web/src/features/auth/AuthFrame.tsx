@@ -61,7 +61,7 @@ export function AuthFrame({
       <footer className="site-footer">
         <span>A better beginning.</span>
         <Link to="/">
-          Explore a sample intake <span aria-hidden="true">↗</span>
+          Explore Snapform <span aria-hidden="true">↗</span>
         </Link>
       </footer>
     </div>

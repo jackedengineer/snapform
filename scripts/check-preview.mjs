@@ -4,7 +4,7 @@ const base = 'http://127.0.0.1:5173';
 const response = await fetch(base);
 assert.equal(response.status, 200);
 const html = await response.text();
-assert.match(html, /What would you like to achieve/);
+assert.match(html, /Better questions/);
 const nonce = response.headers
   .get('content-security-policy')
   ?.match(/'nonce-([^']+)'/)?.[1];
@@ -18,6 +18,19 @@ for (const [, attributes] of inlineScripts)
     attributes.includes(`nonce="${nonce}"`),
     'every inline hydration script must use the response nonce',
   );
+assert.ok(
+  !response.headers
+    .get('content-security-policy')
+    .includes('challenges.cloudflare.com'),
+  'private/marketing pages must not authorize the challenge provider',
+);
+const collector = await fetch(base + '/f/11111111-1111-4111-8111-111111111111');
+assert.equal(collector.status, 200);
+assert.match(
+  collector.headers.get('content-security-policy'),
+  /frame-src 'self' https:\/\/challenges\.cloudflare\.com/,
+);
+assert.match(await collector.text(), /Opening your form/);
 const second = await fetch(base);
 assert.notEqual(
   second.headers.get('content-security-policy'),
