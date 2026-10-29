@@ -1,3 +1,4 @@
+import { intakeEnvelopeSchema, capabilitySchema } from './intake.ts';
 import { z } from 'zod';
 import { answerInputSchema } from './answers.ts';
 import { evaluateForm } from './evaluate.ts';
@@ -48,3 +49,28 @@ export function prepareIntakeProgress(
     endingId: evaluated.endingId,
   };
 }
+
+export const intakeRecoverySchema = z
+  .strictObject({
+    version: z.literal(1),
+    publicId: identity,
+    identity: z.strictObject({ id: identity, capability: capabilitySchema }),
+    expiresAt: z.int().positive(),
+    session: intakeEnvelopeSchema.shape.session.nullable(),
+    pending: z
+      .strictObject({
+        kind: z.enum(['save', 'submit']),
+        input: intakeMutationSchema,
+      })
+      .nullable(),
+  })
+  .refine((record) =>
+    !record.session
+      ? record.pending === null
+      : record.session.id === record.identity.id &&
+        record.session.publicId === record.publicId &&
+        Date.parse(record.session.expiresAt) === record.expiresAt &&
+        (!record.pending ||
+          record.pending.input.expectedRevision === record.session.revision),
+  );
+export type IntakeRecovery = z.infer<typeof intakeRecoverySchema>;
