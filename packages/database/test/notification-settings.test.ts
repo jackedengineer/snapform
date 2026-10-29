@@ -13,7 +13,17 @@ import {
   configureEmailNotifications,
 } from '../src/notification-settings.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
-it('opts in future notifications, snapshots a verified owner and cancels pending work without replaying old responses', async () => {
+type NotificationFixture = {
+  tx: import('../src/client.ts').Transaction;
+  actor: string;
+  formId: string;
+  email: string;
+  workspace: { id: string };
+  submit: () => Promise<string>;
+};
+async function withNotificationForm(
+  run: (fixture: NotificationFixture) => Promise<void>,
+) {
   if (!process.env.DATABASE_URL) throw Error('Runtime database required');
   const { db, close } = await openDatabase(process.env.DATABASE_URL),
     rollback = Error('Rollback notification fixtures');
@@ -56,139 +66,169 @@ it('opts in future notifications, snapshots a verified owner and cancels pending
           });
           return id;
         };
-        expect(await getEmailSettings(tx, actor, workspace.id, formId)).toEqual(
-          { enabled: false, revision: 0 },
-        );
-        expect(await getEmailOverview(tx, actor, workspace.id, formId)).toEqual(
-          { settings: { enabled: false, revision: 0 }, deliveries: [] },
-        );
-        await submit();
-        expect(
-          await configureEmailNotifications(tx, actor, workspace.id, formId, {
-            enabled: true,
-            expectedRevision: 0,
-          }),
-        ).toEqual({ enabled: true, revision: 1 });
-        expect(
-          (
-            await tx.execute(
-              sql`select id from response_email_delivery where form_id=${formId}::uuid`,
-            )
-          ).rows,
-        ).toHaveLength(0);
-        const responseId = await submit();
-        const overview = await getEmailOverview(
-          tx,
-          actor,
-          workspace.id,
-          formId,
-        );
-        expect(overview.deliveries).toHaveLength(1);
-        expect(overview.deliveries[0]).toMatchObject({
-          responseId,
-          status: 'pending',
-          attempts: 0,
-          reason: null,
-        });
-        expect(Object.keys(overview.deliveries[0]).sort()).toEqual([
-          'attempts',
-          'createdAt',
-          'id',
-          'reason',
-          'responseId',
-          'retryable',
-          'status',
-        ]);
-        await getEmailSettings(tx, actor, workspace.id, formId);
-        const queued = (
-          await tx.execute(
-            sql`select recipient_user_id,recipient_email,status,settings_revision from response_email_delivery where session_id=${responseId}::uuid`,
-          )
-        ).rows;
-        expect(queued).toEqual([
-          {
-            recipient_user_id: actor,
-            recipient_email: email,
-            status: 'pending',
-            settings_revision: 1,
-          },
-        ]);
-        expect(
-          await configureEmailNotifications(tx, actor, workspace.id, formId, {
-            enabled: true,
-            expectedRevision: 0,
-          }),
-        ).toEqual({ enabled: true, revision: 1 });
-        await expect(
-          configureEmailNotifications(tx, actor, workspace.id, formId, {
-            enabled: false,
-            expectedRevision: 0,
-          }),
-        ).rejects.toThrow('EMAIL_SETTINGS_CONFLICT');
-        expect(
-          await configureEmailNotifications(tx, actor, workspace.id, formId, {
-            enabled: false,
-            expectedRevision: 1,
-          }),
-        ).toEqual({ enabled: false, revision: 2 });
-        expect(
-          (
-            await tx.execute(
-              sql`select status,reason from response_email_delivery where session_id=${responseId}::uuid`,
-            )
-          ).rows,
-        ).toEqual([{ status: 'cancelled', reason: 'disabled' }]);
-        await configureEmailNotifications(tx, actor, workspace.id, formId, {
-          enabled: true,
-          expectedRevision: 2,
-        });
-        expect(
-          (
-            await tx.execute(
-              sql`select status from response_email_delivery where form_id=${formId}::uuid`,
-            )
-          ).rows,
-        ).toEqual([{ status: 'cancelled' }]);
-        const viewer = crypto.randomUUID();
-        await tx.insert(user).values({
-          id: viewer,
-          name: 'Viewer QA',
-          email: `${viewer}@example.invalid`,
-          emailVerified: true,
-        });
-        await tx.insert(membership).values({
-          workspaceId: workspace.id,
-          userId: viewer,
-          role: 'viewer',
-        });
-        expect(
-          (await getEmailSettings(tx, viewer, workspace.id, formId)).enabled,
-        ).toBe(true);
-        await expect(
-          configureEmailNotifications(tx, viewer, workspace.id, formId, {
-            enabled: false,
-            expectedRevision: 3,
-          }),
-        ).rejects.toThrow('FORBIDDEN');
-        await expect(
-          getEmailSettings(tx, crypto.randomUUID(), workspace.id, formId),
-        ).rejects.toThrow('WORKSPACE_NOT_FOUND');
-        const privileges = (
-          await tx.execute(
-            sql`select has_table_privilege(current_user,'public.response_email_delivery','INSERT') as insert,has_table_privilege(current_user,'public.response_email_delivery','UPDATE') as update,has_table_privilege('snapform_jobs','public.user','SELECT') as job_auth_read`,
-          )
-        ).rows;
-        expect(privileges).toEqual([
-          { insert: false, update: false, job_auth_read: false },
-        ]);
+        await run({ tx, actor, formId, email, workspace, submit });
         throw rollback;
       }),
     ).rejects.toBe(rollback);
   } finally {
     await close();
   }
+}
+it('opts in only future submissions and projects the verified owner snapshot', async () => {
+  await withNotificationForm(
+    async ({ tx, actor, formId, email, workspace, submit }) => {
+      expect(await getEmailSettings(tx, actor, workspace.id, formId)).toEqual({
+        enabled: false,
+        revision: 0,
+      });
+      expect(await getEmailOverview(tx, actor, workspace.id, formId)).toEqual({
+        settings: { enabled: false, revision: 0 },
+        deliveries: [],
+      });
+      await submit();
+      expect(
+        await configureEmailNotifications(tx, actor, workspace.id, formId, {
+          enabled: true,
+          expectedRevision: 0,
+        }),
+      ).toEqual({ enabled: true, revision: 1 });
+      expect(
+        (
+          await tx.execute(
+            sql`select id from response_email_delivery where form_id=${formId}::uuid`,
+          )
+        ).rows,
+      ).toHaveLength(0);
+      const responseId = await submit();
+      const overview = await getEmailOverview(tx, actor, workspace.id, formId);
+      expect(overview.deliveries).toHaveLength(1);
+      expect(overview.deliveries[0]).toMatchObject({
+        responseId,
+        status: 'pending',
+        attempts: 0,
+        reason: null,
+      });
+      expect(Object.keys(overview.deliveries[0]).sort()).toEqual([
+        'attempts',
+        'createdAt',
+        'id',
+        'reason',
+        'responseId',
+        'retryable',
+        'status',
+      ]);
+      await getEmailSettings(tx, actor, workspace.id, formId);
+      const queued = (
+        await tx.execute(
+          sql`select recipient_user_id,recipient_email,status,settings_revision from response_email_delivery where session_id=${responseId}::uuid`,
+        )
+      ).rows;
+      expect(queued).toEqual([
+        {
+          recipient_user_id: actor,
+          recipient_email: email,
+          status: 'pending',
+          settings_revision: 1,
+        },
+      ]);
+    },
+  );
 }, 30000);
-
+it('serializes settings changes and preserves cancellation when re-enabled', async () => {
+  await withNotificationForm(
+    async ({ tx, actor, formId, workspace, submit }) => {
+      await configureEmailNotifications(tx, actor, workspace.id, formId, {
+        enabled: true,
+        expectedRevision: 0,
+      });
+      const responseId = await submit();
+      expect(
+        await configureEmailNotifications(tx, actor, workspace.id, formId, {
+          enabled: true,
+          expectedRevision: 0,
+        }),
+      ).toEqual({ enabled: true, revision: 1 });
+      await expect(
+        configureEmailNotifications(tx, actor, workspace.id, formId, {
+          enabled: false,
+          expectedRevision: 0,
+        }),
+      ).rejects.toThrow('EMAIL_SETTINGS_CONFLICT');
+      expect(
+        await configureEmailNotifications(tx, actor, workspace.id, formId, {
+          enabled: false,
+          expectedRevision: 1,
+        }),
+      ).toEqual({ enabled: false, revision: 2 });
+      expect(
+        (
+          await tx.execute(
+            sql`select status,reason from response_email_delivery where session_id=${responseId}::uuid`,
+          )
+        ).rows,
+      ).toEqual([{ status: 'cancelled', reason: 'disabled' }]);
+      await configureEmailNotifications(tx, actor, workspace.id, formId, {
+        enabled: true,
+        expectedRevision: 2,
+      });
+      expect(
+        (
+          await tx.execute(
+            sql`select status from response_email_delivery where form_id=${formId}::uuid`,
+          )
+        ).rows,
+      ).toEqual([{ status: 'cancelled' }]);
+    },
+  );
+}, 30000);
+it('enforces real membership and denies direct notification writes', async () => {
+  await withNotificationForm(async ({ tx, actor, formId, workspace }) => {
+    await configureEmailNotifications(tx, actor, workspace.id, formId, {
+      enabled: true,
+      expectedRevision: 0,
+    });
+    await configureEmailNotifications(tx, actor, workspace.id, formId, {
+      enabled: false,
+      expectedRevision: 1,
+    });
+    await configureEmailNotifications(tx, actor, workspace.id, formId, {
+      enabled: true,
+      expectedRevision: 2,
+    });
+    const viewer = crypto.randomUUID();
+    await tx.insert(user).values({
+      id: viewer,
+      name: 'Viewer QA',
+      email: `${viewer}@example.invalid`,
+      emailVerified: true,
+    });
+    await tx.insert(membership).values({
+      workspaceId: workspace.id,
+      userId: viewer,
+      role: 'viewer',
+    });
+    expect(
+      (await getEmailSettings(tx, viewer, workspace.id, formId)).enabled,
+    ).toBe(true);
+    await expect(
+      configureEmailNotifications(tx, viewer, workspace.id, formId, {
+        enabled: false,
+        expectedRevision: 3,
+      }),
+    ).rejects.toThrow('FORBIDDEN');
+    await expect(
+      getEmailSettings(tx, crypto.randomUUID(), workspace.id, formId),
+    ).rejects.toThrow('WORKSPACE_NOT_FOUND');
+    const privileges = (
+      await tx.execute(
+        sql`select has_table_privilege(current_user,'public.response_email_delivery','INSERT') as insert,has_table_privilege(current_user,'public.response_email_delivery','UPDATE') as update,has_table_privilege('snapform_jobs','public.user','SELECT') as job_auth_read`,
+      )
+    ).rows;
+    expect(privileges).toEqual([
+      { insert: false, update: false, job_auth_read: false },
+    ]);
+  });
+}, 30000);
 it('keeps email delivery claims and outcomes outside application authority', async () => {
   if (!process.env.DATABASE_URL) throw Error('Runtime database required');
   const { db, close } = await openDatabase(process.env.DATABASE_URL);
