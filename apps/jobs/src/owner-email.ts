@@ -1,4 +1,5 @@
 import { responseEventMessageSchema } from '@snapform/contracts/response-event';
+import type { EmailOutcome } from '@snapform/contracts/notifications';
 const identity = responseEventMessageSchema.shape.eventId;
 export type OwnerEmail = {
   id: string;
@@ -8,13 +9,6 @@ export type OwnerEmail = {
   recipient: string;
   firstAttemptAt: string;
 };
-export type EmailOutcome =
-  | { status: 'accepted'; providerId: string }
-  | { status: 'retry'; reason: 'provider-unavailable'; delaySeconds: number }
-  | {
-      status: 'needs_action';
-      reason: 'configuration' | 'provider-rejected' | 'idempotency-expired';
-    };
 async function providerResult(response: Response): Promise<unknown> {
   if (!response.body) throw Error('Missing provider response');
   const reader = response.body.getReader(),
@@ -81,6 +75,7 @@ export async function sendOwnerEmail(
         from: settings.from,
         to: [delivery.recipient],
         subject: 'A new response is ready in Snapform',
+        tags: [{ name: 'snapform_delivery', value: delivery.id }],
         text: `A new response is ready in Snapform.\n\nOpen your inbox:\nhttps://snapform.jacked.dev/workspaces/${delivery.workspaceId}/responses/${delivery.formId}?response=${delivery.sessionId}\n\nReference: ${delivery.sessionId}\n\nYou receive this because response notifications are enabled for this form. Manage them from the inbox.\n\nSnapform`,
       }),
     });

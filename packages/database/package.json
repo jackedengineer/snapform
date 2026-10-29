@@ -13,6 +13,8 @@
     "./intake": "./src/intake.ts",
     "./outbox": "./src/outbox.ts",
     "./responses": "./src/responses.ts",
+    "./notification-delivery": "./src/notification-delivery.ts",
+    "./notification-settings": "./src/notification-settings.ts",
     "./response-export": "./src/response-export.ts"
   },
   "dependencies": {
@@ -24,6 +26,7 @@
     "migrate": "node --env-file-if-exists=../../.env src/migrate.ts",
     "test": "node --env-file-if-exists=../../apps/api/.dev.vars ../../node_modules/vitest/vitest.mjs run --config vitest.config.ts",
     "bootstrap": "node --env-file-if-exists=../../.env src/bootstrap.ts",
-    "bootstrap:jobs": "node --env-file-if-exists=../../.env src/bootstrap-jobs.ts"
+    "bootstrap:jobs": "node --env-file-if-exists=../../.env src/bootstrap-jobs.ts",
+    "verify:email-delivery": "node --experimental-transform-types --env-file=../../.env scripts/verify-email-delivery.ts"
   }
 }

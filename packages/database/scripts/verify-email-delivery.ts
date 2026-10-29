@@ -1,0 +1,273 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { parseEnv } from 'node:util';
+import { sql } from 'drizzle-orm';
+import { openDatabase } from '../src/client.ts';
+import { user } from '../src/schema.ts';
+import { createWorkspace } from '../src/workspaces.ts';
+import { createForm } from '../src/forms.ts';
+import { publishForm } from '../src/publication.ts';
+import { startIntake, mutateIntake } from '../src/intake.ts';
+import { configureEmailNotifications } from '../src/notification-settings.ts';
+import { formFixture } from '../../contracts/test/form-fixture.ts';
+
+// Operator-only verification: one database, one transaction, always rolled back.
+if (!process.env.DATABASE_MIGRATION_URL)
+  throw Error('Local operator configuration required');
+const { db, close } = await openDatabase(process.env.DATABASE_MIGRATION_URL);
+const rollback = Error('Expected verification rollback');
+try {
+  const jobConfiguration = parseEnv(
+    await readFile(
+      new URL('../../../apps/jobs/.dev.vars', import.meta.url),
+      'utf8',
+    ),
+  );
+  assert.equal(
+    new URL(jobConfiguration.DATABASE_URL).username,
+    'snapform_jobs',
+  );
+  const jobs = await openDatabase(jobConfiguration.DATABASE_URL);
+  try {
+    assert.deepEqual(
+      (await jobs.db.execute(sql`select current_user as actor`)).rows,
+      [{ actor: 'snapform_jobs' }],
+    );
+    assert.deepEqual(
+      (
+        await jobs.db.execute(
+          sql`select * from public.claim_owner_emails(1,${crypto.randomUUID()}::uuid)`,
+        )
+      ).rows,
+      [],
+    );
+  } finally {
+    await jobs.close();
+  }
+  await db.transaction(async (tx) => {
+    const actor = crypto.randomUUID(),
+      formId = crypto.randomUUID(),
+      email = `${actor}@example.invalid`;
+    await tx.insert(user).values({
+      id: actor,
+      name: 'Email recovery verification',
+      email,
+      emailVerified: true,
+    });
+    const workspace = await createWorkspace(tx, actor, {
+      id: crypto.randomUUID(),
+      name: 'Recovery QA',
+      segment: 'agency',
+    });
+    const { definition, ids } = formFixture();
+    await createForm(tx, actor, workspace.id, { id: formId, definition });
+    const published = await publishForm(tx, actor, workspace.id, formId, {
+      versionId: crypto.randomUUID(),
+      expectedRevision: 1,
+    });
+    assert(published.publication);
+    await configureEmailNotifications(tx, actor, workspace.id, formId, {
+      enabled: true,
+      expectedRevision: 0,
+    });
+    const sessionId = crypto.randomUUID(),
+      hash = sessionId.replaceAll('-', '').repeat(2);
+    await startIntake(tx, published.publication.publicId, sessionId, hash);
+    await mutateIntake(
+      tx,
+      published.publication.publicId,
+      sessionId,
+      hash,
+      'submit',
+      {
+        operationId: crypto.randomUUID(),
+        expectedRevision: 1,
+        answers: {
+          [ids.budget]: { state: 'value', value: 0 },
+          [ids.contact]: { state: 'value', value: 'qa@example.invalid' },
+        },
+      },
+    );
+    const delivery = (
+      await tx.execute<{ id: string }>(
+        sql`select id from public.response_email_delivery where session_id=${sessionId}::uuid`,
+      )
+    ).rows[0];
+    assert(delivery);
+    const claim = async () =>
+      (
+        await tx.execute<{
+          id: string;
+          lease_token: string;
+          recipient: string;
+          first_attempt_at: Date;
+        }>(sql`select * from public.claim_owner_emails(1,${delivery.id}::uuid)`)
+      ).rows;
+    const record = async (
+      token: string,
+      outcome: string,
+      provider: string | null,
+      reason: string | null,
+      delay: number | null,
+    ) =>
+      (
+        await tx.execute<{ recorded: boolean }>(
+          sql`select public.record_owner_email(${delivery.id}::uuid,${token}::uuid,${outcome},${provider}::uuid,${reason},${delay}::integer) as recorded`,
+        )
+      ).rows[0].recorded;
+
+    const [first] = await claim();
+    assert.equal(first.recipient, email);
+    assert.equal(
+      (await claim()).length,
+      0,
+      'active lease excludes duplicate claims',
+    );
+    assert.equal(
+      await record(
+        crypto.randomUUID(),
+        'accepted',
+        crypto.randomUUID(),
+        null,
+        0,
+      ),
+      false,
+      'forged lease fenced',
+    );
+    // Savepoint keeps an invalid argument probe from aborting the outer rollback fixture.
+    const invalid = await tx
+      .transaction(async (savepoint) => {
+        return (
+          await savepoint.execute<{ recorded: boolean }>(
+            sql`select public.record_owner_email(${delivery.id}::uuid,${first.lease_token}::uuid,'retry',NULL,'provider-unavailable',NULL) as recorded`,
+          )
+        ).rows[0].recorded;
+      })
+      .catch(() => 'invalid-argument-threw');
+    assert.equal(
+      invalid,
+      false,
+      'NULL retry delay must be rejected without changing the delivery',
+    );
+    assert.equal(
+      await record(
+        first.lease_token,
+        'retry',
+        null,
+        'provider-unavailable',
+        60,
+      ),
+      true,
+    );
+    assert.equal(
+      (await claim()).length,
+      0,
+      'backoff prevents immediate reclaim',
+    );
+
+    await tx.execute(
+      sql`update public.response_email_delivery set available_at=now()-interval '1 second' where id=${delivery.id}::uuid`,
+    );
+
+    const [second] = await claim();
+    assert.equal(
+      second.id,
+      first.id,
+      'retries preserve the idempotency identity',
+    );
+    assert.equal(
+      new Date(second.first_attempt_at).getTime(),
+      new Date(first.first_attempt_at).getTime(),
+    );
+    assert.notEqual(second.lease_token, first.lease_token);
+    assert.equal(
+      await record(first.lease_token, 'accepted', crypto.randomUUID(), null, 0),
+      false,
+      'stale writer fenced',
+    );
+
+    await tx.execute(
+      sql`update public.response_email_delivery set lease_until=now()-interval '1 second' where id=${delivery.id}::uuid`,
+    );
+
+    const [third] = await claim();
+    assert.notEqual(
+      third.lease_token,
+      second.lease_token,
+      'expired worker claim can be recovered',
+    );
+    const provider = crypto.randomUUID();
+    assert.equal(
+      await record(third.lease_token, 'accepted', provider, null, 0),
+      true,
+    );
+    assert.equal(
+      await record(third.lease_token, 'accepted', provider, null, 0),
+      false,
+      'completion cannot be replayed',
+    );
+    assert.equal((await claim()).length, 0, 'accepted email is not resent');
+
+    for (const [attempts, age, reason] of [
+      [8, '1 hour', 'attempts-exhausted'],
+      [1, '24 hours', 'idempotency-expired'],
+    ] as const) {
+      await tx.execute(
+        sql`update public.response_email_delivery set status='pending',reason=NULL,attempts=${attempts},first_attempt_at=now()-${age}::interval,available_at=now()-interval '1 second',provider_id=NULL,accepted_at=NULL where id=${delivery.id}::uuid`,
+      );
+      assert.equal((await claim()).length, 0);
+
+      assert.deepEqual(
+        (
+          await tx.execute(
+            sql`select status,reason from public.response_email_delivery where id=${delivery.id}::uuid`,
+          )
+        ).rows,
+        [{ status: 'needs_action', reason }],
+      );
+    }
+    await tx.execute(
+      sql`update public.response_email_delivery set status='pending',reason=NULL,attempts=0,first_attempt_at=NULL where id=${delivery.id}::uuid`,
+    );
+    await tx.execute(
+      sql`update public."user" set email_verified=false where id=${actor}`,
+    );
+    assert.equal((await claim()).length, 0);
+
+    assert.deepEqual(
+      (
+        await tx.execute(
+          sql`select status,reason from public.response_email_delivery where id=${delivery.id}::uuid`,
+        )
+      ).rows,
+      [{ status: 'needs_action', reason: 'recipient-unavailable' }],
+    );
+    await configureEmailNotifications(tx, actor, workspace.id, formId, {
+      enabled: false,
+      expectedRevision: 1,
+    });
+    assert.deepEqual(
+      (
+        await tx.execute(
+          sql`select status,reason from public.response_email_delivery where id=${delivery.id}::uuid`,
+        )
+      ).rows,
+      [{ status: 'cancelled', reason: 'disabled' }],
+    );
+    throw rollback;
+  });
+} catch (error) {
+  if (error !== rollback) {
+    console.error(
+      error instanceof assert.AssertionError
+        ? error.message
+        : 'Email delivery verification failed (transaction rolled back).',
+    );
+    process.exitCode = 1;
+  } else
+    console.log(
+      'Email claims, fencing, expiry, backoff, recipient checks and cancellation passed; all synthetic writes rolled back.',
+    );
+} finally {
+  await close();
+}
