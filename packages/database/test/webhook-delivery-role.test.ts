@@ -158,3 +158,31 @@ it('allows a real application owner to prepare a test but never forge response j
     await close();
   }
 }, 30000);
+it('denies claim, prepare and outcome authority to the actual application login', async () => {
+  if (!process.env.DATABASE_URL) throw Error('Runtime database required');
+  const { db, close } = await openDatabase(process.env.DATABASE_URL);
+  try {
+    expect(
+      (
+        await db.execute(
+          sql`select has_function_privilege(current_user,'public.claim_webhooks(integer,uuid)','EXECUTE') as claim,has_function_privilege(current_user,'public.prepare_webhook_payload(uuid,uuid,text)','EXECUTE') as prepare,has_function_privilege(current_user,'public.record_webhook_attempt(uuid,uuid,text,integer,text,integer)','EXECUTE') as record`,
+        )
+      ).rows,
+    ).toEqual([{ claim: false, prepare: false, record: false }]);
+    const id = crypto.randomUUID(),
+      token = crypto.randomUUID();
+    for (const statement of [
+      sql`select * from public.claim_webhooks(1,${id}::uuid)`,
+      sql`select public.prepare_webhook_payload(${id}::uuid,${token}::uuid,null)`,
+      sql`select public.record_webhook_attempt(${id}::uuid,${token}::uuid,'acknowledged',204,null,0)`,
+    ])
+      await expect(
+        db.transaction(async (tx) => {
+          await tx.execute(statement);
+          throw Error('Unexpected application delivery authority');
+        }),
+      ).rejects.toMatchObject({ cause: { code: '42501' } });
+  } finally {
+    await close();
+  }
+}, 20000);
