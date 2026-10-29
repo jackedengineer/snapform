@@ -497,3 +497,49 @@
   opacity: 0.6;
   cursor: wait;
 }
+
+.settings-dialog {
+  width: min(480px, calc(100% - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 28px;
+  border: 1px solid var(--border-default);
+  border-radius: 16px;
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  overflow: auto;
+}
+.settings-dialog::backdrop {
+  background: rgb(25 26 27 / 35%);
+}
+.settings-dialog h2 {
+  margin: 8px 0 12px;
+  letter-spacing: -0.03em;
+}
+.settings-dialog .field {
+  margin-top: 20px;
+}
+.settings-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 28px;
+}
+.settings-dialog input,
+.settings-dialog select {
+  font-size: 16px;
+  width: 100%;
+}
+@media (max-width: 480px) {
+  .settings-pair {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .settings-dialog {
+    padding: 20px;
+  }
+}

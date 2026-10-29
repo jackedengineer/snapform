@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Block } from '@snapform/contracts/form';
 import { blockNames } from './new-form';
+import { AnswerSettings } from './AnswerSettings';
 export function BlockInspector({
   block,
   onChange,
@@ -117,37 +118,7 @@ export function BlockInspector({
           </button>
         </div>
       )}
-      {block.type === 'number' && (
-        <div className="field">
-          <label htmlFor={`unit-${block.id}`}>Number unit</label>
-          <select
-            id={`unit-${block.id}`}
-            value={
-              block.unit.kind === 'currency' ? block.unit.code : block.unit.kind
-            }
-            onChange={(event) => {
-              const unit = event.target.value;
-              onChange({
-                ...block,
-                unit:
-                  unit === 'none'
-                    ? { kind: 'none' }
-                    : unit === 'percent'
-                      ? { kind: 'percent' }
-                      : { kind: 'currency', code: unit },
-              });
-            }}
-          >
-            <option value="none">No unit</option>
-            <option value="percent">Percent (%)</option>
-            {['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD'].map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      <AnswerSettings key={block.id} block={block} onChange={onChange} />
       {block.type === 'file' && (
         <p className="field-help">
           Files stay private and require validation and scanning before they can
