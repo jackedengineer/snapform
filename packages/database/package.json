@@ -7,7 +7,8 @@
     "./schema": "./src/schema.ts",
     "./workspaces": "./src/workspaces.ts",
     "./workspace-schema": "./src/workspace-schema.ts",
-    "./forms": "./src/forms.ts"
+    "./forms": "./src/forms.ts",
+    "./publication": "./src/publication.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",
