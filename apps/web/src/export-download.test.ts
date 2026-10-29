@@ -36,7 +36,9 @@ it('turns authorization, rate and size failures into private styled pages withou
     );
     expect(response.status).toBe(status);
     expect(response.headers.get('Content-Type')).toContain('text/html');
-    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(response.headers.get('Cache-Control')).toBe(
+      'no-store, no-transform',
+    );
     expect(response.headers.get('Content-Security-Policy')).toContain(
       "default-src 'none'",
     );

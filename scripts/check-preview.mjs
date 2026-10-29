@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 const base = 'http://127.0.0.1:5173';
 const response = await fetch(base);
 assert.equal(response.status, 200);
+assert.match(response.headers.get('cache-control') || '', /no-transform/);
 const html = await response.text();
 assert.match(html, /Better questions/);
 const nonce = response.headers
