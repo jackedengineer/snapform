@@ -87,3 +87,37 @@ it('offers only operators compatible with each answer type and typed initial val
     'unanswered',
   ]);
 });
+it('generates compiler-compatible comparisons for all nine answer types', () => {
+  const types = [
+    'short-text',
+    'long-text',
+    'email',
+    'number',
+    'single-choice',
+    'multiple-choice',
+    'date',
+    'acknowledgment',
+    'file',
+  ] as const;
+  for (const type of types) {
+    const field = newBlock(type);
+    if (!('required' in field)) throw new Error('Expected answer field');
+    const definition = newBlankDefinition();
+    definition.pages[0].blocks.push(field);
+    for (const op of operatorsFor(field)) {
+      definition.rules = [
+        {
+          id: crypto.randomUUID(),
+          priority: 0,
+          condition: predicateFor(field, op),
+          action: {
+            type: 'end',
+            fromPageId: definition.pages[0].id,
+            endingId: definition.defaultEndingId,
+          },
+        },
+      ];
+      expect(compileDefinition(definition).ok, `${type} ${op}`).toBe(true);
+    }
+  }
+});
