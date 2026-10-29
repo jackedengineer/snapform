@@ -71,6 +71,13 @@
       "when": 1793257445643,
       "tag": "0009_public_form_resolution",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793259732246,
+      "tag": "0010_robust_scalphunter",
+      "breakpoints": true
     }
   ]
 }

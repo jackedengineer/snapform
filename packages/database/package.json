@@ -9,7 +9,8 @@
     "./workspace-schema": "./src/workspace-schema.ts",
     "./forms": "./src/forms.ts",
     "./publication": "./src/publication.ts",
-    "./public-form": "./src/public-form.ts"
+    "./public-form": "./src/public-form.ts",
+    "./intake": "./src/intake.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",
