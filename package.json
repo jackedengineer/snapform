@@ -15,7 +15,7 @@
     "test:api": "vitest run --config apps/api/vitest.config.ts",
     "test": "pnpm test:unit --coverage && pnpm test:api && pnpm test:jobs && pnpm test:db && pnpm test:auth:integration",
     "build": "pnpm --filter @snapform/web build && pnpm --filter @snapform/api build && pnpm --filter @snapform/jobs build",
-    "check:bundle": "node scripts/check-bundle.mjs",
+    "check:bundle": "node --test scripts/bundle-graph.test.mjs && node scripts/check-bundle.mjs",
     "check:fast": "pnpm format:check && pnpm typecheck && pnpm lint",
     "check": "pnpm types:generate && pnpm check:fast && pnpm test && pnpm build && pnpm check:bundle && pnpm test:preview && pnpm test:dev-reload",
     "git:hooks": "git config core.hooksPath .githooks",
