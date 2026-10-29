@@ -5,6 +5,7 @@ import { briefSchema } from '@snapform/contracts';
 import { authRoutes } from './auth-routes.ts';
 import { requestScope } from './request-context.ts';
 import { publicFormRoutes } from './public-form.ts';
+import { intakeRoutes } from './intake-routes.ts';
 import { authFailure, checkAuthRequest } from './auth-boundary.ts';
 import type { AuthEnvironment } from './environment.ts';
 
@@ -22,6 +23,7 @@ app.use((req, res, next) => {
 });
 app.use(authRoutes);
 app.use(publicFormRoutes);
+app.use(intakeRoutes);
 app.post(
   '/api/v1/brief/review',
   (req, res, next) => {
@@ -109,8 +111,9 @@ export default {
       }
       request = checked;
     }
-    return requestScope.run({ environment, context }, () =>
-      serve(request, environment, context),
+    return requestScope.run(
+      { environment, context, origin: new URL(request.url).origin },
+      () => serve(request, environment, context),
     );
   },
 };

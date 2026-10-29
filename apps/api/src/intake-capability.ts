@@ -7,14 +7,6 @@ async function hash(token: string) {
     byte.toString(16).padStart(2, '0'),
   ).join('');
 }
-export async function mintIntakeCapability() {
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const capability = btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-  return { capability, hash: await hash(capability) };
-}
 export async function intakeAuthorizationHash(
   authorization: string | undefined,
 ) {

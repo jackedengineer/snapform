@@ -30,7 +30,7 @@ export async function verifyIntakeChallenge(
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        redirect: 'error',
+        redirect: 'manual',
         signal: AbortSignal.timeout(5000),
         body: JSON.stringify({
           secret: settings.secret,

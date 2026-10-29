@@ -20,7 +20,7 @@ it('verifies hostname/action using the backend-only fixed provider endpoint', as
   );
   expect(transport.mock.calls[0][1]).toMatchObject({
     method: 'POST',
-    redirect: 'error',
+    redirect: 'manual',
     signal: expect.any(AbortSignal),
   });
   expect(JSON.parse(String(transport.mock.calls[0][1]?.body))).toEqual({
@@ -80,4 +80,21 @@ it('keeps official test credentials local and treats provider outages separately
       vi.fn<typeof fetch>().mockRejectedValue(new Error('Provider down')),
     ),
   ).toBe('unavailable');
+});
+
+it('uses a request mode supported by the real Worker and refuses provider redirects', async () => {
+  const transport = vi
+    .fn<typeof fetch>()
+    .mockImplementation(async (url, init) => {
+      new Request(url, init);
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'https://other.test' },
+      });
+    });
+  expect(await verifyIntakeChallenge(production, transport)).toBe(
+    'unavailable',
+  );
+  expect(transport).toHaveBeenCalledOnce();
+  expect(transport.mock.calls[0][1]?.redirect).toBe('manual');
 });

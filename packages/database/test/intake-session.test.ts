@@ -180,3 +180,17 @@ it(
     }),
   30000,
 );
+it(
+  'returns the same scoped intake when admission is retried',
+  async () =>
+    fixture(async (tx, _actor, _workspaceId, _formId, publicId) => {
+      const id = crypto.randomUUID(),
+        hash = crypto.randomUUID().replaceAll('-', '').repeat(2);
+      const first = await startIntake(tx, publicId, id, hash);
+      expect(await startIntake(tx, publicId, id, hash)).toEqual(first);
+      await expect(
+        startIntake(tx, publicId, id, 'f'.repeat(64)),
+      ).rejects.toThrow('INTAKE_UNAVAILABLE');
+    }),
+  30000,
+);

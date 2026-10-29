@@ -5,7 +5,10 @@ const publicForm = publicFormEnvelopeSchema.shape.form;
 const identity = publicForm.shape.publicId;
 export const capabilitySchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 export const capabilityHashSchema = z.string().regex(/^[0-9a-f]{64}$/);
-export const createIntakeSchema = z.strictObject({});
+export const createIntakeSchema = z.strictObject({
+  id: identity,
+  challengeToken: z.string().min(1).max(2048),
+});
 export const sessionAnswersSchema = z
   .record(
     identity,
@@ -26,8 +29,5 @@ export const intakeEnvelopeSchema = z.strictObject({
     expiresAt: z.iso.datetime(),
     status: z.enum(['collecting', 'submitted']),
   }),
-});
-export const intakeCreatedSchema = intakeEnvelopeSchema.extend({
-  capability: capabilitySchema,
 });
 export type IntakeSession = z.infer<typeof intakeEnvelopeSchema>['session'];

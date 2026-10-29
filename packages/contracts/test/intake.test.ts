@@ -16,9 +16,17 @@ it('keeps capability material strict and creation free of caller-selected owners
   ])
     expect(capabilitySchema.safeParse(token).success).toBe(false);
   expect(capabilityHashSchema.safeParse('0'.repeat(64)).success).toBe(true);
-  expect(createIntakeSchema.safeParse({}).success).toBe(true);
+  const request = {
+    id: crypto.randomUUID(),
+    challengeToken: 'synthetic-challenge',
+  };
+  expect(createIntakeSchema.safeParse(request).success).toBe(true);
+  expect(createIntakeSchema.safeParse({}).success).toBe(false);
   expect(
-    createIntakeSchema.safeParse({ workspaceId: crypto.randomUUID() }).success,
+    createIntakeSchema.safeParse({
+      ...request,
+      workspaceId: crypto.randomUUID(),
+    }).success,
   ).toBe(false);
 });
 it('returns only a pinned session snapshot, never capability hashes or account roles', () => {

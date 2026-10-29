@@ -14,6 +14,7 @@ export default defineConfig({
           ...(process.env.BETTER_AUTH_SECRET
             ? { BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET }
             : {}),
+          SNAPFORM_ENV: 'production',
           AUTH_ALLOWED_RECIPIENT: 'approved@example.invalid',
           RESEND_API_KEY: 'no-live-email-in-tests',
           BETTER_AUTH_URL: 'http://127.0.0.1:5173',

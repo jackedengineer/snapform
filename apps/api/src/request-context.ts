@@ -3,4 +3,5 @@ import type { AuthEnvironment } from './environment.ts';
 export const requestScope = new AsyncLocalStorage<{
   environment: Env & AuthEnvironment;
   context: ExecutionContext;
+  origin: string;
 }>();
