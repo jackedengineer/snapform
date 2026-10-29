@@ -29,6 +29,7 @@
     "bootstrap": "node --env-file-if-exists=../../.env src/bootstrap.ts",
     "bootstrap:jobs": "node --env-file-if-exists=../../.env src/bootstrap-jobs.ts",
     "verify:email-delivery": "node --experimental-transform-types --env-file=../../.env scripts/verify-email-delivery.ts",
-    "verify:webhook-intents": "node --experimental-transform-types --env-file=../../.env scripts/verify-webhook-intents.ts"
+    "verify:webhook-intents": "node --experimental-transform-types --env-file=../../.env scripts/verify-webhook-intents.ts",
+    "verify:webhook-attempts": "node --experimental-transform-types --env-file=../../.env scripts/verify-webhook-attempts.ts"
   }
 }
