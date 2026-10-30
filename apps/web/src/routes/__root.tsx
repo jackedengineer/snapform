@@ -30,13 +30,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     component: Root,
     shellComponent: Document,
     notFoundComponent: () => (
-      <main className="not-found">
+      <main id="main" className="not-found">
         <h1>We couldn’t find that page.</h1>
         <a href="/">Back to Snapform</a>
       </main>
     ),
     errorComponent: () => (
-      <main className="not-found">
+      <main id="main" className="not-found">
         <h1>Something interrupted this page.</h1>
         <p>
           Reload to try again, then check your saved work before continuing.

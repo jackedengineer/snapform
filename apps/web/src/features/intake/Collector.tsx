@@ -6,6 +6,7 @@ import { useIntake } from './use-intake';
 import { FieldControl } from './FieldControl';
 import { Turnstile } from './Turnstile';
 import { collectionSteps } from './steps';
+import { PublicLinks } from '../info/PublicInfo';
 export function Collector({ publicId }: { publicId: string }) {
   const intake = useIntake(publicId),
     [token, setToken] = useState(''),
@@ -392,6 +393,7 @@ export function Collector({ publicId }: { publicId: string }) {
                 </button>
               </footer>
             )}
+            {definition && <PublicLinks newTab />}
           </>
         )}
       </main>
