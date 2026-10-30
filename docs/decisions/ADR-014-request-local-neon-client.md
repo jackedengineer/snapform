@@ -9,3 +9,9 @@ Use one native Neon `Client` per request, explicitly await `connect()`, and awai
 The disconnect regression now passes with actual Neon inside workerd, alongside identity, rollback and transaction tests. The isolated dev test also performs repeated real auth HTTP requests after API reloads and checks for lifecycle failures. CI prepares private runtime configuration with dummy mail credentials for this read-only auth check; no live mail key is available to CI.
 
 Sources: [Neon Client lifecycle](https://neon.com/docs/serverless/serverless-driver#pool-and-client-usage-notes), pinned driver 1.2.0 Client/Pool implementation, [Cloudflare execution context](https://developers.cloudflare.com/workers/runtime-apis/context/).
+
+30 October follow-up: Workers disable per-client `coalesceWrites`. Its deferred
+send could outlive a peer close and throw outside the request promise. Native
+workerd regression tests now assert no send after close, including a query whose
+peer closes in the same turn. Node retains its driver default. See
+[the reproduction and browser evidence](../development/0083-neon-worker-close-race.md).

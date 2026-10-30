@@ -34,5 +34,6 @@ export default defineConfig({
       },
     }),
   ],
-  test: { include: ['test/**/*.test.ts'], allowOnly: false, maxWorkers: 2 },
+  // Live Neon lifecycle fixtures share the sole development/production database.
+  test: { include: ['test/**/*.test.ts'], allowOnly: false, maxWorkers: 1 },
 });
