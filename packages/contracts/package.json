@@ -30,7 +30,8 @@
     "./webhook-payload": "./src/webhook-payload.ts",
     "./webhook-protocol": "./src/webhook-protocol.ts",
     "./webhook-test": "./src/webhook-test.ts",
-    "./webhook-deliveries": "./src/webhook-deliveries.ts"
+    "./webhook-deliveries": "./src/webhook-deliveries.ts",
+    "./retention": "./src/retention.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
