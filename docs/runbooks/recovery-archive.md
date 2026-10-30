@@ -36,6 +36,12 @@ HKDF-separated HMAC, canonical filename, age under 30 days and exact encrypted
 size/hash. Never change the signed creation time to make an old copy eligible.
 Unsigned format-one manifests from the initial local drill are not accepted by
 this production verification path. Archive AES-GCM framing remains version one.
+Use `pnpm --filter @snapform/database bootstrap:backup` with local migration
+configuration to provision the private SELECT-only snapshot identity. It
+preserves `.env.backup`'s existing archive key and never silently rotates a live
+login. Verify permissions with `pnpm --filter @snapform/database verify:backup-role`;
+the operator probe rolls back its synthetic changes. Exports use
+`node --env-file=.env.backup scripts/backup-postgres.mjs`, never the owner URL.
 The tool refuses foreign/pooled targets and existing output files; diagnostics
 are fixed events without connection URLs or provider error details.
 
