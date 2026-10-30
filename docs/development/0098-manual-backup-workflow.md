@@ -24,8 +24,9 @@ Required encrypted repository secrets:
 The Cloudflare account ID is public configuration. The current local Wrangler
 OAuth credential cannot list API-token permission groups (403) and is not a CI
 credential. Bucket-scoped object credentials use R2's compatible object API,
-not the Cloudflare administrative REST API. A secure dashboard handoff is needed
-if the original browser-control tool remains unavailable. No credential belongs
+not the Cloudflare administrative REST API. The approved scoped key and four
+encrypted secrets are now configured; live transfer evidence is in 0101.
+No credential belongs
 in chat, source, process arguments, command output or diagnostic logs.
 
 Sources: [Cloudflare authentication](https://developers.cloudflare.com/r2/api/tokens/),

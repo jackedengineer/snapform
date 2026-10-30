@@ -23,7 +23,8 @@ fake curl process, including credentials/arguments, publication/download order,
 collisions, 403, oversize/truncated/altered bytes, tampered descriptors, expired
 archives and cleanup. Existing archive/manifest tests remain intact.
 
-These offline tests do not establish live scoped-key authentication. Earlier
-real R2 roundtrip/restore used local Wrangler OAuth; that credential is not put
-in CI. Live curl transfer with bucket-scoped credentials, scheduling, automated
-restore/replay, independent key custody and freshness alerts remain open gates.
+The later live scoped-key roundtrip passed with 201,666 encrypted bytes and
+23 table-data entries; see 0101. Reads of the purge-ledger bucket and bucket
+administration returned 403. No broad Wrangler OAuth credential enters CI.
+Hosted invocation, scheduling, automated restore/replay, independent key
+custody and freshness alerts remain open gates.
