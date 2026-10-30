@@ -1,4 +1,5 @@
 import { matchWebhookRoute, handleWebhookRequest } from './webhooks.ts';
+import { matchRetentionRoute, handleRetentionRequest } from './retention.ts';
 import { requestScope } from './request-context.ts';
 import {
   matchResponseExportRoute,
@@ -30,7 +31,8 @@ export function isPrivatePath(path: string) {
     matchResponseExportRoute(path) !== null ||
     matchNotificationRoute(path) !== null ||
     matchWebhookRoute(path) !== null ||
-    matchDeletionRoute(path) !== null
+    matchDeletionRoute(path) !== null ||
+    matchRetentionRoute(path) !== null
   );
 }
 const workspaceBody = json({ limit: 16384, strict: true, inflate: false });
@@ -49,12 +51,15 @@ export const privateBody: RequestHandler = (req, res, next) => {
     ['PUT', 'POST', 'PATCH'].includes(req.method);
   const isDeletion =
     matchDeletionRoute(req.path) !== null && req.method === 'POST';
+  const isRetention =
+    matchRetentionRoute(req.path) !== null && req.method === 'PUT';
   if (
     !isWebhook &&
     !isForm &&
     !isPublication &&
     !isNotification &&
     !isDeletion &&
+    !isRetention &&
     (req.path !== workspacePath || req.method !== 'POST')
   )
     return next();
@@ -76,6 +81,7 @@ export async function handlePrivateRequest(
   const notificationRoute = matchNotificationRoute(req.path);
   const publicationRoute = matchPublicationRoute(req.path);
   const deletionRoute = matchDeletionRoute(req.path);
+  const retentionRoute = matchRetentionRoute(req.path);
   if (req.path === '/api/v1/me') {
     if (req.method !== 'GET') {
       res.setHeader('Allow', 'GET');
@@ -85,6 +91,8 @@ export async function handlePrivateRequest(
     await handleWorkspaceRequest(req, res, db, user.id);
   } else if (deletionRoute) {
     await handleDeletionRequest(req, res, db, user.id, deletionRoute);
+  } else if (retentionRoute) {
+    await handleRetentionRequest(req, res, db, user.id, retentionRoute);
   } else if (webhookRoute) {
     await handleWebhookRequest(
       req,
