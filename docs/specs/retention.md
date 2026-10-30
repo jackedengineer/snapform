@@ -47,9 +47,10 @@ configuration, keyboard/stale/multi-tab use, and forged role/tenant/input reques
 
 No public compliance certification or legal identity is inferred. Public
 support/privacy/abuse contact is trainwithchirag@gmail.com, labeled Snapform.
-R2 currently requires the user's approved payment-method setup. A temporary
-restore database/branch is not authorized by the one-database instruction;
-resolve the restore method before claiming recovery complete.
+R2 currently requires the user's approved payment-method setup. The user subsequently approved one scoped exception: an isolated temporary local
+restore with no network or exposed ports, removed after verification. That drill
+passed; it does not authorize another Neon database/branch or persistent local
+test database. Remote expiry, purge replay and automated backups remain open.
 
 ## Purge/recovery ordering
 
