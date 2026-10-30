@@ -39,6 +39,7 @@ export default defineConfig({
         'packages/contracts/src/webhook-test.ts',
         'packages/contracts/src/webhook-deliveries.ts',
         'packages/contracts/src/retention.ts',
+        'packages/contracts/src/purge.ts',
       ],
       reporter: ['text', 'json-summary'],
       thresholds: { lines: 90, functions: 90, statements: 90, branches: 85 },
