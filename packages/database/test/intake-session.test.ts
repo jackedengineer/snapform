@@ -311,9 +311,9 @@ it(
 );
 
 it(
-  'saves partial progress with immutable retry receipts and submits once',
+  'saves partial progress with immutable retry receipts and rejects invalid submission',
   async () =>
-    fixture(async (tx, actor, workspaceId, formId, publicId) => {
+    fixture(async (tx, _actor, _workspaceId, _formId, publicId) => {
       const id = crypto.randomUUID(),
         hash = '8'.repeat(64);
       const session = await startIntake(tx, publicId, id, hash);
@@ -364,6 +364,27 @@ it(
           expectedRevision: 2,
         }),
       ).rejects.toThrow('INVALID_INTAKE_ANSWERS');
+    }),
+  30000,
+);
+
+it(
+  'submits once and preserves receipts after unpublishing',
+  async () =>
+    fixture(async (tx, actor, workspaceId, formId, publicId) => {
+      const id = crypto.randomUUID(),
+        hash = '8'.repeat(64);
+      const session = await startIntake(tx, publicId, id, hash);
+      const fields = session.definition.pages.flatMap((page) => page.blocks);
+      const budget = fields.find((field) => field.type === 'number');
+      const contact = fields.find((field) => field.type === 'email');
+      if (!budget || !contact) throw new Error('Missing fixture fields');
+      const progress = {
+        operationId: crypto.randomUUID(),
+        expectedRevision: 1,
+        answers: { [budget.id]: { state: 'value' as const, value: '-' } },
+      };
+      await mutateIntake(tx, publicId, id, hash, 'save', progress);
       const submit = {
         operationId: crypto.randomUUID(),
         expectedRevision: 2,
