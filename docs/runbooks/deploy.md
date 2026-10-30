@@ -92,14 +92,14 @@ verified versions and rollback points.
 
 ## Outbound webhook configuration
 
-The API settings controls are deployed (evidence 0074). Outbound sending remains
-unconnected until preflight/attempt recovery is implemented and verified.
+Outbound preflight, guarded sends/retries and delivery history are deployed
+and verified (evidence 0084–0085). Deploy Jobs before the producing API and web
+controls; its service binding has no public route.
 `WEBHOOK_ENCRYPTION_KEY` is a 32-byte random key encoded as canonical base64.
 API, local Jobs and production must use the same value because their endpoint
 configurations live in one database. Keep it in private Worker secrets/ignored
 mode-0600 files and encrypted recovery material; never rotate it by overwriting
-configuration without an explicit re-encryption/rollback plan. Jobs still needs
-its production copy before sender activation. Template values are placeholders.
+configuration without an explicit re-encryption/rollback plan. The production Jobs copy is installed. Template values remain placeholders.
 
 Webhook delivery uses the immutable configuration and exact stored payload from
 the original attempt. Endpoint edits disable delivery and cancel old queued work;
@@ -107,3 +107,11 @@ they never retarget it. Disabling cannot retract an in-flight request. Tests and
 2xx acknowledgements must be distinguished from real submissions/business success.
 Unknown outcomes require explicit safe replay/reconciliation, with receiver-side
 deduplication by webhook-id. Do not reset event IDs or attempt counts to replay.
+
+Current verified webhook release and rollback versions are recorded in evidence
+0085. For an incident, disable the affected endpoint in its inbox first; a request
+already in flight may still arrive. Roll back Jobs to the prior email/receipt
+version to stop new webhook claims without deleting its ledger, then roll back
+API/web if needed. Preserve the expanded schema and signing material. Expired
+sending leases become Unknown; reconcile before explicitly replaying them.
+A code rollback cannot undo an external receiver's action.
