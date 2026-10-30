@@ -28,4 +28,6 @@ operator tooling, absent from application dependencies and bundles.
 The workflow remains manual-only, pending a hosted invocation, automated
 isolated restore/replay, independent key-custody verification and freshness/failure
 alerts. Existing logical restore evidence does not prove the complete new CI
-path. Browser-option restoration is tracked separately until verified disabled.
+path. The user restored the browser option to disabled; a capture-free probe
+confirmed that state. Only the owned setup window was closed, and temporary
+browser/encryption helpers were removed. Existing tabs and private keys remain.
