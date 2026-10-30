@@ -4,6 +4,7 @@ import {
   webhookToggleInputSchema,
   webhookPreviewSchema,
   webhookHistorySchema,
+  canOfferWebhookRetry,
 } from './webhook-deliveries.ts';
 const configurationId = crypto.randomUUID(),
   deliveryId = crypto.randomUUID();
@@ -40,6 +41,44 @@ it('requires explicit bounded retry context and rejects privileged client data',
       enabled: true,
     }).success,
   ).toBe(false);
+});
+it('offers repair only for the current endpoint, bounded attempts and a compatible enabled state', () => {
+  const current = {
+    configurationId,
+    enabled: false,
+    versionId: crypto.randomUUID(),
+  };
+  const delivery = {
+    configurationId,
+    versionId: current.versionId,
+    kind: 'test' as const,
+    status: 'unknown' as const,
+    reason: 'receiver-unconfirmed',
+    attempts: 1,
+  };
+  expect(canOfferWebhookRetry(delivery, current)).toBe(true);
+  expect(
+    canOfferWebhookRetry(
+      { ...delivery, status: 'needs_action', reason: 'authorization' },
+      current,
+    ),
+  ).toBe(true);
+  for (const changed of [
+    { ...delivery, configurationId: crypto.randomUUID() },
+    { ...delivery, versionId: crypto.randomUUID() },
+    { ...delivery, attempts: 8 },
+    { ...delivery, attempts: 0 },
+    { ...delivery, status: 'acknowledged' as const },
+    { ...delivery, status: 'needs_action' as const, reason: 'payload-invalid' },
+    { ...delivery, kind: 'response.submitted' as const },
+  ])
+    expect(canOfferWebhookRetry(changed, current)).toBe(false);
+  expect(
+    canOfferWebhookRetry(
+      { ...delivery, kind: 'response.submitted' },
+      { ...current, enabled: true },
+    ),
+  ).toBe(true);
 });
 it('strictly projects synthetic previews and content-free bounded history', () => {
   const at = new Date().toISOString();

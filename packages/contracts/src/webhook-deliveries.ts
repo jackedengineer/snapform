@@ -70,3 +70,37 @@ export type WebhookSendInput = z.infer<typeof webhookSendInputSchema>;
 export type WebhookToggleInput = z.infer<typeof webhookToggleInputSchema>;
 export type WebhookPreview = z.infer<typeof webhookPreviewSchema>;
 export type WebhookHistory = z.infer<typeof webhookHistorySchema>;
+
+// Display eligibility only; the database rechecks authorization and state on send.
+export function canOfferWebhookRetry(
+  delivery: Pick<
+    WebhookHistory['deliveries'][number],
+    'configurationId' | 'versionId' | 'kind' | 'status' | 'attempts'
+  > & { reason: string | null },
+  current: {
+    configurationId: string | null;
+    enabled: boolean;
+    versionId: string | null;
+  },
+) {
+  if (
+    delivery.configurationId !== current.configurationId ||
+    delivery.attempts < 1 ||
+    delivery.attempts >= 8 ||
+    (delivery.kind === 'test'
+      ? delivery.versionId !== current.versionId
+      : !current.enabled)
+  )
+    return false;
+  return (
+    delivery.status === 'unknown' ||
+    (delivery.status === 'needs_action' &&
+      [
+        'configuration',
+        'redirect-blocked',
+        'authorization',
+        'receiver-rejected',
+        'retry-later',
+      ].includes(delivery.reason ?? ''))
+  );
+}
