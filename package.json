@@ -13,7 +13,7 @@
     "lint": "eslint apps packages scripts --max-warnings 0",
     "test:unit": "vitest run --config vitest.unit.config.ts",
     "test:api": "vitest run --config apps/api/vitest.config.ts",
-    "test": "pnpm test:unit --coverage && pnpm test:api && pnpm test:jobs && pnpm test:db && pnpm test:auth:integration",
+    "test": "pnpm test:recovery && pnpm test:unit --coverage && pnpm test:api && pnpm test:jobs && pnpm test:db && pnpm test:auth:integration",
     "build": "pnpm --filter @snapform/web build && pnpm --filter @snapform/api build && pnpm --filter @snapform/jobs build",
     "check:bundle": "node --test scripts/bundle-graph.test.mjs && node scripts/check-bundle.mjs",
     "check:fast": "pnpm format:check && pnpm typecheck && pnpm lint",
@@ -30,7 +30,8 @@
     "db:bootstrap": "pnpm --filter @snapform/database bootstrap",
     "db:bootstrap:jobs": "pnpm --filter @snapform/database bootstrap:jobs",
     "test:auth:integration": "pnpm --filter @snapform/api test:integration",
-    "test:jobs": "vitest run --config apps/jobs/vitest.config.ts"
+    "test:jobs": "vitest run --config apps/jobs/vitest.config.ts",
+    "test:recovery": "node --test --test-timeout=5000 scripts/recovery-archive.test.mjs scripts/backup-postgres.test.mjs"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.65.0",

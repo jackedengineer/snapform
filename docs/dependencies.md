@@ -44,3 +44,19 @@ Cloudflare Cron/Queues and structured JSON logs add no external SDK or browser
 runtime. The standalone job artifact is 216.26 KiB gzip (deployment startup
 24 ms); client assets are unchanged by this workspace. No license or transitive
 package graph changed; the lockfile adds workspace links only.
+
+## Operator recovery tooling
+
+Recovery scripts use native Node streams, filesystem operations and AES-256-GCM;
+no npm package, S3 SDK or application runtime dependency is added. The absent
+system `pg_dump` is supplied by the already installed local Docker engine and
+its existing official PostgreSQL 18.6 Alpine image, pinned to digest
+`sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873`.
+The PostgreSQL clients use the PostgreSQL License. Exporting runs only client
+commands and creates no database. A separately approved local restore drill used
+a disposable server with network mode none and no ports, then removed it. Docker must target a local Unix
+socket; database secrets reach the client through environment, never arguments.
+Native installed PostgreSQL clients are the alternative. This tooling adds
+zero browser/API/Jobs bundle bytes. The first encrypted operator export measured
+190,162 bytes for 22 table-data entries; that is export integrity evidence,
+not restore or automated backup completion.
