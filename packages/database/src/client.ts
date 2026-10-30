@@ -29,15 +29,29 @@ export async function openDatabase(connectionString: string) {
   client.on('error', () => {
     console.error(JSON.stringify({ event: 'database_connection_failed' }));
   });
+  let socketClosed = false;
+  const disconnected = new Promise<void>((resolve) => {
+    client.neonConfig.once('close', () => {
+      socketClosed = true;
+      resolve();
+    });
+  });
+  let closing: Promise<void> | undefined;
+  async function close() {
+    // After a peer close, end() can write again and await an already-fired event.
+    if (socketClosed) return;
+    closing ??= Promise.race([client.end(), disconnected]);
+    await closing;
+  }
   try {
     await client.connect();
   } catch {
-    await client.end().catch(() => {
+    await close().catch(() => {
       console.error(JSON.stringify({ event: 'database_disconnect_failed' }));
     });
     throw new Error('Database connection is unavailable.');
   }
-  return { db: drizzle({ client, schema }), close: () => client.end() };
+  return { db: drizzle({ client, schema }), close };
 }
 export type Database = Awaited<ReturnType<typeof openDatabase>>['db'];
 

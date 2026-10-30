@@ -5,6 +5,11 @@ logical archive is an additional independent recovery copy, not a replacement
 for WAL/PITR or the five-minute RPO target. PostgreSQL's consistent export does
 not by itself establish full production recovery. [PostgreSQL pg_dump](https://www.postgresql.org/docs/current/app-pgdump.html).
 
+The production branch's actual dashboard showed a **six-hour history window**
+on 30 October 2026, with no snapshots or snapshot schedule configured.
+[Observed configuration](../evidence/62-neon-recovery-window.jpg). Do not promise
+a longer PITR window or infer that logical export/restore proves PITR recovery.
+
 `node --env-file=.env.backup scripts/backup-postgres.mjs .recovery` requires an
 explicit `DATABASE_BACKUP_URL` for the direct `snapform` endpoint and a canonical
 32-byte base64 `BACKUP_ENCRYPTION_KEY`. Do not put a migration-owner credential
