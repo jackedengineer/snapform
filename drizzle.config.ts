@@ -11,6 +11,7 @@ export default defineConfig({
     './packages/database/src/notification-schema.ts',
     './packages/database/src/webhook-schema.ts',
     './packages/database/src/webhook-delivery-schema.ts',
+    './packages/database/src/retention-schema.ts',
   ],
   out: './packages/database/migrations',
 });
