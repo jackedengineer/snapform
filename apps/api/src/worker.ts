@@ -4,6 +4,7 @@ import type { ErrorRequestHandler } from 'express';
 import { briefSchema } from '@snapform/contracts';
 import { authRoutes } from './auth-routes.ts';
 import { requestScope } from './request-context.ts';
+import { requestObservation } from './request-observation.ts';
 import { publicFormRoutes } from './public-form.ts';
 import { intakeConfigRoutes } from './intake-config.ts';
 import { intakeRoutes } from './intake-routes.ts';
@@ -13,12 +14,33 @@ import type { AuthEnvironment } from './environment.ts';
 const app = express();
 app.disable('x-powered-by');
 app.use((req, res, next) => {
+  const started = performance.now(),
+    requestId = crypto.randomUUID();
+  let observed = false;
+  const observe = () => {
+    if (observed) return;
+    observed = true;
+    console.log(
+      JSON.stringify(
+        requestObservation({
+          requestId,
+          method: req.method,
+          path: req.path,
+          status: res.statusCode,
+          durationMs: performance.now() - started,
+          completed: res.writableFinished,
+        }),
+      ),
+    );
+  };
+  res.once('finish', observe);
+  res.once('close', observe);
   res.set({
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
     'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
     'Referrer-Policy': 'no-referrer',
-    'X-Request-Id': crypto.randomUUID(),
+    'X-Request-Id': requestId,
   });
   next();
 });
