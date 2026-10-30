@@ -3,6 +3,8 @@ import { readFile, stat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { archiveKey } from './recovery-archive.mjs';
+export const backupFilenamePattern =
+  /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.sfbackup$/;
 const fields = [
   'format',
   'createdAt',
@@ -37,9 +39,7 @@ function descriptor(raw, signed) {
     !Number.isFinite(Date.parse(createdAt)) ||
     new Date(createdAt).toISOString() !== createdAt ||
     typeof file !== 'string' ||
-    !/^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.sfbackup$/.test(
-      file,
-    ) ||
+    !backupFilenamePattern.test(file) ||
     !file.startsWith(createdAt.replaceAll(':', '-') + '-') ||
     !Number.isSafeInteger(encryptedBytes) ||
     encryptedBytes <= 0 ||
