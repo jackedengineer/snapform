@@ -21,3 +21,6 @@ test-results/
 
 # Runtime declarations are reproduced by the pinned Wrangler configuration.
 apps/*/worker-configuration.d.ts
+
+# Private encrypted recovery artifacts and operator metadata
+.recovery/
