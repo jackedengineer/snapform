@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useId } from 'react';
+import { useState, useRef, useEffect, useId, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import type { WebhookSettings as Settings } from '@snapform/contracts/webhook-settings';
 import {
@@ -7,6 +7,7 @@ import {
   revealWebhookSecret,
 } from './webhook-api';
 import { FormRequestError } from './api';
+import { WebhookDeliveryPanel } from './WebhookDeliveryPanel';
 type Props = { workspaceId: string; formId: string; userId: string };
 export function WebhookSettings(props: Props) {
   const [open, setOpen] = useState(false);
@@ -26,6 +27,18 @@ export function WebhookSettings(props: Props) {
     queryFn: ({ signal }) =>
       fetchWebhookSettings(props.workspaceId, props.formId, signal),
   });
+  const settled = useCallback(
+    async (
+      error: Error | null,
+      text = 'Endpoint saved. Delivery remains off until its test is acknowledged.',
+    ) => {
+      setNotice({ text: error?.message ?? text, error: Boolean(error) });
+      if (!(error instanceof FormRequestError && error.code === 'invalid'))
+        await settings.refetch();
+      status.current?.focus();
+    },
+    [settings.refetch],
+  );
   return (
     <details
       className="email-notifications webhook-settings"
@@ -66,19 +79,7 @@ export function WebhookSettings(props: Props) {
               {...props}
               data={settings.data}
               onStarted={() => setNotice(null)}
-              onSettled={async (error) => {
-                setNotice({
-                  text:
-                    error?.message ??
-                    'Endpoint saved. Delivery remains off until its test is acknowledged.',
-                  error: Boolean(error),
-                });
-                if (!(
-                  error instanceof FormRequestError && error.code === 'invalid'
-                ))
-                  await settings.refetch();
-                status.current?.focus();
-              }}
+              onSettled={settled}
             />
           )}
           <button
@@ -103,13 +104,14 @@ type Reveal =
 function WebhookEndpointForm({
   workspaceId,
   formId,
+  userId,
   data,
   onSettled,
   onStarted,
 }: Props & {
   data: Settings;
   onStarted: () => void;
-  onSettled: (error: Error | null) => Promise<void>;
+  onSettled: (error: Error | null, text?: string) => Promise<void>;
 }) {
   const inputId = useId(),
     noteId = useId();
@@ -238,6 +240,17 @@ function WebhookEndpointForm({
           )}
           {reveal.status === 'error' && <p role="alert">{reveal.message}</p>}
         </div>
+      )}
+      {data.configurationId && (
+        <WebhookDeliveryPanel
+          workspaceId={workspaceId}
+          formId={formId}
+          userId={userId}
+          data={data}
+          disabled={changed || busy}
+          onStarted={onStarted}
+          onSettled={onSettled}
+        />
       )}
     </>
   );
