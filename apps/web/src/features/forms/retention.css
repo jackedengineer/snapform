@@ -1,0 +1,62 @@
+.retention-settings {
+  margin-block: 1.5rem;
+  border: 1px solid var(--border-default);
+  border-radius: 1rem;
+  background: var(--surface-panel);
+}
+.retention-settings summary {
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+.retention-content {
+  padding: 0 1.25rem 1.25rem;
+  max-width: 48rem;
+}
+.retention-content p {
+  line-height: 1.6;
+}
+.retention-warning {
+  color: var(--text-primary);
+}
+.retention-note {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+.retention-content fieldset {
+  display: grid;
+  gap: 1rem;
+  border: 0;
+  padding: 0;
+  margin: 1.25rem 0;
+  min-width: 0;
+}
+.retention-content legend {
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+.retention-content select {
+  width: min(100%, 20rem);
+  padding: 0.75rem;
+  color: inherit;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-default);
+  border-radius: 0.5rem;
+  font: inherit;
+}
+.retention-acknowledgement {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  line-height: 1.5;
+}
+.retention-acknowledgement input {
+  flex: none;
+  margin-top: 0.3rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--text-primary);
+}
+.retention-content button {
+  justify-self: start;
+}
