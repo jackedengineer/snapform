@@ -6,7 +6,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-function transport() {
+function transport(closeBeforeReady = false) {
   const pair = new WebSocketPair(),
     server = pair[1];
   server.binaryType = 'arraybuffer';
@@ -24,6 +24,10 @@ function transport() {
   server.addEventListener('message', (event) => {
     const bytes = new Uint8Array(event.data as ArrayBuffer);
     if (bytes[0] === 0) {
+      if (closeBeforeReady) {
+        server.close();
+        return;
+      }
       // A minimal synthetic PostgreSQL authentication/ReadyForQuery exchange.
       server.send(
         new Uint8Array([82, 0, 0, 0, 8, 0, 0, 0, 0, 90, 0, 0, 0, 5, 73]),
@@ -54,11 +58,32 @@ function transport() {
 }
 const url =
   'postgresql://snapform_runtime:synthetic-not-a-real-key@qa.neon.tech/snapform?sslmode=require';
+it('rejects an authentication-stage peer close without waiting for a second close event', async () => {
+  const fixture = transport(true);
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const result = await Promise.race([
+      openDatabase(url).then(
+        () => 'unexpected connection',
+        (error) => String(error.message),
+      ),
+      new Promise((resolve) => {
+        timeout = setTimeout(() => resolve('unsettled cleanup'), 200);
+      }),
+    ]);
+    expect(result).toBe('Database connection is unavailable.');
+    expect(fixture.lateWrites()).toBe(0);
+  } finally {
+    clearTimeout(timeout);
+    fixture.server.close();
+  }
+});
 it('flushes PostgreSQL termination before closing the Worker WebSocket without a later write', async () => {
   const fixture = transport();
   let connection: Awaited<ReturnType<typeof openDatabase>> | undefined;
   try {
     connection = await openDatabase(url);
+    await Promise.all([connection.close(), connection.close()]);
     await connection.close();
     connection = undefined;
     await new Promise((resolve) => setTimeout(resolve, 10));
