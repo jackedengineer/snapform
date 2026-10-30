@@ -29,3 +29,11 @@ This is the internal settings foundation. The bounded purge/recovery-ledger
 ordering, owner deletion/cancellation, HTTP and browser controls remain to be
 implemented and verified before retention can be presented as complete. See the
 [execution specification](../specs/retention.md).
+
+Hosted CI exposed a 30-second timeout in the pre-existing combined intake
+save/retry/submit/unpublish test. The unchanged scenario passed locally in
+16.33 seconds. It is now two independent rollback-only journeys, preserving all
+assertions and the existing 30-second per-test limit; the entire intake file
+passes seven tests in 54.49 seconds locally. This reduces sequential network
+work per scenario, not the assertion set, and is not proof of resolved network
+latency. Updated hosted checks remain required.
