@@ -6,6 +6,8 @@ import { can } from '@snapform/contracts/workspace';
 import { useAccountUser } from '../auth/AccountLayout';
 import { fetchForms, createFormRequest } from './api';
 import { newBlankDefinition } from './new-form';
+import { RetentionSettings } from './RetentionSettings';
+import './retention.css';
 const dates = new Intl.DateTimeFormat('en', { dateStyle: 'medium' });
 export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
   const user = useAccountUser(),
@@ -76,6 +78,11 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
               </button>
             )}
           </div>
+          <RetentionSettings
+            key={`${user.id}:${workspaceId}`}
+            workspaceId={workspaceId}
+            userId={user.id}
+          />
           {mutation.isError && (
             <p role="alert" className="request-error">
               {mutation.error.message}
