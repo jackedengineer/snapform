@@ -6,6 +6,7 @@ import { createReadStream } from 'node:fs';
 import { resolve, join, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { sealArchive, openArchive } from './recovery-archive.mjs';
+import { signBackupManifest } from './recovery-manifest.mjs';
 export const postgresImage =
   'postgres@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873';
 export function postgresEnvironment(connectionString) {
@@ -74,6 +75,36 @@ function runDocker(host, args, environment = {}) {
     );
   });
   return { child, finished };
+}
+// Publish the flushed descriptor last. Readers discover pairs by descriptors,
+// and a handled publication failure removes only the archive linked here.
+export async function publishRecoveryBackup(source, directory, manifest) {
+  if (
+    typeof manifest.file !== 'string' ||
+    basename(manifest.file) !== manifest.file ||
+    manifest.file.startsWith('.') ||
+    !manifest.file.endsWith('.sfbackup')
+  )
+    throw Error('INVALID_BACKUP_PUBLICATION');
+  const staging = await mkdtemp(join(directory, '.publish-'));
+  const destination = join(directory, manifest.file);
+  try {
+    const descriptor = join(staging, 'manifest.json');
+    await writeFile(descriptor, JSON.stringify(manifest, null, 2) + '\n', {
+      flag: 'wx',
+      mode: 0o600,
+      flush: true,
+    });
+    await link(source, destination);
+    try {
+      await link(descriptor, destination + '.json');
+    } catch (error) {
+      await rm(destination);
+      throw error;
+    }
+  } finally {
+    await rm(staging, { recursive: true, force: true });
+  }
 }
 export async function createRecoveryBackup({
   connectionString,
@@ -154,27 +185,23 @@ export async function createRecoveryBackup({
       hash.update(chunk);
       encryptedBytes += chunk.length;
     }
+    const createdAt = new Date().toISOString();
     const name =
-      new Date().toISOString().replaceAll(':', '-') +
-      '-' +
-      randomUUID() +
-      '.sfbackup';
+      createdAt.replaceAll(':', '-') + '-' + randomUUID() + '.sfbackup';
     const destination = join(directory, name);
-    await link(encrypted, destination);
-    const manifest = {
-      format: 1,
-      createdAt: new Date().toISOString(),
-      file: basename(destination),
-      encryptedBytes,
-      sha256: hash.digest('hex'),
-      tableDataEntries,
-      postgresImage,
-    };
-    await writeFile(
-      destination + '.json',
-      JSON.stringify(manifest, null, 2) + '\n',
-      { flag: 'wx', mode: 0o600 },
+    const manifest = signBackupManifest(
+      {
+        format: 2,
+        createdAt,
+        file: basename(destination),
+        encryptedBytes,
+        sha256: hash.digest('hex'),
+        tableDataEntries,
+        postgresImage,
+      },
+      secret,
     );
+    await publishRecoveryBackup(encrypted, directory, manifest);
     return manifest;
   } finally {
     await rm(work, { recursive: true, force: true });

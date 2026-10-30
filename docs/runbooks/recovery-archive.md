@@ -30,6 +30,12 @@ Never pipe unauthenticated plaintext into `pg_restore`.
 The `.sfbackup` file and `.json` manifest remain private and Git-ignored under
 `.recovery/`. Keep both; verify the encrypted SHA-256 before remote upload or
 restore. A copied artifact without its recoverable key is not a recovery plan.
+New manifests use authenticated format two. Call `verifyRecoveryFiles` from
+`scripts/recovery-manifest.mjs` before `openArchive`; it verifies the descriptor's
+HKDF-separated HMAC, canonical filename, age under 30 days and exact encrypted
+size/hash. Never change the signed creation time to make an old copy eligible.
+Unsigned format-one manifests from the initial local drill are not accepted by
+this production verification path. Archive AES-GCM framing remains version one.
 The tool refuses foreign/pooled targets and existing output files; diagnostics
 are fixed events without connection URLs or provider error details.
 
@@ -60,8 +66,17 @@ strip ACLs or grant runtime broad access to make a restore pass. Readiness must
 query the target database; `pg_isready` can report ready during initialization
 before that database exists. Preserve authentication and tenant-boundary checks.
 
-Reapply the durable purge ledger before opening restored traffic. R2 upload,
-expiry controls, automated backup identity/schedule, independent key custody and
-actual alerts remain release gates; R2 activation currently needs the user's
-secure payment-method setup. The restore approval does not authorize another
-Neon database/branch or a permanent local test database.
+R2 activation is complete. The private `snapform-backups` bucket expires
+`archives/` after 30 days in storage; `snapform-purge-ledger` expires `intents/`
+after 90 days. A signed 198,142-byte copy passed remote roundtrip verification
+and a 2,000 ms isolated restore of all 31 migrations, including restricted role
+attributes and typed synthetic values (evidence 0092).
+
+Before opening restored traffic, replay **both** pending SQL purge intents from
+the snapshot and retained authenticated R2 intents. An intent can remain pending
+longer than the R2 lifetime; valid newer snapshots still contain it. Persist its
+ledger record before finalizing, even during restore. Stop on conflicting
+metadata or unavailable ledger storage. Deletion replay, automated backup
+identity/schedule, independent key custody and actual alerts remain release gates.
+The restore approval does not authorize another Neon database/branch or a
+permanent local test database.
