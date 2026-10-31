@@ -9,6 +9,7 @@ import type { ResponseEventMessage } from '@snapform/contracts/response-event';
 import { relayResponseEvents, consumeResponseEvents } from './transport';
 import {
   claimOwnerEmails,
+  prepareOwnerEmail,
   recordOwnerEmail,
   recordOwnerProviderStatus,
 } from '@snapform/database/notification-delivery';
@@ -107,6 +108,7 @@ export default {
           );
         const mail = await dispatchOwnerEmails({
           claim: () => claimOwnerEmails(db),
+          prepare: (claim) => prepareOwnerEmail(db, claim),
           send: (claim) =>
             sendOwnerEmail(claim, {
               apiKey: environment.RESEND_API_KEY || '',
