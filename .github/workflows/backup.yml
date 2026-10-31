@@ -17,7 +17,9 @@ jobs:
           node-version-file: .node-version
       - name: Verify recovery and transfer behavior
         run: node --test --test-timeout=5000 scripts/recovery-archive.test.mjs scripts/recovery-manifest.test.mjs scripts/backup-postgres.test.mjs scripts/backup-r2.test.mjs scripts/backup-to-r2.test.mjs
-      - name: Export, encrypt, upload and verify exact remote bytes
+      - name: Verify isolated restore failure and cleanup behavior
+        run: node --test --test-timeout=15000 scripts/restore-postgres.test.mjs
+      - name: Export, encrypt, upload, verify exact remote bytes and restore
         run: node scripts/backup-to-r2.mjs
         env:
           DATABASE_BACKUP_URL: ${{ secrets.DATABASE_BACKUP_URL }}
