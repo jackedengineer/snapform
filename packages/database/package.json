@@ -37,6 +37,8 @@
     "verify:email-delivery": "node --experimental-transform-types --env-file=../../.env scripts/verify-email-delivery.ts",
     "verify:webhook-intents": "node --experimental-transform-types --env-file=../../.env scripts/verify-webhook-intents.ts",
     "verify:webhook-attempts": "node --experimental-transform-types --env-file=../../.env scripts/verify-webhook-attempts.ts",
+    "bootstrap:backup": "node --experimental-transform-types --env-file-if-exists=../../.env src/bootstrap-backup.ts",
+    "verify:backup-role": "node --experimental-transform-types --env-file=../../.env scripts/verify-backup-role.ts",
     "verify:response-purge": "node --experimental-transform-types --env-file=../../.env scripts/verify-response-purge.ts"
   }
 }

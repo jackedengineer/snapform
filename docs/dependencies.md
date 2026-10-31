@@ -60,3 +60,11 @@ Native installed PostgreSQL clients are the alternative. This tooling adds
 zero browser/API/Jobs bundle bytes. The first encrypted operator export measured
 190,162 bytes for 22 table-data entries; that is export integrity evidence,
 not restore or automated backup completion.
+
+Backup transfers invoke the existing system curl (local 8.6.0), using its
+maintained TLS and SigV4 implementation through private stdin configuration.
+The alternative is maintaining request-signing code or adding an SDK. No package
+is installed and application bundle cost is zero. curl uses the permissive
+[curl license](https://curl.se/docs/copyright.html); CLI behavior follows its
+[official manual](https://curl.se/docs/manpage.html). GitHub runners provide the
+same command; a live scoped-key roundtrip remains required before automation.

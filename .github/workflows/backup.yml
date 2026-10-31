@@ -1,0 +1,29 @@
+name: Encrypted backup
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: encrypted-backup
+  cancel-in-progress: false
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .node-version
+      - name: Verify recovery and transfer behavior
+        run: node --test --test-timeout=5000 scripts/recovery-archive.test.mjs scripts/recovery-manifest.test.mjs scripts/backup-postgres.test.mjs scripts/backup-r2.test.mjs scripts/backup-to-r2.test.mjs
+      - name: Export, encrypt, upload and verify exact remote bytes
+        run: node scripts/backup-to-r2.mjs
+        env:
+          DATABASE_BACKUP_URL: ${{ secrets.DATABASE_BACKUP_URL }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: afc0353bdd89b39c334efd3db0311ec3
+          R2_BACKUP_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+          R2_BACKUP_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
+# Enable the nightly trigger only after scoped credentials, real remote transfer,
+# automated restore/replay and independent key custody have been verified.

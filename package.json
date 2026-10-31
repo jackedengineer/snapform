@@ -31,7 +31,7 @@
     "db:bootstrap:jobs": "pnpm --filter @snapform/database bootstrap:jobs",
     "test:auth:integration": "pnpm --filter @snapform/api test:integration",
     "test:jobs": "vitest run --config apps/jobs/vitest.config.ts",
-    "test:recovery": "node --test --test-timeout=5000 scripts/recovery-archive.test.mjs scripts/backup-postgres.test.mjs scripts/recovery-manifest.test.mjs"
+    "test:recovery": "node --test --test-timeout=5000 scripts/recovery-archive.test.mjs scripts/backup-postgres.test.mjs scripts/recovery-manifest.test.mjs scripts/backup-r2.test.mjs scripts/backup-to-r2.test.mjs"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.65.0",
