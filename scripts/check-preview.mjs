@@ -6,6 +6,35 @@ assert.equal(response.status, 200);
 assert.match(response.headers.get('cache-control') || '', /no-transform/);
 const html = await response.text();
 assert.match(html, /Better questions/);
+for (const [path, title] of [
+  ['/support', 'A little help, a clear next step.'],
+  ['/privacy', 'Your information, explained.'],
+  ['/report-abuse', 'Report a concern.'],
+]) {
+  const page = await fetch(base + path);
+  assert.equal(page.status, 200, `${path} must render without authentication`);
+  const content = await page.text();
+  assert.ok(
+    content.includes(title),
+    `${path} must render its page content on the server`,
+  );
+  assert.ok(
+    content.includes('mailto:trainwithchirag@gmail.com'),
+    `${path} must expose the monitored contact`,
+  );
+  assert.ok(
+    !page.headers
+      .get('content-security-policy')
+      ?.includes('challenges.cloudflare.com'),
+  );
+}
+const missing = await fetch(base + '/privacy/missing');
+assert.equal(missing.status, 404);
+assert.equal(
+  /<main[^>]*\bid="main"/.test(await missing.text()),
+  true,
+  '404 must preserve the global skip-link target',
+);
 const nonce = response.headers
   .get('content-security-policy')
   ?.match(/'nonce-([^']+)'/)?.[1];

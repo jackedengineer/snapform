@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
+import { PublicLinks } from '../info/PublicInfo';
 export function AuthFrame({
   title,
   signup,
@@ -60,6 +61,7 @@ export function AuthFrame({
       </main>
       <footer className="site-footer">
         <span>A better beginning.</span>
+        <PublicLinks />
         <Link to="/">
           Explore Snapform <span aria-hidden="true">↗</span>
         </Link>

@@ -1,0 +1,84 @@
+.info-shell {
+  min-height: 100dvh;
+}
+.info-main {
+  width: min(44rem, 90%);
+  margin: 4rem auto;
+  overflow-wrap: anywhere;
+}
+.info-main h1 {
+  font-size: clamp(2.25rem, 6vw, 3.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  margin: 1rem 0 1.5rem;
+}
+.info-intro {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.info-content {
+  margin-block: 3rem;
+}
+.info-content section {
+  margin-block: 2rem;
+}
+.info-main h2 {
+  font-size: 1.25rem;
+  line-height: 1.3;
+  margin-bottom: 0.75rem;
+}
+.info-content p,
+.info-contact p {
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+.info-contact {
+  border-top: 1px solid var(--border-default);
+  padding-top: 1.5rem;
+}
+.info-contact a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-underline-offset: 4px;
+}
+.info-footer {
+  width: min(70rem, 90%);
+  margin: auto;
+  padding-block: 1.5rem 2.5rem;
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+.public-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.25rem;
+}
+.public-links a,
+.info-footer > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-underline-offset: 4px;
+}
+.landing-footer,
+.site-footer {
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+@media (max-width: 650px) {
+  .info-main {
+    margin-block: 2.5rem;
+  }
+  .info-content {
+    margin-block: 2rem;
+  }
+}

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { PublicLinks } from '../features/info/PublicInfo';
 export const Route = createFileRoute('/')({
   component: Home,
   head: () => ({
@@ -97,6 +98,7 @@ function Home() {
       </section>
       <footer className="landing-footer">
         <span>Snapform · Private preview</span>
+        <PublicLinks />
         <Link to="/login">Open your workspace ↗</Link>
       </footer>
     </div>
