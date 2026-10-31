@@ -45,6 +45,17 @@ export async function recordOwnerEmail(
     throw Error('Invalid email attempt receipt');
   return rows[0].recorded;
 }
+export async function prepareOwnerEmail(
+  db: Database | Transaction,
+  claim: OwnerEmailClaim,
+): Promise<boolean> {
+  const { rows } = await db.execute<{ allowed: boolean }>(
+    sql`select public.prepare_owner_email(${claim.id}::uuid,${claim.leaseToken}::uuid) as allowed`,
+  );
+  if (typeof rows[0]?.allowed !== 'boolean')
+    throw Error('Invalid email authorization receipt');
+  return rows[0].allowed;
+}
 export async function recordOwnerProviderStatus(
   db: Database | Transaction,
   receipt: ProviderEmailReceipt,

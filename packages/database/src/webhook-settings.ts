@@ -136,7 +136,7 @@ export async function getWebhookSettings(
 ) {
   workspaceId = identity.parse(workspaceId);
   formId = identity.parse(formId);
-  return inWorkspace(db, actor, workspaceId, 'integrations.manage', (tx) =>
+  return inWorkspace(db, actor, workspaceId, 'integrations.read', (tx) =>
     readSettings(tx, workspaceId, formId, master),
   );
 }
@@ -226,7 +226,7 @@ export async function getWebhookSigningSecret(
     db,
     actor,
     workspaceId,
-    'integrations.manage',
+    'integrations.read',
     async (tx) => {
       const [row] = await tx
         .select({ sealed: webhookConfiguration.sealedDestination })

@@ -232,6 +232,34 @@
       "when": 1793425743502,
       "tag": "0032_owner-purge",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793427262302,
+      "tag": "0033_workspace-scope",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793430666079,
+      "tag": "0034_deletion-collection-guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793433677520,
+      "tag": "0035_intake-call-boundary",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793435035187,
+      "tag": "0036_email-send-guard",
+      "breakpoints": true
     }
   ]
 }

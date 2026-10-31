@@ -2,13 +2,12 @@ import { expect, it } from 'vitest';
 import { sql, eq } from 'drizzle-orm';
 import type { Transaction } from '../src/client.ts';
 import { openDatabase } from '../src/client.ts';
-import { user } from '../src/schema.ts';
-import { createWorkspace } from '../src/workspaces.ts';
-import { createForm, saveDraft } from '../src/forms.ts';
+import { saveDraft } from '../src/forms.ts';
 import { publishForm, unpublishForm } from '../src/publication.ts';
 import { responseSession } from '../src/intake-schema.ts';
 import { startIntake, getIntake, mutateIntake } from '../src/intake.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
+import { seedForm } from './fixtures/forms.ts';
 async function fixture(
   run: (
     tx: Transaction,
@@ -25,24 +24,8 @@ async function fixture(
   try {
     await expect(
       db.transaction(async (tx) => {
-        const actor = crypto.randomUUID(),
-          formId = crypto.randomUUID();
-        await tx.insert(user).values({
-          id: actor,
-          name: 'Intake QA',
-          email: `${actor}@example.invalid`,
-          emailVerified: true,
-        });
-        const workspace = await createWorkspace(tx, actor, {
-          id: crypto.randomUUID(),
-          name: 'Intake QA',
-          segment: 'agency',
-        });
-        await createForm(tx, actor, workspace.id, {
-          id: formId,
-          definition: formFixture().definition,
-        });
-        const published = await publishForm(tx, actor, workspace.id, formId, {
+        const { actor, workspaceId, formId } = await seedForm(tx, 'Intake QA');
+        const published = await publishForm(tx, actor, workspaceId, formId, {
           versionId: crypto.randomUUID(),
           expectedRevision: 1,
         });
@@ -50,7 +33,7 @@ async function fixture(
         await run(
           tx,
           actor,
-          workspace.id,
+          workspaceId,
           formId,
           published.publication.publicId,
         );

@@ -238,6 +238,18 @@ it('keeps email delivery claims and outcomes outside application authority', asy
         sql`select * from public.claim_owner_emails(1,${crypto.randomUUID()}::uuid)`,
       ),
     ).rejects.toMatchObject({ cause: { code: '42501' } });
+    await expect(
+      db.execute(
+        sql`select public.prepare_owner_email(${crypto.randomUUID()}::uuid,${crypto.randomUUID()}::uuid)`,
+      ),
+    ).rejects.toMatchObject({ cause: { code: '42501' } });
+    expect(
+      (
+        await db.execute(
+          sql`select has_function_privilege('snapform_jobs','public.prepare_owner_email(uuid,uuid)','EXECUTE') as prepare`,
+        )
+      ).rows,
+    ).toEqual([{ prepare: true }]);
     expect(
       (
         await db.execute(

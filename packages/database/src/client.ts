@@ -23,9 +23,9 @@ export async function openDatabase(connectionString: string) {
   });
   // Readiness must confirm server authentication, not optimistic pipelining.
   client.neonConfig.pipelineConnect = false;
-  // In Workers, deferred writes can escape the request after a peer close.
-  // Node tooling keeps its driver's validated batching behavior.
-  if ('WebSocketPair' in globalThis) client.neonConfig.coalesceWrites = false;
+  // A deferred flush can run after peer close in both Node and Workers,
+  // escaping the query promise. Send through the driver's immediate path.
+  client.neonConfig.coalesceWrites = false;
   client.on('error', () => {
     console.error(JSON.stringify({ event: 'database_connection_failed' }));
   });

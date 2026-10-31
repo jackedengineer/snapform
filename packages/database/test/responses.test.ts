@@ -4,13 +4,10 @@ import { openDatabase } from '../src/client.ts';
 import type { Transaction } from '../src/client.ts';
 import { user } from '../src/schema.ts';
 import { membership } from '../src/workspace-schema.ts';
-import { createWorkspace } from '../src/workspaces.ts';
-import { createForm, saveDraft } from '../src/forms.ts';
-import { publishForm } from '../src/publication.ts';
-import { startIntake, mutateIntake } from '../src/intake.ts';
 import { listResponses, getResponse } from '../src/responses.ts';
 import { getResponseExport } from '../src/response-export.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
+import { seedResponses } from './fixtures/forms.ts';
 
 type Fixture = {
   tx: Transaction;
@@ -29,62 +26,8 @@ async function withResponses(run: (fixture: Fixture) => Promise<void>) {
   try {
     await expect(
       db.transaction(async (tx) => {
-        const actor = crypto.randomUUID(),
-          formId = crypto.randomUUID();
-        await tx.insert(user).values({
-          id: actor,
-          name: 'Response QA',
-          email: `${actor}@example.invalid`,
-          emailVerified: true,
-        });
-        const workspace = await createWorkspace(tx, actor, {
-          id: crypto.randomUUID(),
-          name: 'Response QA',
-          segment: 'agency',
-        });
-        const definition = formFixture().definition;
-        await createForm(tx, actor, workspace.id, { id: formId, definition });
-        const published = await publishForm(tx, actor, workspace.id, formId, {
-          versionId: crypto.randomUUID(),
-          expectedRevision: 1,
-        });
-        if (!published.publication) throw Error('Publication required');
-        const publicId = published.publication.publicId;
-        const fields = definition.pages.flatMap((page) => page.blocks);
-        const budget = fields.find((field) => field.type === 'number'),
-          email = fields.find((field) => field.type === 'email');
-        if (!budget || !email) throw Error('Fixture fields required');
-        const ids = [crypto.randomUUID(), crypto.randomUUID()].sort().reverse();
-        for (const id of ids) {
-          const hash = id.replaceAll('-', '').repeat(2);
-          await startIntake(tx, publicId, id, hash);
-          await mutateIntake(tx, publicId, id, hash, 'submit', {
-            operationId: crypto.randomUUID(),
-            expectedRevision: 1,
-            answers: {
-              [budget.id]: { state: 'value', value: 0 },
-              [email.id]: { state: 'value', value: 'qa@example.invalid' },
-            },
-          });
-        }
-        const partial = crypto.randomUUID();
-        await startIntake(tx, publicId, partial, 'e'.repeat(64));
-        await saveDraft(tx, actor, workspace.id, formId, {
-          operationId: crypto.randomUUID(),
-          expectedRevision: 1,
-          definition: { ...definition, title: 'Changed draft title' },
-        });
-
-        await run({
-          tx,
-          actor,
-          workspaceId: workspace.id,
-          formId,
-          definition,
-          ids,
-          partial,
-          budgetId: budget.id,
-        });
+        const fixture = await seedResponses(tx);
+        await run({ tx, ...fixture });
         throw rollback;
       }),
     ).rejects.toBe(rollback);
