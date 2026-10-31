@@ -41,7 +41,7 @@ export async function listWebhookDeliveries(
     db,
     actor,
     workspaceId,
-    'integrations.manage',
+    'integrations.read',
     async (tx) => {
       const [exists] = await tx
         .select({ id: form.id })
