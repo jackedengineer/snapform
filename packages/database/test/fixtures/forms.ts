@@ -85,5 +85,5 @@ export async function seedResponses(tx: Transaction, name = 'Response QA') {
         revision=2,updated_by='${actor}',updated_at=now()
         WHERE workspace_id='${workspaceId}' AND form_id='${formId}';`),
   );
-  return { ...fixture, ids, partial, budgetId: fieldIds.budget };
+  return { ...fixture, ids, partial, publicId, budgetId: fieldIds.budget };
 }
