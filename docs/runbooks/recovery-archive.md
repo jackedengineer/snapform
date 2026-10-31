@@ -30,6 +30,18 @@ Never pipe unauthenticated plaintext into `pg_restore`.
 The `.sfbackup` file and `.json` manifest remain private and Git-ignored under
 `.recovery/`. Keep both; verify the encrypted SHA-256 before remote upload or
 restore. A copied artifact without its recoverable key is not a recovery plan.
+New manifests use authenticated format two. Call `verifyRecoveryFiles` from
+`scripts/recovery-manifest.mjs` before `openArchive`; it verifies the descriptor's
+HKDF-separated HMAC, canonical filename, age under 30 days and exact encrypted
+size/hash. Never change the signed creation time to make an old copy eligible.
+Unsigned format-one manifests from the initial local drill are not accepted by
+this production verification path. Archive AES-GCM framing remains version one.
+Use `pnpm --filter @snapform/database bootstrap:backup` with local migration
+configuration to provision the private SELECT-only snapshot identity. It
+preserves `.env.backup`'s existing archive key and never silently rotates a live
+login. Verify permissions with `pnpm --filter @snapform/database verify:backup-role`;
+the operator probe rolls back its synthetic changes. Exports use
+`node --env-file=.env.backup scripts/backup-postgres.mjs`, never the owner URL.
 The tool refuses foreign/pooled targets and existing output files; diagnostics
 are fixed events without connection URLs or provider error details.
 
@@ -51,17 +63,34 @@ auth users. Network mode was `none`, with no published ports. The container and
 plaintext directory were removed and their absence checked. This small logical
 drill is not evidence for production RTO/RPO or an automated backup schedule.
 
-For a fresh isolated restore, recreate the application owner and restricted
+For a fresh isolated restore, recreate the application owner (`snapform_owner`) and restricted
 runtime/Jobs roles before loading preserved ACLs. The Neon archive also references
-`neon_superuser` and `cloud_admin`: create inert NOLOGIN roles locally and grant
-`cloud_admin` temporarily to the local restore owner so its archived default
+`neon_superuser`, `neondb_owner` and `cloud_admin`: create inert NOLOGIN roles locally and grant
+`cloud_admin` and `neondb_owner` temporarily to the local restore owner so its archived default
 privileges can be restored; revoke that membership immediately afterward. Do not
 strip ACLs or grant runtime broad access to make a restore pass. Readiness must
-query the target database; `pg_isready` can report ready during initialization
+wait for PID 1 to become the final postgres server and query the target database; `pg_isready` can report ready during initialization
 before that database exists. Preserve authentication and tenant-boundary checks.
 
-Reapply the durable purge ledger before opening restored traffic. R2 upload,
-expiry controls, automated backup identity/schedule, independent key custody and
-actual alerts remain release gates; R2 activation currently needs the user's
-secure payment-method setup. The restore approval does not authorize another
-Neon database/branch or a permanent local test database.
+R2 activation is complete. The private `snapform-backups` bucket expires
+`archives/` after 30 days in storage; `snapform-purge-ledger` expires `intents/`
+after 90 days. A signed 198,142-byte copy passed remote roundtrip verification
+and a 2,000 ms isolated restore of all 31 migrations, including restricted role
+attributes and typed synthetic values (evidence 0092).
+
+Before opening restored traffic, replay **both** pending SQL purge intents from
+the snapshot and retained authenticated R2 intents. An intent can remain pending
+longer than the R2 lifetime; valid newer snapshots still contain it. Persist its
+ledger record before finalizing, even during restore. Stop on conflicting
+metadata or unavailable ledger storage. The restricted backup identity, scoped R2 transfer, encrypted CI secrets and
+repeatable restore are implemented. Hosted invocation, deletion replay, automatic
+scheduling, independent key custody and actual alerts remain release gates.
+The restore approval does not authorize another Neon database/branch or a
+permanent local test database.
+
+Run `node --env-file=.env.backup scripts/restore-postgres.mjs PATH_TO_SIGNED_MANIFEST`
+for an isolated drill of an eligible private copy. The runner always removes its
+container and authenticated dump on completion, error or handled termination.
+The manual backup workflow now verifies a fresh snapshot by restoring it after
+R2 byte verification. It still reports purge replay as unexercised. See evidence
+0103; do not reopen restored traffic on snapshot-only verification.
