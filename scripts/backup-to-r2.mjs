@@ -8,6 +8,7 @@ import {
   validateR2BackupCredentials,
 } from './backup-r2.mjs';
 import { archiveKey } from './recovery-archive.mjs';
+import { verifyIsolatedRestore } from './restore-postgres.mjs';
 
 export async function backupToR2(environment) {
   for (const field of [
@@ -42,7 +43,14 @@ export async function backupToR2(environment) {
         secretAccessKey: environment.R2_BACKUP_SECRET_ACCESS_KEY,
       },
     );
+    // R2's downloaded ciphertext has just matched this signed local pair exactly.
+    const restore = await verifyIsolatedRestore({
+      manifestPath: join(directory, local.file + '.json'),
+      secret: environment.BACKUP_ENCRYPTION_KEY,
+      workDirectory: directory,
+    });
     return {
+      restore,
       createdAt: remote.manifest.createdAt,
       encryptedBytes: remote.manifest.encryptedBytes,
       tableDataEntries: remote.manifest.tableDataEntries,

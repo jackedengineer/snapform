@@ -197,3 +197,29 @@ test('SIGTERM waits for container and plaintext cleanup', () =>
       if (child.exitCode === null) child.kill('SIGKILL');
     }
   }));
+
+test('an operator inspection failure still removes the restored copy', () =>
+  fixture(async ({ folder, path }) => {
+    const script = join(folder, 'inspection.mjs');
+    await writeFile(
+      script,
+      `import {verifyIsolatedRestore} from ${JSON.stringify(new URL('./restore-postgres.mjs', import.meta.url).href)};
+ try{await verifyIsolatedRestore({manifestPath:process.argv[2],secret:process.env.BACKUP_ENCRYPTION_KEY,workDirectory:process.argv[3],inspect:async({executeSql})=>{await executeSql('SELECT 1;');throw Error('Synthetic inspection failure');}});}catch{process.exitCode=1;}`,
+    );
+    const result = spawnSync(process.execPath, [script, path, folder], {
+      env: {
+        ...process.env,
+        PATH: folder + ':' + process.env.PATH,
+        BACKUP_ENCRYPTION_KEY: secret,
+        DOCKER_TRACE: join(folder, 'trace'),
+      },
+      encoding: 'utf8',
+      timeout: 15000,
+    });
+    assert.equal(result.status, 1);
+    assert.equal((await trace(folder)).at(-1).includes('rm'), true);
+    assert.equal(
+      (await readdir(folder)).some((name) => name.startsWith('.restore-')),
+      false,
+    );
+  }));
