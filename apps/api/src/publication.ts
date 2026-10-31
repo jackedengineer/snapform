@@ -24,6 +24,7 @@ export function matchPublicationRoute(path: string) {
     : null;
 }
 const statuses = new Map([
+  ['WORKSPACE_DELETION_PENDING', 409],
   ['WORKSPACE_NOT_FOUND', 404],
   ['FORM_NOT_FOUND', 404],
   ['PUBLICATION_NOT_FOUND', 404],
