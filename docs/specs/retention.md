@@ -65,3 +65,10 @@ even if a crash happened between its ledger write and final SQL deletion.
 Tombstones prevent target-ID reuse while retained; metadata lasts 90 days and
 backup copies must expire earlier. No raw answers enter recovery-ledger objects.
 This ordering avoids recording cancelled requests as irreversible tombstones.
+
+Recovery must also drain pending SQL intents restored from the snapshot, not
+only objects still present in R2. A long-stalled intent may outlive its first R2
+copy while remaining in every valid newer database snapshot. Re-archive that
+authenticated SQL intent before finalizing it and opening traffic. Reject
+expired or unauthenticated backup manifests; storage upload time cannot reset
+the signed snapshot's eligibility window.

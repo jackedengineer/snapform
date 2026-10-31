@@ -7,7 +7,7 @@ import { pipeline } from 'node:stream/promises';
 const magic = Buffer.from('SNAPFORM-ARCHIVE-1\n');
 const nonceLength = 12,
   tagLength = 16;
-function archiveKey(value) {
+export function archiveKey(value) {
   if (typeof value !== 'string' || value.length !== 44)
     throw Error('A canonical 32-byte backup key is required.');
   const key = Buffer.from(value, 'base64');
