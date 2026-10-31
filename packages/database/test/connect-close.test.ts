@@ -93,3 +93,54 @@ it('rejects promptly when the real driver observes a peer close before authentic
     clearTimeout(timeout);
   }
 });
+
+it('never flushes a deferred Node query after the peer closes', async () => {
+  const sockets: QuerySocket[] = [];
+  let lateWrites = 0;
+  class QuerySocket extends EventTarget {
+    readyState = 0;
+    binaryType = 'arraybuffer';
+    constructor() {
+      super();
+      sockets.push(this);
+      queueMicrotask(() => {
+        this.readyState = 1;
+        this.dispatchEvent(new Event('open'));
+      });
+    }
+    send(bytes: Uint8Array) {
+      if (this.readyState !== 1) {
+        lateWrites++;
+        return;
+      }
+      if (bytes[0] === 0)
+        queueMicrotask(() =>
+          this.dispatchEvent(
+            new MessageEvent('message', {
+              data: new Uint8Array([
+                82, 0, 0, 0, 8, 0, 0, 0, 0, 90, 0, 0, 0, 5, 73,
+              ]).buffer,
+            }),
+          ),
+        );
+    }
+    close() {
+      if (this.readyState === 3) return;
+      this.readyState = 3;
+      queueMicrotask(() => this.dispatchEvent(new Event('close')));
+    }
+  }
+  neonConfig.webSocketConstructor = QuerySocket;
+  const connection = await openDatabase(
+    'postgresql://snapform_runtime:synthetic-not-a-key@qa.neon.tech/snapform?sslmode=require',
+  );
+  try {
+    const pending = connection.db.$client.query('select 1');
+    sockets[0].close();
+    await expect(pending).rejects.toThrow();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(lateWrites).toBe(0);
+  } finally {
+    await connection.close();
+  }
+}, 1000);
