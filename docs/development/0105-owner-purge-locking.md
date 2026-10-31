@@ -1,6 +1,6 @@
 # Due owner requests and consistent purge locking
 
-Unapplied migration 0032 reserves bounded irreversible intents after an owner's
+Migration 0032, applied to the shared Neon database, reserves bounded irreversible intents after an owner's
 24-hour cancellation window. Pending intents are retried first. Workspace purge
 explicitly removes responses and publication references before workspace cascades,
 retains content-free audit/requests and prevents workspace identity reuse. Trial
@@ -31,6 +31,9 @@ expiryAfterPendingObserved=true to both false, with successful finalizers and
 serialized scheduling. Its disposable database and plaintext were removed.
 
 The generated custom-migration snapshot matches 0031's schema exactly apart from
-its IDs. No dependency or client bundle changes. Applying the reviewed migration,
-post-apply rollback verification, retaining the concurrency harness in the source
-tree and Worker/browser verification remain required before activation.
+its IDs. No dependency or client bundle changes. The brief reviewed migration
+completed after the earlier CI runs finished; the post-apply owner behavior probe
+passed and rolled back every synthetic write. The portable retained regression is
+scripts/verify-purge-locks.mjs; it passed against the isolated copy and removed its
+container/plaintext. Active Jobs, collection/private-write guards, ledger replay,
+owner API/UI and their Worker/browser checks remain required before activation.
