@@ -4,7 +4,7 @@ import { openDatabase } from '../src/client.ts';
 import type { Transaction } from '../src/client.ts';
 import { user } from '../src/schema.ts';
 import { membership } from '../src/workspace-schema.ts';
-import { createWorkspace, inWorkspace } from '../src/workspaces.ts';
+import { inWorkspace } from '../src/workspaces.ts';
 import { createForm, saveDraft } from '../src/forms.ts';
 import { formVersion } from '../src/publication-schema.ts';
 import {
@@ -13,6 +13,7 @@ import {
   unpublishForm,
 } from '../src/publication.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
+import { seedForm } from './fixtures/forms.ts';
 async function fixture(
   run: (
     tx: Transaction,
@@ -28,24 +29,11 @@ async function fixture(
   try {
     await expect(
       db.transaction(async (tx) => {
-        const actor = crypto.randomUUID(),
-          formId = crypto.randomUUID();
-        await tx.insert(user).values({
-          id: actor,
-          name: 'Publication QA',
-          email: `${actor}@example.invalid`,
-          emailVerified: true,
-        });
-        const workspace = await createWorkspace(tx, actor, {
-          id: crypto.randomUUID(),
-          name: 'Publication QA',
-          segment: 'agency',
-        });
-        await createForm(tx, actor, workspace.id, {
-          id: formId,
-          definition: formFixture().definition,
-        });
-        await run(tx, actor, workspace.id, formId);
+        const { actor, workspaceId, formId } = await seedForm(
+          tx,
+          'Publication QA',
+        );
+        await run(tx, actor, workspaceId, formId);
         throw rollback;
       }),
     ).rejects.toBe(rollback);
