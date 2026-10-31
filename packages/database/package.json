@@ -21,7 +21,8 @@
     "./webhook-preview": "./src/webhook-preview.ts",
     "./webhook-deliveries": "./src/webhook-deliveries.ts",
     "./retention": "./src/retention.ts",
-    "./purge": "./src/purge.ts"
+    "./purge": "./src/purge.ts",
+    "./deletion": "./src/deletion.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

@@ -13,6 +13,7 @@ export default defineConfig({
     './packages/database/src/webhook-delivery-schema.ts',
     './packages/database/src/retention-schema.ts',
     './packages/database/src/purge-schema.ts',
+    './packages/database/src/deletion-schema.ts',
   ],
   out: './packages/database/migrations',
 });

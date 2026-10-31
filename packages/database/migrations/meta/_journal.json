@@ -218,6 +218,13 @@
       "when": 1793362197012,
       "tag": "0030_quick_gertrude_yorkes",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793384428429,
+      "tag": "0031_daily_vivisector",
+      "breakpoints": true
     }
   ]
 }
