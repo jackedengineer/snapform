@@ -225,6 +225,13 @@
       "when": 1793384428429,
       "tag": "0031_daily_vivisector",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793425743502,
+      "tag": "0032_owner-purge",
+      "breakpoints": true
     }
   ]
 }
