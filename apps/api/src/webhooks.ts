@@ -207,6 +207,7 @@ export async function handleWebhookRequest(
         ? 403
         : [
               'WEBHOOK_SETTINGS_CONFLICT',
+              'WORKSPACE_DELETION_PENDING',
               'WEBHOOK_DELIVERY_CONFLICT',
               'OPERATION_CONFLICT',
               'PUBLICATION_REQUIRED',

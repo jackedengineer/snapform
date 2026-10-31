@@ -7,6 +7,7 @@ const permissions = {
   'forms.write': ['owner', 'editor'],
   'responses.export': ['owner', 'editor'],
   'integrations.manage': ['owner', 'editor'],
+  'integrations.read': ['owner', 'editor'],
   'members.manage': ['owner'],
   'billing.manage': ['owner'],
   'workspace.delete': ['owner'],

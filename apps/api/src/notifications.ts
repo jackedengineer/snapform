@@ -95,7 +95,11 @@ export async function handleNotificationRequest(
     const status =
       code === 'FORBIDDEN'
         ? 403
-        : ['EMAIL_SETTINGS_CONFLICT', 'EMAIL_RETRY_CONFLICT'].includes(code)
+        : [
+              'EMAIL_SETTINGS_CONFLICT',
+              'EMAIL_RETRY_CONFLICT',
+              'WORKSPACE_DELETION_PENDING',
+            ].includes(code)
           ? 409
           : ['WORKSPACE_NOT_FOUND', 'FORM_NOT_FOUND'].includes(code)
             ? 404

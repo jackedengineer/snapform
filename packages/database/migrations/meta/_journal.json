@@ -232,6 +232,13 @@
       "when": 1793425743502,
       "tag": "0032_owner-purge",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793427262302,
+      "tag": "0033_workspace-scope",
+      "breakpoints": true
     }
   ]
 }

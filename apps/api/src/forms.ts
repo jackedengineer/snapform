@@ -34,6 +34,7 @@ export function matchFormsRoute(path: string): FormsRoute | null {
     : null;
 }
 const statuses = new Map([
+  ['WORKSPACE_DELETION_PENDING', 409],
   ['WORKSPACE_NOT_FOUND', 404],
   ['FORM_NOT_FOUND', 404],
   ['FORBIDDEN', 403],

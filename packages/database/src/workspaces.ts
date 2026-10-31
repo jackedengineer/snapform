@@ -1,5 +1,9 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
-import { can, createWorkspaceSchema } from '@snapform/contracts/workspace';
+import {
+  can,
+  createWorkspaceSchema,
+  roleSchema,
+} from '@snapform/contracts/workspace';
 import type {
   Capability,
   CreateWorkspace,
@@ -81,19 +85,32 @@ export async function inWorkspace<T>(
 ): Promise<T> {
   const normalizedId = createWorkspaceSchema.shape.id.parse(id);
   return db.transaction(async (tx) => {
-    await identify(tx, actor);
-    const [member] = await tx
-      .select({ role: membership.role })
-      .from(membership)
-      .where(
-        and(
-          eq(membership.workspaceId, normalizedId),
-          eq(membership.userId, actor),
-        ),
-      );
-    if (!member) throw new Error('WORKSPACE_NOT_FOUND');
-    if (!can(member.role, action)) throw new Error('FORBIDDEN');
-    await scope(tx, normalizedId, member.role);
-    return run(tx, member.role);
+    const writing =
+      action !== 'responses.read' &&
+      action !== 'responses.export' &&
+      action !== 'integrations.read';
+    let context: { role: unknown; deletion_pending: unknown } | undefined;
+    try {
+      context = (
+        await tx.execute<{ role: unknown; deletion_pending: unknown }>(
+          sql`select * from public.scope_workspace(${actor},${normalizedId}::uuid,${writing})`,
+        )
+      ).rows[0];
+    } catch (error) {
+      const code =
+        error instanceof Error && error.cause instanceof Error
+          ? error.cause.message
+          : '';
+      if (code === 'WORKSPACE_NOT_FOUND' || code === 'FORBIDDEN')
+        throw Error(code, { cause: error });
+      throw error;
+    }
+    if (!context || typeof context.deletion_pending !== 'boolean')
+      throw Error('INVALID_WORKSPACE_CONTEXT');
+    const role = roleSchema.parse(context.role);
+    if (!can(role, action)) throw Error('FORBIDDEN');
+    if (writing && context.deletion_pending)
+      throw Error('WORKSPACE_DELETION_PENDING');
+    return run(tx, role);
   });
 }
