@@ -253,6 +253,13 @@
       "when": 1793433677520,
       "tag": "0035_intake-call-boundary",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793435035187,
+      "tag": "0036_email-send-guard",
+      "breakpoints": true
     }
   ]
 }
