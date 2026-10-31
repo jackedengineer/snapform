@@ -12,6 +12,11 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Every run uses the same Neon database; preserve queued checks across branches.
+    concurrency:
+      group: snapform-shared-neon-verification
+      queue: max
+      cancel-in-progress: false
     env:
       DATABASE_URL: ${{ secrets.SNAPFORM_DATABASE_URL }}
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
