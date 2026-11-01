@@ -3,6 +3,7 @@ import {
   purgeIntentSchema,
   sealPurgeIntent,
   openPurgeIntent,
+  validatePurgeLedgerSecret,
 } from '../src/purge';
 const secret = btoa('s'.repeat(32));
 const intent = {
@@ -38,6 +39,8 @@ it('rejects unknown content, invalid identifiers, keys, versions and unbounded e
     { ...intent, kind: 'form' },
     { ...intent, createdAt: 'yesterday' },
     { ...intent, id: 'invalid' },
+    { ...intent, kind: 'workspace', reason: 'expired' },
+    { ...intent, kind: 'workspace', reason: 'owner' },
   ])
     expect(purgeIntentSchema.safeParse(input).success).toBe(false);
   await expect(
@@ -56,5 +59,22 @@ it('rejects unknown content, invalid identifiers, keys, versions and unbounded e
   ])
     await expect(openPurgeIntent(text, secret, intent.id)).rejects.toThrow(
       'INVALID_PURGE_LEDGER',
+    );
+});
+it('requires workspace deletion metadata to identify the same workspace', () => {
+  expect(
+    purgeIntentSchema.parse({
+      ...intent,
+      kind: 'workspace',
+      reason: 'owner',
+      targetId: intent.workspaceId,
+    }),
+  ).toMatchObject({ kind: 'workspace', reason: 'owner' });
+});
+it('validates the ledger key before any job can claim deletion work', async () => {
+  await expect(validatePurgeLedgerSecret(secret)).resolves.toBeUndefined();
+  for (const value of ['', 'bad-key', btoa('s'.repeat(31))])
+    await expect(validatePurgeLedgerSecret(value)).rejects.toThrow(
+      'INVALID_PURGE_LEDGER_KEY',
     );
 });

@@ -24,9 +24,19 @@ import {
 import { dispatchWebhooks } from './webhook-dispatch';
 import { sendWebhook } from './webhook-send';
 import { handleWebhookWake } from './webhook-wake';
+import { runScheduledPurge } from './purge-ledger';
+import {
+  claimOwnerDeletions,
+  claimExpiredResponses,
+  finalizeResponsePurge,
+  finalizeWorkspacePurge,
+} from '@snapform/database/purge';
 import type { Database } from '@snapform/database';
 
 type JobEnvironment = {
+  PURGE_ENABLED?: string;
+  PURGE_LEDGER_KEY?: string;
+  PURGE_LEDGER?: R2Bucket;
   DATABASE_URL?: string;
   RESEND_API_KEY?: string;
   RESEND_WEBHOOK_SECRET?: string;
@@ -98,6 +108,23 @@ export default {
     try {
       const { db, close } = await connect(environment);
       try {
+        const purge = await runScheduledPurge(
+          {
+            enabled: environment.PURGE_ENABLED,
+            secret: environment.PURGE_LEDGER_KEY,
+            bucket: environment.PURGE_LEDGER,
+          },
+          {
+            owner: () => claimOwnerDeletions(db),
+            expired: () => claimExpiredResponses(db),
+            finalize: (intent) =>
+              intent.kind === 'workspace'
+                ? finalizeWorkspacePurge(db, intent)
+                : finalizeResponsePurge(db, intent),
+          },
+        );
+        if (purge.claimed)
+          console.log(JSON.stringify({ event: 'retention_purge', ...purge }));
         const result = await relayResponseEvents(environment.EVENTS, {
           claim: () => claimResponseEvents(db),
           record: (lease, queued) => recordResponseDispatch(db, lease, queued),
@@ -122,7 +149,8 @@ export default {
             JSON.stringify({ event: 'owner_email_attempts', ...mail }),
           );
         const webhooks = await deliverWebhooks(db, environment);
-        if (webhooks.failed) throw Error('Webhook persistence unavailable');
+        if (webhooks.failed || purge.failed)
+          throw Error('Job persistence unavailable');
       } finally {
         await close();
       }
