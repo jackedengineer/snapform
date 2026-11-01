@@ -23,11 +23,21 @@ migrations. The isolated restore/inspection took 4,421 ms with network `none` an
 zero published ports. SQL pending and R2 objects both numbered zero; replay and
 quarantine passed and the temporary container/plaintext were removed. This is
 real empty-ledger evidence, complemented by the nonempty synthetic SQL regression
-in evidence 0117. It does not establish a nonempty live-ledger or hosted run.
+in evidence 0117. It does not establish a nonempty live-ledger run.
+
+The [hosted manual drill](https://github.com/jackedengineer/snapform/actions/runs/41313542282)
+subsequently passed on the exact reviewed integration tree
+`894bed7906d21e4ddd64184fb3ab24985f1c9fcf`. GitHub's final result records a
+242,836-byte encrypted backup at 2026-11-01T13:55:54.899Z, 38 restored migrations,
+24 data-table entries, authenticated empty-ledger replay and quarantine. Restore
+and inspection took 2,459 ms, with network `none`, zero exposed ports and
+`trafficSafe: false`. The complete verification run
+[also passed](https://github.com/jackedengineer/snapform/actions/runs/41313514990);
+PR 49 was rebase-merged with its six focused commits preserved.
 
 The manual workflow now installs exact locked dependencies and runs the complete
 recovery suite before the live backup/replay step. Nightly scheduling remains off
-until the hosted run and failure/freshness alert delivery are verified. The reader
+until failure/freshness alert delivery is verified. The reader
 does not authorize reopening restored traffic. An authoritative restore still
 requires quiescing collection and all jobs before obtaining its ledger listing;
 UUID pagination under concurrent writes is not an authoritative checkpoint.
