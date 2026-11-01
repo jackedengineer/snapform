@@ -51,6 +51,9 @@ export const deletionRequestSchema = z
   }, 'Inconsistent deletion receipt');
 export type DeletionInput = z.infer<typeof deletionInputSchema>;
 export type DeletionRequest = z.infer<typeof deletionRequestSchema>;
+export const deletionEnvelopeSchema = z.strictObject({
+  deletion: deletionRequestSchema.nullable(),
+});
 export function deletionConfirmationMatches(
   kind: DeletionRequest['kind'],
   workspaceName: string,
