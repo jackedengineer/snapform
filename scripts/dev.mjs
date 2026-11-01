@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { resolve } from 'node:path';
 
 // Wrangler recreates the API isolate on edits, releasing the Node HTTP listener.
 // Vite keeps the frontend's fast refresh and discovers the API service binding.
@@ -28,8 +29,15 @@ const commands = [
   ],
   ['--filter', '@snapform/web', 'dev'],
 ];
+// Vite and Wrangler otherwise use different registry defaults. Scope discovery
+// to this checkout so unrelated local projects cannot provide the API binding.
+const environment = {
+  ...process.env,
+  CLOUDFLARE_DEV_REGISTRY_PATH: resolve('.wrangler/dev-registry'),
+};
 const children = commands.map((args) =>
   spawn('pnpm', args, {
+    env: environment,
     stdio: 'inherit',
     detached: true,
   }),

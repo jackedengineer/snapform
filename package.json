@@ -34,7 +34,7 @@
     "test:recovery": "node --test --test-timeout=5000 scripts/recovery-archive.test.mjs scripts/backup-postgres.test.mjs scripts/recovery-manifest.test.mjs scripts/backup-r2.test.mjs scripts/backup-to-r2.test.mjs scripts/purge-replay.test.mjs scripts/restore-migrations.test.mjs scripts/r2-purge-reader.test.mjs scripts/restore-safety.test.mjs scripts/restore-ledger.test.mjs && node --test --test-timeout=15000 scripts/restore-postgres.test.mjs"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.65.0",
+    "@cloudflare/vite-plugin": "1.66.0",
     "@cloudflare/vitest-plugin": "1.4.9",
     "@eslint/js": "10.0.1",
     "@rgrove/parse-xml": "5.0.0",
