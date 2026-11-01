@@ -8,6 +8,10 @@ import { fetchResponses, fetchResponse, responseExportPath } from './api';
 import './responses.css';
 import { WebhookSettings } from './WebhookSettings';
 import { EmailNotifications } from './EmailNotifications';
+import {
+  DeletionControl,
+  useDeletionStatus,
+} from '../deletion/DeletionControl';
 const dates = new Intl.DateTimeFormat('en', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -35,6 +39,17 @@ export function ResponseInbox({
     queryFn: ({ signal }) =>
       fetchResponse(workspaceId, formId, selected || '', signal),
   });
+  const deletion = useDeletionStatus(
+    user.id,
+    workspaceId,
+    { kind: 'response', targetId: selected || '' },
+    Boolean(selected) && page.data?.role === 'owner',
+  );
+  const deletionBlocksExport =
+    (page.data?.role === 'owner' && !deletion.isSuccess) ||
+    deletion.data?.state === 'scheduled' ||
+    deletion.data?.state === 'purging' ||
+    deletion.data?.state === 'deleted';
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (detail.data) heading.current?.focus();
@@ -194,27 +209,28 @@ export function ResponseInbox({
                   <p className="response-full-reference">
                     Reference {detail.data.id}
                   </p>
-                  {can(page.data.role, 'responses.export') && (
-                    <div className="response-export">
-                      <a
-                        className="text-button"
-                        href={responseExportPath(
-                          workspaceId,
-                          formId,
-                          detail.data.versionId,
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`Download version ${detail.data.version} CSV (opens in a new tab)`}
-                      >
-                        Download version {detail.data.version} CSV
-                      </a>
-                      <p>
-                        All completed responses for this published version.
-                        Potential formulas are exported as text.
-                      </p>
-                    </div>
-                  )}
+                  {can(page.data.role, 'responses.export') &&
+                    !deletionBlocksExport && (
+                      <div className="response-export">
+                        <a
+                          className="text-button"
+                          href={responseExportPath(
+                            workspaceId,
+                            formId,
+                            detail.data.versionId,
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Download version ${detail.data.version} CSV (opens in a new tab)`}
+                        >
+                          Download version {detail.data.version} CSV
+                        </a>
+                        <p>
+                          All completed responses for this published version.
+                          Potential formulas are exported as text.
+                        </p>
+                      </div>
+                    )}
                   <dl className="response-answers">
                     {detail.data.definition.pages
                       .flatMap((page) => page.blocks)
@@ -236,6 +252,16 @@ export function ResponseInbox({
                   </dl>
                 </>
               )
+            )}
+            {selected && page.data.role === 'owner' && (
+              <DeletionControl
+                key={`deletion:${selected}`}
+                userId={user.id}
+                workspaceId={workspaceId}
+                target={{ kind: 'response', targetId: selected }}
+                confirmation="DELETE"
+                role={page.data.role}
+              />
             )}
           </section>
         </div>
