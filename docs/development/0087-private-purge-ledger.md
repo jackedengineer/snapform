@@ -38,3 +38,10 @@ Verification: 234 pure tests pass, with 99.83% lines, 100% functions, 99.29%
 statements and 97.82% branches across the implemented pure contracts. All 36
 Jobs tests pass in workerd, and production builds/bundle checks pass. The web
 bundle is unchanged because this foundation is server-only and not activated.
+
+# Scheduled wiring update — 1 November 2026
+
+The scheduled handler is now wired and tested, with activation explicitly off.
+See [0113](0113-scheduled-purge-wiring.md) for current evidence and the remaining
+restore, key-custody, alerting and browser release gates. Statements below describe
+the earlier foundation slice.

@@ -1,12 +1,19 @@
 import { z } from 'zod';
-export const purgeIntentSchema = z.strictObject({
-  id: z.uuid(),
-  workspaceId: z.uuid(),
-  kind: z.enum(['response', 'workspace']),
-  targetId: z.uuid(),
-  reason: z.enum(['expired', 'owner']),
-  createdAt: z.iso.datetime(),
-});
+export const purgeIntentSchema = z
+  .strictObject({
+    id: z.uuid(),
+    workspaceId: z.uuid(),
+    kind: z.enum(['response', 'workspace']),
+    targetId: z.uuid(),
+    reason: z.enum(['expired', 'owner']),
+    createdAt: z.iso.datetime(),
+  })
+  .refine(
+    (item) =>
+      item.kind !== 'workspace' ||
+      (item.reason === 'owner' && item.targetId === item.workspaceId),
+    'Invalid workspace purge target',
+  );
 export type PurgeIntent = z.infer<typeof purgeIntentSchema>;
 export const purgeBatchSchema = z.array(purgeIntentSchema).max(20);
 const encoder = new TextEncoder();
@@ -25,6 +32,13 @@ function key(secret: string) {
     'encrypt',
     'decrypt',
   ]);
+}
+export async function validatePurgeLedgerSecret(secret: string): Promise<void> {
+  try {
+    await key(secret);
+  } catch {
+    throw Error('INVALID_PURGE_LEDGER_KEY');
+  }
 }
 function context(id: string) {
   return encoder.encode(`snapform-purge-ledger-v1|${z.uuid().parse(id)}`);

@@ -7,7 +7,10 @@
   "send_metrics": false,
   "workers_dev": false,
   "preview_urls": false,
-  "vars": { "EMAIL_FROM": "Snapform <no-reply@jacked.dev>" },
+  "vars": {
+    "EMAIL_FROM": "Snapform <no-reply@jacked.dev>",
+    "PURGE_ENABLED": "0",
+  },
   "r2_buckets": [
     { "binding": "PURGE_LEDGER", "bucket_name": "snapform-purge-ledger" },
   ],
