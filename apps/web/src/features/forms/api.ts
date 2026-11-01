@@ -94,11 +94,29 @@ export async function request<T>(
         'not-found',
         'That workspace or form is unavailable.',
       );
-    if (response.status === 409)
+    if (response.status === 409) {
+      let deletionPending = false;
+      try {
+        const body: unknown = await response.json();
+        const error =
+          body && typeof body === 'object' && 'error' in body
+            ? body.error
+            : null;
+        deletionPending =
+          !!error &&
+          typeof error === 'object' &&
+          'code' in error &&
+          error.code === 'WORKSPACE_DELETION_PENDING';
+      } catch {
+        // A malformed error body still remains a conflict, never a success.
+      }
       throw new FormRequestError(
         'conflict',
-        'This operation conflicts with saved changes. Review the saved version before trying again.',
+        deletionPending
+          ? 'This workspace is scheduled for deletion. Cancel it from workspace data controls before making changes.'
+          : 'This operation conflicts with saved changes. Review the saved version before trying again.',
       );
+    }
     if (response.status === 429)
       throw new FormRequestError(
         'rate-limited',

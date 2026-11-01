@@ -14,6 +14,10 @@ import {
   matchNotificationRoute,
 } from '../src/notifications.ts';
 import { handleWebhookRequest, matchWebhookRoute } from '../src/webhooks.ts';
+import {
+  handleRetentionRequest,
+  matchRetentionRoute,
+} from '../src/retention.ts';
 import { formFixture } from '../../../packages/contracts/test/form-fixture.ts';
 // Auth is tested by the resource-route tests. Here the real Express/Worker bridge
 // receives an already verified actor and a database boundary denying a write.
@@ -26,6 +30,15 @@ const app = express();
 app.use(express.json());
 app.use((req, res, next) => {
   const forms = matchFormsRoute(req.path);
+  const retention = matchRetentionRoute(req.path);
+  if (retention)
+    return handleRetentionRequest(
+      req,
+      res,
+      blocked,
+      'synthetic-verified-actor',
+      retention,
+    ).catch(next);
   if (forms)
     return handleFormsRequest(
       req,
@@ -79,6 +92,12 @@ const workspace = crypto.randomUUID(),
   form = crypto.randomUUID(),
   base = `https://owned.test/api/v1/workspaces/${workspace}/forms`;
 const cases = [
+  {
+    name: 'retention settings',
+    url: `https://owned.test/api/v1/workspaces/${workspace}/retention`,
+    method: 'PUT',
+    body: { days: 90, expectedRevision: 0, acknowledgeDeletion: true },
+  },
   {
     name: 'form creation',
     url: base,

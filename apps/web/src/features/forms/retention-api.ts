@@ -36,12 +36,20 @@ export async function commitRetention(
   userId: string,
   workspaceId: string,
   raw: unknown,
+  active: { current: boolean },
 ) {
+  if (!active.current)
+    throw new FormRequestError(
+      'unavailable',
+      'Reopen retention settings before changing this policy.',
+    );
   const saved = await saveRetention(workspaceId, raw);
+  if (!active.current) return saved;
   const key = retentionKey(userId, workspaceId);
   // Cancel reads only after the write commits: every still-pending old snapshot
   // must be ignored before publishing the receipt. Later reads see this commit.
   await cache.cancelQueries({ queryKey: key, exact: true });
+  if (!active.current) return saved;
   cache.setQueryData(key, saved);
   return saved;
 }

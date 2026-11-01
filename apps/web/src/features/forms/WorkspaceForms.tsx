@@ -4,10 +4,15 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import type { CreateForm } from '@snapform/contracts/draft';
 import { can } from '@snapform/contracts/workspace';
 import { useAccountUser } from '../auth/AccountLayout';
-import { fetchForms, createFormRequest } from './api';
+import { fetchForms, createFormRequest, FormRequestError } from './api';
 import { newBlankDefinition } from './new-form';
 import { RetentionSettings } from './RetentionSettings';
 import './retention.css';
+import {
+  DeletionControl,
+  useDeletionStatus,
+} from '../deletion/DeletionControl';
+import { WorkspaceDeleted } from '../deletion/WorkspaceDeleted';
 const dates = new Intl.DateTimeFormat('en', { dateStyle: 'medium' });
 export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
   const user = useAccountUser(),
@@ -18,13 +23,31 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
     queryKey: ['forms', user.id, workspaceId, cursor],
     queryFn: ({ signal }) => fetchForms(workspaceId, cursor, signal),
   });
+  const missing =
+    query.isError &&
+    query.error instanceof FormRequestError &&
+    query.error.code === 'not-found';
+  const deletion = useDeletionStatus(
+    user.id,
+    workspaceId,
+    { kind: 'workspace', targetId: workspaceId },
+    query.data?.workspace.role === 'owner' || missing,
+  );
+  const blocksWrites =
+    query.data?.workspace.role === 'owner' &&
+    (!deletion.isSuccess ||
+      deletion.data?.state === 'scheduled' ||
+      deletion.data?.state === 'purging' ||
+      deletion.data?.state === 'deleted');
+  const deletionPending =
+    deletion.data?.state === 'scheduled' || deletion.data?.state === 'purging';
   const pending = useRef<CreateForm | null>(null),
     busy = useRef(false);
   const mutation = useMutation({
     mutationFn: (input: CreateForm) => createFormRequest(workspaceId, input),
   });
   async function create() {
-    if (busy.current) return;
+    if (busy.current || blocksWrites) return;
     busy.current = true;
     pending.current ||= {
       id: crypto.randomUUID(),
@@ -47,7 +70,9 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
       <Link className="back-link" to="/app">
         ← All workspaces
       </Link>
-      {query.isPending ? (
+      {deletion.data?.state === 'deleted' ? (
+        <WorkspaceDeleted receipt={deletion.data} />
+      ) : query.isPending ? (
         <p role="status">Loading your forms…</p>
       ) : query.isError ? (
         <div className="workspace-empty">
@@ -70,7 +95,7 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
             {can(query.data.workspace.role, 'forms.write') && (
               <button
                 className="button primary compact-button"
-                disabled={mutation.isPending}
+                disabled={mutation.isPending || blocksWrites}
                 onClick={() => void create()}
               >
                 {mutation.isPending ? 'Creating…' : 'New form'}
@@ -78,11 +103,12 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
               </button>
             )}
           </div>
-          <RetentionSettings
-            key={`${user.id}:${workspaceId}`}
-            workspaceId={workspaceId}
-            userId={user.id}
-          />
+          {deletionPending && (
+            <p role="status" className="deletion-status">
+              Workspace deletion is scheduled. Collection and changes are
+              stopped. <a href="#workspace-data-title">View deletion status</a>.
+            </p>
+          )}
           {mutation.isError && (
             <p role="alert" className="request-error">
               {mutation.error.message}
@@ -146,6 +172,30 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
               </button>
             </nav>
           )}
+          <section
+            className="workspace-data-settings"
+            aria-labelledby="workspace-data-title"
+          >
+            <h2 id="workspace-data-title" tabIndex={-1}>
+              Data and privacy
+            </h2>
+            <RetentionSettings
+              key={`${user.id}:${workspaceId}`}
+              workspaceId={workspaceId}
+              userId={user.id}
+              blocked={blocksWrites}
+            />
+            {query.data.workspace.role === 'owner' && (
+              <DeletionControl
+                key={`workspace-deletion:${workspaceId}`}
+                userId={user.id}
+                workspaceId={workspaceId}
+                target={{ kind: 'workspace', targetId: workspaceId }}
+                confirmation={query.data.workspace.name}
+                role={query.data.workspace.role}
+              />
+            )}
+          </section>
         </>
       )}
     </div>

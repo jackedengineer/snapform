@@ -48,7 +48,7 @@ export async function handleRetentionRequest(
     const status =
       code === 'FORBIDDEN'
         ? 403
-        : code === 'RETENTION_CONFLICT'
+        : ['RETENTION_CONFLICT', 'WORKSPACE_DELETION_PENDING'].includes(code)
           ? 409
           : code === 'WORKSPACE_NOT_FOUND'
             ? 404
