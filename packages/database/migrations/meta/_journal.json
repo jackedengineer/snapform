@@ -274,6 +274,13 @@
       "when": 1793541329568,
       "tag": "0038_deletion-target-recovery",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793544872032,
+      "tag": "0039_deletion-metadata-expiry",
+      "breakpoints": true
     }
   ]
 }

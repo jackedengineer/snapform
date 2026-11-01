@@ -70,3 +70,22 @@ export async function finalizeWorkspacePurge(
     throw Error('Invalid purge receipt');
   return rows[0].completed;
 }
+export async function pruneDeletionMetadata(db: Database | Transaction) {
+  const { rows } = await db.execute<{
+    requests_deleted: number;
+    intents_deleted: number;
+  }>(sql`select * from public.prune_deletion_metadata(100)`);
+  const result = rows[0];
+  if (
+    rows.length !== 1 ||
+    !result ||
+    ![result.requests_deleted, result.intents_deleted].every(
+      (value) => Number.isSafeInteger(value) && value >= 0 && value <= 100,
+    )
+  )
+    throw Error('Invalid metadata cleanup receipt');
+  return {
+    requestsDeleted: result.requests_deleted,
+    intentsDeleted: result.intents_deleted,
+  };
+}

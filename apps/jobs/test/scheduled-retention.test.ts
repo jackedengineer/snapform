@@ -7,6 +7,7 @@ import {
   claimExpiredResponses,
   finalizeWorkspacePurge,
   finalizeResponsePurge,
+  pruneDeletionMetadata,
 } from '@snapform/database/purge';
 import { openPurgeIntent } from '@snapform/contracts/purge';
 import worker from '../src/worker';
@@ -16,6 +17,10 @@ vi.mock('@snapform/database/purge', () => ({
   claimExpiredResponses: vi.fn(async () => []),
   finalizeWorkspacePurge: vi.fn(),
   finalizeResponsePurge: vi.fn(),
+  pruneDeletionMetadata: vi.fn(async () => ({
+    requestsDeleted: 0,
+    intentsDeleted: 0,
+  })),
 }));
 vi.mock('@snapform/database/outbox', () => ({
   claimResponseEvents: vi.fn(async () => []),
@@ -40,6 +45,10 @@ beforeEach(() => {
   vi.mocked(openDatabase).mockResolvedValue({ db: {} as Database, close });
   vi.mocked(claimOwnerDeletions).mockResolvedValue([]);
   vi.mocked(claimExpiredResponses).mockResolvedValue([]);
+  vi.mocked(pruneDeletionMetadata).mockResolvedValue({
+    requestsDeleted: 0,
+    intentsDeleted: 0,
+  });
 });
 const configuration = () => ({
   ...env,
@@ -86,6 +95,7 @@ it('routes a scheduled event through real R2 before the correct workspace and re
       expired,
     );
     expect(close).toHaveBeenCalledOnce();
+    expect(pruneDeletionMetadata).toHaveBeenCalledOnce();
   } finally {
     for (const item of [owner, expired])
       await env.PURGE_LEDGER.delete(`intents/${item.id}.enc`);
@@ -106,5 +116,13 @@ it('keeps activation off by default and fails closed on an enabled invalid key',
   expect(claimExpiredResponses).not.toHaveBeenCalled();
   expect(finalizeWorkspacePurge).not.toHaveBeenCalled();
   expect(finalizeResponsePurge).not.toHaveBeenCalled();
+  expect(pruneDeletionMetadata).not.toHaveBeenCalled();
   expect(close).toHaveBeenCalledTimes(2);
+});
+it('reports metadata cleanup failures and still closes the database connection', async () => {
+  vi.mocked(pruneDeletionMetadata).mockRejectedValueOnce(Error('Unavailable'));
+  await expect(
+    worker.scheduled(createScheduledController(), configuration()),
+  ).rejects.toThrow('Response jobs failed');
+  expect(close).toHaveBeenCalledOnce();
 });
