@@ -30,6 +30,9 @@
 .deletion-form p {
   margin: 0;
 }
+.deletion-form label {
+  overflow-wrap: anywhere;
+}
 .deletion-ack {
   display: flex;
   align-items: flex-start;
@@ -63,4 +66,13 @@
 .deletion-reference {
   font-size: 0.75rem;
   overflow-wrap: anywhere;
+}
+.workspace-data-settings {
+  margin-top: var(--space-12);
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--border-default);
+}
+.workspace-data-settings > h2 {
+  margin: 0 0 var(--space-4);
+  font-size: 1.25rem;
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { RetentionSettings as Settings } from '@snapform/contracts/retention';
 import { fetchRetention, commitRetention, retentionKey } from './retention-api';
@@ -6,27 +6,39 @@ import { fetchRetention, commitRetention, retentionKey } from './retention-api';
 export function RetentionSettings({
   workspaceId,
   userId,
+  blocked = false,
 }: {
   workspaceId: string;
   userId: string;
+  blocked?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const refresh = useRef<HTMLButtonElement>(null),
-    busy = useRef(false);
+    busy = useRef(false),
+    active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const cache = useQueryClient();
   const key = retentionKey(userId, workspaceId);
   const query = useQuery({
     queryKey: key,
     enabled: open,
     queryFn: ({ signal }) => fetchRetention(workspaceId, signal),
+    gcTime: 0,
+    retry: false,
   });
   const change = useMutation({
     mutationFn: (input: unknown) =>
-      commitRetention(cache, userId, workspaceId, input),
+      commitRetention(cache, userId, workspaceId, input, active),
+    gcTime: 0,
     retry: false,
     onSettled: () => {
       busy.current = false;
-      refresh.current?.focus();
+      if (active.current) refresh.current?.focus();
     },
   });
   return (
@@ -63,6 +75,7 @@ export function RetentionSettings({
               key={query.data.revision}
               settings={query.data}
               pending={change.isPending}
+              blocked={blocked}
               onSave={(input) => {
                 if (busy.current) return;
                 busy.current = true;
@@ -104,17 +117,24 @@ function RetentionForm({
   settings,
   pending,
   onSave,
+  blocked,
 }: {
   settings: Settings;
   pending: boolean;
   onSave: (input: unknown) => void;
+  blocked: boolean;
 }) {
   const [days, setDays] = useState<number>(settings.days);
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        if (pending || settings.role !== 'owner' || days === settings.days)
+        if (
+          pending ||
+          blocked ||
+          settings.role !== 'owner' ||
+          days === settings.days
+        )
           return;
         const data = new FormData(event.currentTarget);
         onSave({
@@ -124,7 +144,7 @@ function RetentionForm({
         });
       }}
     >
-      <fieldset disabled={settings.role !== 'owner' || pending}>
+      <fieldset disabled={settings.role !== 'owner' || pending || blocked}>
         <legend>Workspace retention policy</legend>
         <label htmlFor="retention-days">Keep submitted responses for</label>
         <select
@@ -152,6 +172,12 @@ function RetentionForm({
       </fieldset>
       {settings.role !== 'owner' && (
         <p>Only the workspace owner can change this policy.</p>
+      )}
+      {blocked && (
+        <p>
+          Policy changes are unavailable while workspace deletion is pending or
+          its status cannot be confirmed. Use the workspace data controls below.
+        </p>
       )}
       <p className="retention-note">
         Saved policy: {settings.days} days. Deletions run in scheduled batches.
