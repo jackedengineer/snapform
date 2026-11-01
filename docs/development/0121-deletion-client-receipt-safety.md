@@ -14,7 +14,7 @@ and after cancelling the exact user/workspace/kind/target query, then caches the
 server receipt. Unrelated reads are preserved. Read-only review confirmed both
 corrections. No optimistic deletion status or new dependency.
 
-All eight feature tests pass (three HTTP-contract tests, two native-markup tests,
-three QueryClient lifecycle tests). The expanded suite passes 248 core/UI tests
-with the existing coverage thresholds unchanged. Browser journey and final
-artifact evidence accompany the separate UI slice in 0122.
+All six HTTP-contract/QueryClient tests pass. The native confirmation form uses
+required inputs, the shared exact-match predicate and browser validity/focus
+handling; it has no form-state dependency. Its browser journey and the combined
+feature's 248 tests/final artifacts accompany the separate UI slice in 0122.
