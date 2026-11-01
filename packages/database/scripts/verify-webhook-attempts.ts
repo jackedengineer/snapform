@@ -19,6 +19,7 @@ import {
   recordWebhookAttempt,
 } from '../src/webhook-attempts.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
+import { scheduleDeletion, cancelDeletion } from '../src/deletion.ts';
 if (!process.env.DATABASE_MIGRATION_URL)
   throw Error('Local operator configuration required');
 const { db, close } = await openDatabase(process.env.DATABASE_MIGRATION_URL),
@@ -31,6 +32,16 @@ let stage = 'setup',
 try {
   try {
     await db.transaction(async (tx) => {
+      if (process.argv.includes('--candidate')) {
+        const migration = await readFile(
+          new URL(
+            '../migrations/0037_delivery-deletion-fences.sql',
+            import.meta.url,
+          ),
+          'utf8',
+        );
+        await tx.execute(sql.raw(migration));
+      }
       await tx.insert(user).values({
         id: actor,
         name: 'Webhook attempts QA',
@@ -195,6 +206,7 @@ try {
         assert(row);
         return {
           id: row.id,
+          responseId: id,
           body: createWebhookPayload(
             {
               id: row.id,
@@ -379,7 +391,68 @@ try {
         'Expired previews require regeneration',
       );
 
-      stage = 'settings fence in-flight outcomes';
+      stage = 'pending deletion fences';
+      const pending = await submit();
+      const [pendingClaim] = await claim(pending.id);
+      assert(pendingClaim);
+      assert(await prepare(pendingClaim, pending.body));
+      const request = await scheduleDeletion(
+        tx,
+        actor,
+        workspace.id,
+        { kind: 'response', targetId: pending.responseId },
+        {
+          requestId: crypto.randomUUID(),
+          confirmation: 'DELETE',
+          acknowledgeDeletion: true,
+        },
+      );
+      // Stale work must not regain authority merely because it has a live lease.
+      await tx.execute(
+        sql`update public.webhook_delivery set status='sending',reason=NULL,lease_token=${pendingClaim.lease_token}::uuid,lease_until=clock_timestamp()+interval '2 minutes' where id=${pending.id}::uuid`,
+      );
+      assert.equal(
+        await record(pendingClaim, 'acknowledged', 204, null),
+        false,
+        'pending target blocks stale completion',
+      );
+      assert.equal(
+        await prepare(pendingClaim, null),
+        false,
+        'pending target blocks provider preparation',
+      );
+      await tx.execute(
+        sql`update public.webhook_delivery set status='needs_action',reason='receiver-rejected',lease_token=NULL,lease_until=NULL where id=${pending.id}::uuid`,
+      );
+      assert.equal(
+        await queue(pending.id, 1, false),
+        false,
+        'manual repair cannot revive a pending target',
+      );
+      await cancelDeletion(tx, actor, workspace.id, request.id, {
+        expectedRevision: 1,
+      });
+      assert.equal(
+        await queue(pending.id, 1, false),
+        true,
+        'explicit repair works again after cancellation',
+      );
+      const [purgingClaim] = await claim(pending.id);
+      assert(purgingClaim);
+      await tx.execute(
+        sql`insert into public.purge_intent(workspace_id,kind,target_id,reason) values(${workspace.id}::uuid,'response',${pending.responseId}::uuid,'expired')`,
+      );
+      assert.equal(
+        await record(purgingClaim, 'acknowledged', 204, null),
+        false,
+        'durable purge intent blocks completion',
+      );
+      assert.equal(
+        await prepare(purgingClaim, null),
+        false,
+        'durable purge intent blocks preparation',
+      );
+      stage = 'changed configuration';
       const changed = await submit();
 
       const [lease] = await claim(changed.id);
