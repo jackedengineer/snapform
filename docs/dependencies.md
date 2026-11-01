@@ -24,7 +24,7 @@ The web auxiliary Express Worker bundle is about 313.7 KiB gzip; the standalone 
 
 ## Development-only tools
 
-Cloudflare Vite plugin 1.65.0, Cloudflare Vitest plugin 1.4.9, Vite 8.3.5, React Vite plugin 6.1.2, Wrangler 4.154.0, Vitest/coverage-v8 5.0.5, ESLint 10.13.0, @eslint/js 10.0.1, typescript-eslint 8.72.1, globals 17.4.0 Prettier 3.9.10 and the pinned @types packages are tooling. Prettier provides consistent reviewable formatting and a CI check; it adds no application runtime code. Their package licenses are MIT, except Wrangler (MIT OR Apache-2.0). TypeScript 6.0.3 is Apache-2.0. TypeScript 7 was rejected because the lint parser does not support it; no peer override was used.
+Cloudflare Vite plugin 1.66.0, Cloudflare Vitest plugin 1.4.9, Vite 8.3.5, React Vite plugin 6.1.2, Wrangler 4.154.0, Vitest/coverage-v8 5.0.5, ESLint 10.13.0, @eslint/js 10.0.1, typescript-eslint 8.72.1, globals 17.4.0 Prettier 3.9.10 and the pinned @types packages are tooling. Prettier provides consistent reviewable formatting and a CI check; it adds no application runtime code. Their package licenses are MIT, except Wrangler (MIT OR Apache-2.0). TypeScript 6.0.3 is Apache-2.0. TypeScript 7 was rejected because the lint parser does not support it; no peer override was used.
 
 The official test plugin requires Vitest 4.1+ or 5; 5.0.5 is pinned. Local Workers compatibility date is 2026-10-23, supported by both pinned runtime toolchains. Generated runtime declarations are reproducible and ignored; generated route types are committed. `pnpm audit --prod --audit-level high` is a blocking CI check; an audit is time-specific evidence, not a permanent assurance. Transitive notices remain in package distributions/lockfile; review them before distributing a release.
 
