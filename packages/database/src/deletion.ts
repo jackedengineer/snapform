@@ -6,7 +6,10 @@ import {
   deletionRequestSchema,
   deletionTargetSchema,
 } from '@snapform/contracts/deletion';
-import type { DeletionTarget } from '@snapform/contracts/deletion';
+import type {
+  DeletionTarget,
+  DeletionRequest,
+} from '@snapform/contracts/deletion';
 import type { Database, Transaction } from './client.ts';
 const errors = new Set([
   'WORKSPACE_NOT_FOUND',
@@ -15,6 +18,7 @@ const errors = new Set([
   'RESPONSE_NOT_FOUND',
   'DELETION_CONFLICT',
   'INVALID_DELETION_CONFIRMATION',
+  'INVALID_DELETION_TARGET',
   'WORKSPACE_DELETION_PENDING',
 ]);
 const dates = new Set(['requestedAt', 'notBefore', 'cancelledAt', 'deletedAt']);
@@ -102,4 +106,24 @@ export async function cancelDeletion(
     workspaceId,
     sql`select public.cancel_deletion(${workspaceId}::uuid,${id}::uuid,${input.expectedRevision}) as receipt`,
   );
+}
+export async function findDeletion(
+  db: Database | Transaction,
+  actor: string,
+  workspaceId: string,
+  target: DeletionTarget,
+): Promise<DeletionRequest | null> {
+  const checked = deletionTargetSchema.parse(target);
+  try {
+    return await receipt(
+      db,
+      actor,
+      workspaceId,
+      sql`select public.find_deletion(${workspaceId}::uuid,${checked.kind},${checked.targetId}::uuid) as receipt`,
+    );
+  } catch (error) {
+    if (error instanceof Error && error.message === 'DELETION_NOT_FOUND')
+      return null;
+    throw error;
+  }
 }

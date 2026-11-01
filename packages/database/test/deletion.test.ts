@@ -11,6 +11,7 @@ import {
   scheduleDeletion,
   readDeletion,
   cancelDeletion,
+  findDeletion,
 } from '../src/deletion.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
 it('schedules explicit owner deletion, keeps a cancellation window and never revives cancelled request identities', async () => {
@@ -57,6 +58,19 @@ it('schedules explicit owner deletion, keeps a cancellation window and never rev
             confirmation: 'DELETE',
             acknowledgeDeletion: true as const,
           };
+        expect(await findDeletion(tx, owner, workspaceId, target)).toBeNull();
+        await expect(
+          findDeletion(tx, editor, workspaceId, target),
+        ).rejects.toThrow('FORBIDDEN');
+        await expect(
+          findDeletion(tx, owner, crypto.randomUUID(), target),
+        ).rejects.toThrow('WORKSPACE_NOT_FOUND');
+        await expect(
+          findDeletion(tx, editor, workspaceId, {
+            kind: 'workspace',
+            targetId: crypto.randomUUID(),
+          }),
+        ).rejects.toThrow('INVALID_DELETION_TARGET');
         await expect(
           scheduleDeletion(tx, editor, workspaceId, target, input),
         ).rejects.toThrow('FORBIDDEN');
@@ -96,6 +110,12 @@ it('schedules explicit owner deletion, keeps a cancellation window and never rev
           revision: 1,
           targetId: responseId,
         });
+        expect(await findDeletion(tx, owner, workspaceId, target)).toEqual(
+          first,
+        );
+        await expect(
+          findDeletion(tx, editor, workspaceId, target),
+        ).rejects.toThrow('FORBIDDEN');
         expect(
           Date.parse(first.notBefore) - Date.parse(first.requestedAt),
         ).toBe(86400000);
@@ -126,6 +146,9 @@ it('schedules explicit owner deletion, keeps a cancellation window and never rev
           { expectedRevision: 1 },
         );
         expect(cancelled).toMatchObject({ state: 'cancelled', revision: 2 });
+        expect(await findDeletion(tx, owner, workspaceId, target)).toEqual(
+          cancelled,
+        );
         expect(
           await cancelDeletion(tx, owner, workspaceId, first.id, {
             expectedRevision: 1,
@@ -183,6 +206,12 @@ it('schedules explicit owner deletion, keeps a cancellation window and never rev
           requestId: crypto.randomUUID(),
         });
         expect(next.state).toBe('scheduled');
+        expect(await findDeletion(tx, owner, workspaceId, target)).toEqual(
+          next,
+        );
+        expect(
+          await findDeletion(tx, owner, workspaceId, workspaceTarget),
+        ).toMatchObject({ state: 'cancelled' });
         const permissions = await tx.execute(
           sql`select has_table_privilege(current_user,'public.deletion_request','SELECT') as direct_read,has_table_privilege(current_user,'public.deletion_request','UPDATE') as direct_write,has_function_privilege(current_user,'public.pending_workspace_deletion(uuid)','EXECUTE') as unscoped_status,has_function_privilege('snapform_jobs','public.schedule_deletion(uuid,uuid,text,uuid,text,boolean)','EXECUTE') as jobs_schedule`,
         );
