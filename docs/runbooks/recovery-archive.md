@@ -91,6 +91,19 @@ permanent local test database.
 Run `node --env-file=.env.backup scripts/restore-postgres.mjs PATH_TO_SIGNED_MANIFEST`
 for an isolated drill of an eligible private copy. The runner always removes its
 container and authenticated dump on completion, error or handled termination.
-The manual backup workflow now verifies a fresh snapshot by restoring it after
-R2 byte verification. It still reports purge replay as unexercised. See evidence
-0103; do not reopen restored traffic on snapshot-only verification.
+The manual backup workflow now verifies a fresh snapshot after R2 byte
+verification, checks/updates its migration prefix, replays the authenticated
+remote/SQL union and quarantines restored auth/collector capabilities and queued
+deliveries (evidence 0117–0118). CI uses its separate Object Read only ledger key;
+missing durable counterparts for pending SQL intents stop the drill. It cannot
+repair the ledger. The basic snapshot-only CLI above still reports purge replay
+as unexercised. Neither route authorizes reopening traffic.
+
+For an authoritative restore, stop collection, API writes and all jobs before
+listing the ledger. A concurrent UUID-key listing can miss inserts before its
+cursor. Authenticate every retained object, preserve pending SQL intents even
+when older than the object lifetime, and persist any missing durable counterpart
+with a separately authorized operator write before finalization. Do not give the
+CI reader write access to make a drill pass. Quarantine invalidates old sessions,
+verification and OAuth tokens, collector capabilities and unfinished deliveries;
+users must sign in again. Password hashes and unrelated responses are preserved.

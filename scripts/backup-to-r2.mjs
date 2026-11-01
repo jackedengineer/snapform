@@ -9,6 +9,9 @@ import {
 } from './backup-r2.mjs';
 import { archiveKey } from './recovery-archive.mjs';
 import { verifyIsolatedRestore } from './restore-postgres.mjs';
+import { readR2PurgeLedger, r2PurgeReadConfig } from './r2-purge-reader.mjs';
+import { verifyRestoredLedger } from './restore-ledger.mjs';
+import { validatePurgeLedgerSecret } from '../packages/contracts/src/purge.ts';
 
 export async function backupToR2(environment) {
   for (const field of [
@@ -17,6 +20,9 @@ export async function backupToR2(environment) {
     'CLOUDFLARE_ACCOUNT_ID',
     'R2_BACKUP_ACCESS_KEY_ID',
     'R2_BACKUP_SECRET_ACCESS_KEY',
+    'R2_PURGE_ACCESS_KEY_ID',
+    'R2_PURGE_SECRET_ACCESS_KEY',
+    'PURGE_LEDGER_KEY',
   ])
     if (!environment[field]) throw Error('BACKUP_CONFIGURATION_REQUIRED');
   if (new URL(environment.DATABASE_BACKUP_URL).username !== 'snapform_backup')
@@ -27,6 +33,13 @@ export async function backupToR2(environment) {
     secretAccessKey: environment.R2_BACKUP_SECRET_ACCESS_KEY,
   });
   archiveKey(environment.BACKUP_ENCRYPTION_KEY);
+  const ledgerSettings = {
+    accountId: environment.CLOUDFLARE_ACCOUNT_ID,
+    accessKeyId: environment.R2_PURGE_ACCESS_KEY_ID,
+    secretAccessKey: environment.R2_PURGE_SECRET_ACCESS_KEY,
+  };
+  r2PurgeReadConfig(ledgerSettings);
+  await validatePurgeLedgerSecret(environment.PURGE_LEDGER_KEY);
   const directory = await mkdtemp(join(tmpdir(), 'snapform-nightly-'));
   try {
     const local = await createRecoveryBackup({
@@ -44,13 +57,21 @@ export async function backupToR2(environment) {
       },
     );
     // R2's downloaded ciphertext has just matched this signed local pair exactly.
+    let ledger;
     const restore = await verifyIsolatedRestore({
       manifestPath: join(directory, local.file + '.json'),
       secret: environment.BACKUP_ENCRYPTION_KEY,
       workDirectory: directory,
+      inspect: async ({ executeSql }) => {
+        ledger = await verifyRestoredLedger({
+          executeSql,
+          objects: readR2PurgeLedger(ledgerSettings),
+          secret: environment.PURGE_LEDGER_KEY,
+        });
+      },
     });
     return {
-      restore,
+      restore: { ...restore, ...ledger },
       createdAt: remote.manifest.createdAt,
       encryptedBytes: remote.manifest.encryptedBytes,
       tableDataEntries: remote.manifest.tableDataEntries,
