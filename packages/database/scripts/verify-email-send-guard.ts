@@ -3,7 +3,10 @@ import { readFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
 import { openDatabase } from '../src/client.ts';
 import { seedResponses } from '../test/fixtures/forms.ts';
-import { configureEmailNotifications } from '../src/notification-settings.ts';
+import {
+  configureEmailNotifications,
+  retryOwnerEmail,
+} from '../src/notification-settings.ts';
 import { mutateIntake } from '../src/intake.ts';
 import { scheduleDeletion, cancelDeletion } from '../src/deletion.ts';
 
@@ -17,6 +20,16 @@ try {
     if (process.argv.includes('--candidate')) {
       const migration = await readFile(
         new URL('../migrations/0036_email-send-guard.sql', import.meta.url),
+        'utf8',
+      );
+      await tx.execute(sql.raw(migration));
+    }
+    if (process.argv.includes('--delivery-candidate')) {
+      const migration = await readFile(
+        new URL(
+          '../migrations/0037_delivery-deletion-fences.sql',
+          import.meta.url,
+        ),
         'utf8',
       );
       await tx.execute(sql.raw(migration));
@@ -115,6 +128,19 @@ try {
       false,
       'pending deletion checked independently of lease',
     );
+    await tx.execute(
+      sql`update public.response_email_delivery set status='needs_action',reason='configuration',lease_token=NULL,lease_until=NULL where id=${delivery.id}::uuid`,
+    );
+    await assert.rejects(
+      retryOwnerEmail(tx, f.actor, f.workspaceId, f.formId, {
+        deliveryId: delivery.id,
+        expectedAttempts: 0,
+      }),
+      /EMAIL_RETRY_CONFLICT/,
+      'manual retry cannot revive a pending response',
+    );
+    await lease();
+    assert.equal(await prepare(), false);
     await cancelDeletion(tx, f.actor, f.workspaceId, request.id, {
       expectedRevision: 1,
     });
