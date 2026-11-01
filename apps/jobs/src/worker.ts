@@ -29,6 +29,7 @@ import {
   claimOwnerDeletions,
   claimExpiredResponses,
   finalizeResponsePurge,
+  pruneDeletionMetadata,
   finalizeWorkspacePurge,
 } from '@snapform/database/purge';
 import type { Database } from '@snapform/database';
@@ -125,6 +126,16 @@ export default {
         );
         if (purge.claimed)
           console.log(JSON.stringify({ event: 'retention_purge', ...purge }));
+        if (environment.PURGE_ENABLED === '1' && !purge.failed) {
+          const metadata = await pruneDeletionMetadata(db);
+          if (metadata.requestsDeleted || metadata.intentsDeleted)
+            console.log(
+              JSON.stringify({
+                event: 'deletion_metadata_pruned',
+                ...metadata,
+              }),
+            );
+        }
         const result = await relayResponseEvents(environment.EVENTS, {
           claim: () => claimResponseEvents(db),
           record: (lease, queued) => recordResponseDispatch(db, lease, queued),

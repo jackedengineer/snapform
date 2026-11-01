@@ -13,6 +13,8 @@ it('reserves irreversible purge operations for Jobs and denies direct metadata a
       has_table_privilege(current_user,'public.purge_intent','SELECT') as app_read,
       has_table_privilege('snapform_jobs','public.purge_intent','UPDATE') as jobs_write,
       has_function_privilege('snapform_jobs','public.claim_expired_responses(integer,uuid)','EXECUTE') as jobs_claim,
+      has_function_privilege(current_user,'public.prune_deletion_metadata(integer)','EXECUTE') as app_prune,
+      has_function_privilege('snapform_jobs','public.prune_deletion_metadata(integer)','EXECUTE') as jobs_prune,
       has_function_privilege('snapform_jobs','public.finalize_response_purge(uuid)','EXECUTE') as jobs_finalize`)
       ).rows,
     ).toEqual([
@@ -22,6 +24,8 @@ it('reserves irreversible purge operations for Jobs and denies direct metadata a
         app_read: false,
         jobs_write: false,
         jobs_claim: true,
+        app_prune: false,
+        jobs_prune: true,
         jobs_finalize: true,
       },
     ]);
