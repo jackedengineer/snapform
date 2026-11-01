@@ -13,6 +13,9 @@ export const deletionInputSchema = z.strictObject({
 export const cancelDeletionSchema = z.strictObject({
   expectedRevision: z.int().min(1).max(2147483646),
 });
+export const scheduleDeletionSchema = deletionInputSchema.extend(
+  deletionTargetSchema.shape,
+);
 export const deletionRequestSchema = z
   .strictObject({
     id: identity,
