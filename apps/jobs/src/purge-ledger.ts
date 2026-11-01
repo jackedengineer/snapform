@@ -3,6 +3,7 @@ import {
   purgeBatchSchema,
   sealPurgeIntent,
   openPurgeIntent,
+  validatePurgeLedgerSecret,
 } from '@snapform/contracts/purge';
 import type { PurgeIntent } from '@snapform/contracts/purge';
 
@@ -55,4 +56,29 @@ export async function runPurgeBatch(operations: {
     }
   }
   return { claimed: intents.length, completed, failed };
+}
+export async function runScheduledPurge(
+  configuration: { enabled?: string; secret?: string; bucket?: R2Bucket },
+  operations: {
+    owner: () => Promise<unknown>;
+    expired: () => Promise<unknown>;
+    finalize: (intent: PurgeIntent) => Promise<boolean>;
+  },
+) {
+  const result = { claimed: 0, completed: 0, failed: 0 };
+  if (configuration.enabled !== '1') return result;
+  const { bucket, secret = '' } = configuration;
+  if (!bucket) throw Error('PURGE_CONFIGURATION_REQUIRED');
+  await validatePurgeLedgerSecret(secret);
+  for (const claim of [operations.owner, operations.expired]) {
+    const batch = await runPurgeBatch({
+      claim,
+      persist: (intent) => persistPurgeIntent(bucket, secret, intent),
+      finalize: operations.finalize,
+    });
+    result.claimed += batch.claimed;
+    result.completed += batch.completed;
+    result.failed += batch.failed;
+  }
+  return result;
 }

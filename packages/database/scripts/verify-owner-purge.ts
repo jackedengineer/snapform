@@ -7,6 +7,7 @@ import { createForm } from '../src/forms.ts';
 import { publishForm } from '../src/publication.ts';
 import { startIntake } from '../src/intake.ts';
 import { scheduleDeletion, cancelDeletion } from '../src/deletion.ts';
+import { claimOwnerDeletions, finalizeWorkspacePurge } from '../src/purge.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
 if (!process.env.DATABASE_MIGRATION_URL)
   throw Error('Private operator configuration required');
@@ -80,6 +81,20 @@ try {
       assert.equal(first[0]?.kind, 'response');
       assert.equal(first[0]?.reason, 'owner');
       assert.equal(first[0]?.target_id, responseId);
+      assert.deepEqual(await claimOwnerDeletions(tx, workspaceId), [
+        {
+          id: first[0]?.id,
+          workspaceId,
+          kind: 'response',
+          targetId: responseId,
+          reason: 'owner',
+          createdAt: new Date(
+            first[0]?.created_at instanceof Date
+              ? first[0].created_at.getTime()
+              : String(first[0]?.created_at),
+          ).toISOString(),
+        },
+      ]);
       assert.deepEqual(
         (
           await tx.execute(
@@ -148,6 +163,8 @@ try {
       ).rows;
       assert.equal(claimed.length, 1);
       assert.equal(claimed[0]?.kind, 'workspace');
+      const [workspaceIntent] = await claimOwnerDeletions(tx, workspaceId);
+      assert(workspaceIntent);
       // Calling finalization here simulates a prior durable ledger acknowledgement.
       stage = 'finalize';
       for (let repeat = 0; repeat < 2; repeat++)
@@ -159,6 +176,7 @@ try {
           ).rows,
           [{ done: true }],
         );
+      assert.equal(await finalizeWorkspacePurge(tx, workspaceIntent), true);
       assert.deepEqual(
         (
           await tx.execute(
