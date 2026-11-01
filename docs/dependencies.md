@@ -4,15 +4,15 @@ Only packages needed by an implemented slice are installed. Exact versions and t
 
 ## Installed runtime
 
-| Package | Exact version | Purpose and native alternative |
-|---|---|---|
-| React / react-dom | 19.3.1 / 19.3.1 | Chosen UI renderer and hydration; handwritten DOM state would conflict with the selected frontend framework |
-| @tanstack/react-start | 1.169.4 | Selected SSR/build framework on Workers; avoids owning SSR/hydration plumbing |
-| @tanstack/react-router | 1.170.46 | Typed routes and document/error boundaries; native navigation remains used for full reloads |
-| @tanstack/react-query | 5.105.0 | Remote mutation lifecycle, no retries on commands, no persisted mutation cache; native fetch performs transport |
-| @tanstack/react-form | 1.33.5 | Required TanStack direction; field state, errors and shared-schema validation; controls remain native HTML |
-| express | 5.3.0 | User-selected API middleware/router, only in the Worker bundle; not sent to browsers |
-| zod | 4.6.7 | One shared runtime boundary for browser/API inputs and explicit review output; avoids inconsistent handwritten validation |
+| Package                | Exact version   | Purpose and native alternative                                                                                            |
+| ---------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| React / react-dom      | 19.3.1 / 19.3.1 | Chosen UI renderer and hydration; handwritten DOM state would conflict with the selected frontend framework               |
+| @tanstack/react-start  | 1.169.4         | Selected SSR/build framework on Workers; avoids owning SSR/hydration plumbing                                             |
+| @tanstack/react-router | 1.170.46        | Typed routes and document/error boundaries; native navigation remains used for full reloads                               |
+| @tanstack/react-query  | 5.105.0         | Remote mutation lifecycle, no retries on commands, no persisted mutation cache; native fetch performs transport           |
+| @tanstack/react-form   | 1.33.5          | Required TanStack direction; field state, errors and shared-schema validation; controls remain native HTML                |
+| express                | 5.3.0           | User-selected API middleware/router, only in the Worker bundle; not sent to browsers                                      |
+| zod                    | 4.6.7           | One shared runtime boundary for browser/API inputs and explicit review output; avoids inconsistent handwritten validation |
 
 No database/auth/payment/AI/storage SDK, CSS framework, component kit, animation, date, utility, HTTP-client or global-store package is installed in anticipation of future work. Better Auth, Drizzle and provider integrations are selected in the full specification and will be reviewed when their slice is built.
 
@@ -27,7 +27,6 @@ The web auxiliary Express Worker bundle is about 313.7 KiB gzip; the standalone 
 Cloudflare Vite plugin 1.65.0, Cloudflare Vitest plugin 1.4.9, Vite 8.3.5, React Vite plugin 6.1.2, Wrangler 4.154.0, Vitest/coverage-v8 5.0.5, ESLint 10.13.0, @eslint/js 10.0.1, typescript-eslint 8.72.1, globals 17.4.0 Prettier 3.9.10 and the pinned @types packages are tooling. Prettier provides consistent reviewable formatting and a CI check; it adds no application runtime code. Their package licenses are MIT, except Wrangler (MIT OR Apache-2.0). TypeScript 6.0.3 is Apache-2.0. TypeScript 7 was rejected because the lint parser does not support it; no peer override was used.
 
 The official test plugin requires Vitest 4.1+ or 5; 5.0.5 is pinned. Local Workers compatibility date is 2026-10-23, supported by both pinned runtime toolchains. Generated runtime declarations are reproducible and ignored; generated route types are committed. `pnpm audit --prod --audit-level high` is a blocking CI check; an audit is time-specific evidence, not a permanent assurance. Transitive notices remain in package distributions/lockfile; review them before distributing a release.
-
 
 ## Database/auth foundation additions
 
@@ -47,8 +46,8 @@ package graph changed; the lockfile adds workspace links only.
 
 ## Operator recovery tooling
 
-Recovery scripts use native Node streams, filesystem operations and AES-256-GCM;
-no npm package, S3 SDK or application runtime dependency is added. The absent
+Archive/transfer scripts use native Node streams, filesystem operations and AES-256-GCM;
+no S3 SDK or application runtime dependency is added. The absent
 system `pg_dump` is supplied by the already installed local Docker engine and
 its existing official PostgreSQL 18.6 Alpine image, pinned to digest
 `sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873`.
@@ -68,3 +67,17 @@ is installed and application bundle cost is zero. curl uses the permissive
 [curl license](https://curl.se/docs/copyright.html); CLI behavior follows its
 [official manual](https://curl.se/docs/manpage.html). GitHub runners provide the
 same command; a live scoped-key roundtrip remains required before automation.
+
+The R2 deletion-ledger reader uses `@rgrove/parse-xml` **5.0.0**, pinned as a
+development-only recovery-tool dependency. Its implemented purpose is parsing
+bounded S3 ListObjectsV2 XML, including opaque pagination tokens. Node 24.14 has
+no native `DOMParser`; a custom XML parser would require maintaining XML syntax,
+entity and malformed-document handling. The package has zero dependencies and
+uses the [ISC license](https://github.com/rgrove/parse-xml/blob/main/LICENSE).
+The selected Node distribution measures 47,174 bytes of JS (9,883 gzip across 15
+modules); installed package size including sources is 211,924 bytes. On this Mac,
+a fresh Node process imported it in 8.01 ms; parsing 1,000 listing entries took
+1.22 ms median across 25 samples. It is imported only by recovery scripts.
+Browser/API/Jobs bundle cost remains zero and is checked by the application build.
+Its [documented parser](https://github.com/rgrove/parse-xml) does not resolve external
+DTDs/entities; the reader also rejects DOCTYPE before parsing and bounds body size.
