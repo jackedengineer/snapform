@@ -361,3 +361,94 @@
     padding-inline: 16px;
   }
 }
+
+.form-starters {
+  margin: 32px 0 40px;
+}
+.starter-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.starter-heading h2,
+.forms-section-title {
+  font-size: 18px;
+  font-weight: 550;
+  letter-spacing: -0.4px;
+}
+.starter-heading p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin: 0;
+}
+.starter-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.starter-list button {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  background: white;
+  padding: 20px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  color: var(--text-primary);
+}
+.starter-list button:hover:not(:disabled) {
+  border-color: var(--action-primary);
+  background: #f8f9ff;
+}
+.starter-list button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.starter-list strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+.starter-list button > span:last-child {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.starter-number {
+  color: var(--action-primary);
+  font-size: 12px;
+  margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .workspace-data-settings {
+  margin-top: 40px;
+  padding: 20px 0;
+  border-top: 1px solid var(--border-default);
+}
+.workspace-data-settings > summary {
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+  font-size: 14px;
+}
+@media (max-width: 900px) {
+  .starter-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .starter-heading {
+    display: block;
+  }
+  .starter-heading p {
+    margin-top: 6px;
+  }
+  .starter-list button {
+    padding: 16px;
+  }
+  .starter-list {
+    gap: 8px;
+  }
+}
