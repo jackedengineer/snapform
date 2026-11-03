@@ -31,6 +31,7 @@ export function FormEditor({
   const query = useQuery({
     queryKey: ['draft', user.id, workspaceId, formId],
     queryFn: ({ signal }) => fetchForm(workspaceId, formId, signal),
+    staleTime: 1000,
     refetchOnWindowFocus: false,
   });
   if (query.isPending)

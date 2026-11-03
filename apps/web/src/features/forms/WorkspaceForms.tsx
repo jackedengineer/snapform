@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CreateForm } from '@snapform/contracts/draft';
 import { can } from '@snapform/contracts/workspace';
 import { useAccountUser } from '../auth/AccountLayout';
 import { fetchForms, createFormRequest, FormRequestError } from './api';
 import { newBlankDefinition } from './new-form';
+import { starters, newStarterDefinition, type StarterId } from './starters';
 import { RetentionSettings } from './RetentionSettings';
 import './retention.css';
 import {
@@ -17,6 +18,8 @@ const dates = new Intl.DateTimeFormat('en', { dateStyle: 'medium' });
 export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
   const user = useAccountUser(),
     navigate = useNavigate();
+  const cache = useQueryClient();
+  const [dataOpen, setDataOpen] = useState(false);
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
   const cursor = cursors.at(-1);
   const query = useQuery({
@@ -46,15 +49,18 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
   const mutation = useMutation({
     mutationFn: (input: CreateForm) => createFormRequest(workspaceId, input),
   });
-  async function create() {
+  async function create(starter?: StarterId) {
     if (busy.current || blocksWrites) return;
     busy.current = true;
     pending.current ||= {
       id: crypto.randomUUID(),
-      definition: newBlankDefinition(),
+      definition: starter
+        ? newStarterDefinition(starter)
+        : newBlankDefinition(),
     };
     try {
       const form = await mutation.mutateAsync(pending.current);
+      cache.setQueryData(['draft', user.id, workspaceId, form.id], form);
       await navigate({
         to: '/workspaces/$workspaceId/forms/$formId',
         params: { workspaceId, formId: form.id },
@@ -89,16 +95,18 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
               <p className="eyebrow">{query.data.workspace.role} WORKSPACE</p>
               <h1>{query.data.workspace.name}</h1>
               <p className="intro-copy">
-                Thoughtful questions. Useful answers.
+                Start with a question. Turn the answers into your next step.
               </p>
             </div>
             {can(query.data.workspace.role, 'forms.write') && (
               <button
                 className="button primary compact-button"
-                disabled={mutation.isPending || blocksWrites}
+                disabled={
+                  mutation.isPending || mutation.isError || blocksWrites
+                }
                 onClick={() => void create()}
               >
-                {mutation.isPending ? 'Creating…' : 'New form'}
+                {mutation.isPending ? 'Creating…' : 'Blank form'}
                 <span aria-hidden="true">+</span>
               </button>
             )}
@@ -111,9 +119,43 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
           )}
           {mutation.isError && (
             <p role="alert" className="request-error">
-              {mutation.error.message}
+              {mutation.error.message}{' '}
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => void create()}
+              >
+                Retry creating the same form
+              </button>
             </p>
           )}
+          {can(query.data.workspace.role, 'forms.write') && (
+            <section className="form-starters" aria-labelledby="starter-title">
+              <div className="starter-heading">
+                <h2 id="starter-title">A head start, if you need one.</h2>
+                <p>Useful questions. All yours to change.</p>
+              </div>
+              <div className="starter-list">
+                {starters.map((starter, index) => (
+                  <button
+                    type="button"
+                    key={starter.id}
+                    disabled={
+                      mutation.isPending || mutation.isError || blocksWrites
+                    }
+                    onClick={() => void create(starter.id)}
+                  >
+                    <span className="starter-number" aria-hidden="true">
+                      0{index + 1} ↗
+                    </span>
+                    <strong>{starter.title}</strong>
+                    <span>{starter.description}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+          <h2 className="forms-section-title">Your forms</h2>
           {query.data.forms.length === 0 ? (
             <div className="workspace-empty">
               <span className="empty-symbol" aria-hidden="true">
@@ -141,7 +183,7 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
                       <h2>{form.title.trim() || 'Untitled form'}</h2>
                       <p>Edited {dates.format(new Date(form.updatedAt))}</p>
                     </div>
-                    <span className="draft-badge">Draft</span>
+                    <span className="draft-badge">Edit form</span>
                     <span aria-hidden="true">↗</span>
                   </Link>
                 </li>
@@ -172,30 +214,32 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
               </button>
             </nav>
           )}
-          <section
+          <details
             className="workspace-data-settings"
-            aria-labelledby="workspace-data-title"
+            onToggle={(event) => setDataOpen(event.currentTarget.open)}
           >
-            <h2 id="workspace-data-title" tabIndex={-1}>
-              Data and privacy
-            </h2>
-            <RetentionSettings
-              key={`${user.id}:${workspaceId}`}
-              workspaceId={workspaceId}
-              userId={user.id}
-              blocked={blocksWrites}
-            />
-            {query.data.workspace.role === 'owner' && (
-              <DeletionControl
-                key={`workspace-deletion:${workspaceId}`}
-                userId={user.id}
-                workspaceId={workspaceId}
-                target={{ kind: 'workspace', targetId: workspaceId }}
-                confirmation={query.data.workspace.name}
-                role={query.data.workspace.role}
-              />
+            <summary id="workspace-data-title">Data and privacy</summary>
+            {dataOpen && (
+              <>
+                <RetentionSettings
+                  key={`${user.id}:${workspaceId}`}
+                  workspaceId={workspaceId}
+                  userId={user.id}
+                  blocked={blocksWrites}
+                />
+                {query.data.workspace.role === 'owner' && (
+                  <DeletionControl
+                    key={`workspace-deletion:${workspaceId}`}
+                    userId={user.id}
+                    workspaceId={workspaceId}
+                    target={{ kind: 'workspace', targetId: workspaceId }}
+                    confirmation={query.data.workspace.name}
+                    role={query.data.workspace.role}
+                  />
+                )}
+              </>
             )}
-          </section>
+          </details>
         </>
       )}
     </div>
