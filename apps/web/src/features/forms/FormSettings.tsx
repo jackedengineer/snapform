@@ -27,7 +27,7 @@ export function FormSettings({
     });
   }
   return (
-    <details className="page-controls form-settings">
+    <details className="page-controls form-settings" open>
       <summary>Form settings & completion</summary>
       <div className="field">
         <label htmlFor="form-description">Form description</label>
