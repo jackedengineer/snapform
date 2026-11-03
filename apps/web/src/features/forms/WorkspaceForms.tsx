@@ -111,6 +111,22 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
               </button>
             )}
           </div>
+          {query.data.workspace.role === 'owner' &&
+            deletion.isError &&
+            !dataOpen && (
+              <p role="alert" className="request-error">
+                We couldn’t confirm this workspace is ready for new forms. Your
+                existing forms are still available.{' '}
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={deletion.isFetching}
+                  onClick={() => void deletion.refetch()}
+                >
+                  Retry workspace check
+                </button>
+              </p>
+            )}
           {deletionPending && (
             <p role="status" className="deletion-status">
               Workspace deletion is scheduled. Collection and changes are
