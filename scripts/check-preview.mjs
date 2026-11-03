@@ -5,7 +5,9 @@ const response = await fetch(base);
 assert.equal(response.status, 200);
 assert.match(response.headers.get('cache-control') || '', /no-transform/);
 const html = await response.text();
-assert.match(html, /Better questions/);
+assert.match(html, /A better<br\s*\/?>first <em>hello\.<\/em>/);
+assert.match(html, /aria-label="Interactive example form"/);
+assert.match(html, /An interactive example\. Nothing is collected\./);
 for (const [path, title] of [
   ['/support', 'A little help, a clear next step.'],
   ['/privacy', 'Your information, explained.'],

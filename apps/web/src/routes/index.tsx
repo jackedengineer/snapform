@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { PublicLinks } from '../features/info/PublicInfo';
+import { LandingExample } from '../features/intake/LandingExample';
 export const Route = createFileRoute('/')({
   component: Home,
   head: () => ({
@@ -31,14 +32,14 @@ function Home() {
         <section className="landing-hero">
           <p className="intake-eyebrow">GOOD WORK STARTS WITH UNDERSTANDING</p>
           <h1>
-            Better questions.
+            A better
             <br />
-            Better beginnings<span>.</span>
+            first <em>hello.</em>
           </h1>
           <p>
-            Give every new client a thoughtful place to start. Create a form
-            that asks what matters, keeps the context and makes the next
-            conversation easier.
+            Turn a blank page into a thoughtful form. Start with useful
+            questions, make them yours and share a link. A clearer first
+            conversation starts here.
           </p>
           <Link to="/signup" className="button primary">
             Create your first form <span aria-hidden="true">↗</span>
@@ -47,31 +48,7 @@ function Home() {
             For agencies, coaches, consultants and growing teams.
           </p>
         </section>
-        <aside className="landing-example" aria-label="Example project enquiry">
-          <span className="landing-example-label">
-            A LITTLE CLARITY GOES A LONG WAY
-          </span>
-          <div className="landing-example-card">
-            <span className="intake-eyebrow">YOUR NEXT CHAPTER</span>
-            <h2>
-              What can we
-              <br />
-              help you with?
-            </h2>
-            <div className="landing-example-option">
-              <span aria-hidden="true">○</span> A new website
-            </div>
-            <div className="landing-example-option selected">
-              <span aria-hidden="true">●</span> A clearer direction{' '}
-              <span aria-hidden="true">↗</span>
-            </div>
-            <div className="landing-example-option">
-              <span aria-hidden="true">○</span> Something else entirely
-            </div>
-            <p>One good question at a time.</p>
-          </div>
-          <span className="landing-example-note">Your pace. Your words.</span>
-        </aside>
+        <LandingExample />
       </main>
       <section
         className="landing-principles"
