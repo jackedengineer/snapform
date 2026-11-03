@@ -60,9 +60,9 @@ export function AccountLayout() {
     return () => channel.close();
   }, [queryClient, navigate]);
   return (
-    <>
+    <div className="app-shell">
       <header className="topbar">
-        <Link className="wordmark" to="/" aria-label="Snapform home">
+        <Link className="wordmark" to="/app" aria-label="Snapform workspaces">
           <span className="brand-symbol" aria-hidden="true">
             s
           </span>
@@ -121,6 +121,6 @@ export function AccountLayout() {
           </p>
         )}
       </main>
-    </>
+    </div>
   );
 }

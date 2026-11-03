@@ -19,6 +19,7 @@ import { PageControls } from './PageControls';
 import { FormSettings } from './FormSettings';
 import { RuleControls } from './RuleControls';
 import { moveBlockToPage } from './pages';
+import { insertQuestion } from './insert-question';
 export function FormEditor({
   workspaceId,
   formId,
@@ -71,7 +72,8 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   const [activePageId, setActivePageId] = useState(
     snapshot.definition.pages[0].id,
   );
-  const [type, setType] = useState<Block['type']>('short-text');
+  const [panel, setPanel] = useState<'build' | 'settings' | 'share'>('build');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false),
     [loadError, setLoadError] = useState('');
   const [backup, setBackup] = useState<typeof snapshot.definition | null>(null);
@@ -108,7 +110,6 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   const selectedIndex =
     selectedPage?.blocks.findIndex((item) => item.id === selected) ?? -1;
   const answerCount = blocks.filter((item) => 'required' in item).length;
-  const contentType = type === 'heading' || type === 'help';
 
   function update(block: Block) {
     form.setFieldValue('pages', (pages) =>
@@ -120,15 +121,16 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
       })),
     );
   }
-  function add() {
+  function add(type: Block['type']) {
     const next = newBlock(type);
-    form.setFieldValue('pages', (pages) =>
-      pages.map((page) =>
-        page.id === activePage.id
-          ? { ...page, blocks: [...page.blocks, next] }
-          : page,
-      ),
+    const updated = insertQuestion(
+      { ...form.state.values, rules },
+      activePage.id,
+      selected,
+      next,
     );
+    if (!updated) return;
+    form.setFieldValue('pages', updated.pages);
     setSelected(next.id);
   }
   function move(direction: number) {
@@ -155,14 +157,14 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   function duplicate() {
     if (!block) return;
     const copy = duplicateBlock(block);
-    form.setFieldValue('pages', (pages) =>
-      pages.map((page) => ({
-        ...page,
-        blocks: page.blocks.flatMap((item) =>
-          item.id === block.id ? [item, copy] : [item],
-        ),
-      })),
+    const updated = insertQuestion(
+      { ...form.state.values, rules },
+      activePage.id,
+      selected,
+      copy,
     );
+    if (!updated) return;
+    form.setFieldValue('pages', updated.pages);
     setSelected(copy.id);
   }
   async function loadSaved() {
@@ -220,14 +222,14 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
       <fieldset disabled={publishing || loading || (editable && !ready)}>
         <div className="editor-header">
           <div>
-            <p className="eyebrow">FORM DRAFT</p>
+            <p className="editor-context">Your form studio</p>
             <form.Field name="title">
               {(field) => (
                 <textarea
                   className="form-title-input"
                   aria-label="Form title"
                   placeholder="Untitled form"
-                  rows={2}
+                  rows={1}
                   maxLength={120}
                   readOnly={!editable}
                   value={field.state.value}
@@ -282,221 +284,262 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
             onReload={() => void loadSaved()}
           />
         )}
-        <PublicationControls
-          workspaceId={snapshot.workspaceId}
-          formId={snapshot.id}
-          editable={editable && ready && !conflict && status !== 'blocked'}
-          revision={revision}
-          dirty={dirty}
-          onBusy={setPublishing}
-          blocked={
-            !compilation.ok
-              ? 'Fix the form’s validation issues before publishing.'
-              : blocks.some((block) => block.type === 'file')
-                ? 'File collection is not ready. Remove file questions before sharing this form.'
-                : ''
-          }
-          prepare={() =>
-            preparePublication(
-              { ...form.state.values, rules },
-              autosave.flush,
-              () => fetchForm(snapshot.workspaceId, snapshot.id),
-            )
-          }
-        />
-        <FormSettings
-          definition={definition}
-          editable={editable}
-          onChange={(settings) => {
-            form.setFieldValue('description', settings.description);
-            form.setFieldValue('presentation', settings.presentation);
-            form.setFieldValue('endings', settings.endings);
-            form.setFieldValue('defaultEndingId', settings.defaultEndingId);
-          }}
-        />
-        <RuleControls
-          definition={definition}
-          editable={editable}
-          issues={compilation.ok ? [] : compilation.issues}
-          onChange={setRules}
-        />
-        <PageControls
-          definition={definition}
-          pageId={activePage.id}
-          editable={editable}
-          onChange={(pages) => form.setFieldValue('pages', pages)}
-          onSelect={selectPage}
-        />
-        <div className="editor-grid">
-          <aside className="form-outline" aria-label="Form outline">
-            <div className="outline-heading">
-              <h2>Your questions</h2>
-              <span>{blocks.length}</span>
-            </div>
-            {definition.pages.map((page) => (
-              <div key={page.id}>
-                <h3>
-                  <button
-                    className="page-name-button"
-                    type="button"
-                    aria-current={
-                      activePage.id === page.id ? 'true' : undefined
-                    }
-                    onClick={() => selectPage(page.id)}
-                  >
-                    {page.title || 'Untitled page'}
-                  </button>
-                </h3>
-                <ol>
-                  {page.blocks.map((item, index) => (
-                    <li key={item.id}>
-                      <button
-                        id={`question-${item.id}`}
-                        type="button"
-                        aria-pressed={selected === item.id}
-                        onClick={() => {
-                          setActivePageId(page.id);
-                          setSelected(item.id);
-                        }}
-                      >
-                        <span>{index + 1}</span>
-                        <span>{blockCaption(item)}</span>
-                        <small>{blockNames[item.type]}</small>
-                      </button>
-                    </li>
-                  ))}
-                </ol>
+        <nav className="editor-navigation" aria-label="Editor views">
+          {(['build', 'settings', 'share'] as const).map((view) => (
+            <button
+              key={view}
+              type="button"
+              aria-current={panel === view ? 'page' : undefined}
+              onClick={() => setPanel(view)}
+            >
+              {
+                {
+                  build: 'Build',
+                  settings: 'Settings',
+                  share: 'Publish & share',
+                }[view]
+              }
+            </button>
+          ))}
+        </nav>
+        <div hidden={panel !== 'share'}>
+          <PublicationControls
+            expanded={panel === 'share'}
+            workspaceId={snapshot.workspaceId}
+            formId={snapshot.id}
+            editable={editable && ready && !conflict && status !== 'blocked'}
+            revision={revision}
+            dirty={dirty}
+            onBusy={setPublishing}
+            blocked={
+              !compilation.ok
+                ? 'Fix the form’s validation issues before publishing.'
+                : blocks.some((block) => block.type === 'file')
+                  ? 'File collection is not ready. Remove file questions before sharing this form.'
+                  : ''
+            }
+            prepare={() =>
+              preparePublication(
+                { ...form.state.values, rules },
+                autosave.flush,
+                () => fetchForm(snapshot.workspaceId, snapshot.id),
+              )
+            }
+          />
+        </div>
+        <div hidden={panel !== 'settings'}>
+          <FormSettings
+            definition={definition}
+            editable={editable}
+            onChange={(settings) => {
+              form.setFieldValue('description', settings.description);
+              form.setFieldValue('presentation', settings.presentation);
+              form.setFieldValue('endings', settings.endings);
+              form.setFieldValue('defaultEndingId', settings.defaultEndingId);
+            }}
+          />
+          <RuleControls
+            definition={definition}
+            editable={editable}
+            issues={compilation.ok ? [] : compilation.issues}
+            onChange={setRules}
+          />
+          <PageControls
+            definition={definition}
+            pageId={activePage.id}
+            editable={editable}
+            onChange={(pages) => form.setFieldValue('pages', pages)}
+            onSelect={selectPage}
+          />
+        </div>
+        <div hidden={panel !== 'build'}>
+          <div className="editor-grid">
+            <aside className="form-outline" aria-label="Form outline">
+              <div className="outline-heading">
+                <h2>Your questions</h2>
+                <span>{blocks.length}</span>
               </div>
-            ))}
-            {editable && (
-              <div className="add-block">
-                <label htmlFor="block-type">Question type</label>
-                <select
-                  id="block-type"
-                  value={type}
-                  onChange={(event) => {
-                    if (Object.hasOwn(blockNames, event.target.value))
-                      setType(event.target.value as Block['type']);
-                  }}
-                >
-                  {Object.entries(blockNames).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className="button secondary"
-                  type="button"
-                  disabled={
-                    contentType
-                      ? blocks.length - answerCount >= 100
-                      : answerCount >= 50
-                  }
-                  onClick={add}
-                >
-                  Add to form <span aria-hidden="true">+</span>
-                </button>
-              </div>
-            )}
-          </aside>
-          <div className="editor-canvas">
-            {block ? (
-              <>
-                <fieldset disabled={!editable}>
-                  <BlockInspector block={block} onChange={update} />
-                </fieldset>
-                {editable && (
-                  <div className="block-actions">
-                    {definition.pages.length > 1 && selectedPage && (
-                      <div className="field move-page-field">
-                        <label htmlFor="move-question-page">Move to page</label>
-                        <select
-                          id="move-question-page"
-                          value={selectedPage.id}
-                          onChange={(event) => {
-                            const next = moveBlockToPage(
-                              definition,
-                              block.id,
-                              event.target.value,
-                            );
-                            if (!next) return;
-                            form.setFieldValue('pages', next.pages);
-                            setActivePageId(event.target.value);
+              {definition.pages.map((page) => (
+                <div key={page.id}>
+                  <h3 hidden={definition.pages.length === 1}>
+                    <button
+                      className="page-name-button"
+                      type="button"
+                      aria-current={
+                        activePage.id === page.id ? 'true' : undefined
+                      }
+                      onClick={() => selectPage(page.id)}
+                    >
+                      {page.title || 'Untitled page'}
+                    </button>
+                  </h3>
+                  <ol>
+                    {page.blocks.map((item, index) => (
+                      <li key={item.id}>
+                        <button
+                          id={`question-${item.id}`}
+                          type="button"
+                          aria-pressed={selected === item.id}
+                          onClick={() => {
+                            setActivePageId(page.id);
+                            setSelected(item.id);
                           }}
                         >
-                          {definition.pages.map((page) => (
-                            <option key={page.id} value={page.id}>
-                              {page.title || 'Untitled page'}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    <button
-                      className="text-button"
-                      type="button"
-                      disabled={selectedIndex <= 0}
-                      onClick={() => move(-1)}
-                    >
-                      Move up ↑
-                    </button>
-                    <button
-                      className="text-button"
-                      type="button"
-                      disabled={
-                        !selectedPage ||
-                        selectedIndex >= selectedPage.blocks.length - 1
-                      }
-                      onClick={() => move(1)}
-                    >
-                      Move down ↓
-                    </button>
-                    <button
-                      className="text-button"
-                      type="button"
-                      onClick={duplicate}
-                    >
-                      Duplicate
-                    </button>
-                    <button
-                      className="text-button danger-text"
-                      type="button"
-                      onClick={() => {
-                        form.setFieldValue('pages', (pages) =>
-                          pages.map((page) => ({
-                            ...page,
-                            blocks: page.blocks.filter(
-                              (item) => item.id !== block.id,
-                            ),
-                          })),
-                        );
-                        setSelected(null);
-                      }}
-                    >
-                      Remove
-                    </button>
+                          <span>{index + 1}</span>
+                          <span>{blockCaption(item)}</span>
+                          <small>{blockNames[item.type]}</small>
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ))}
+              {editable && (
+                <div className="add-block">
+                  <h3>Add a question</h3>
+                  <button
+                    type="button"
+                    className="question-picker-toggle"
+                    aria-expanded={pickerOpen}
+                    aria-controls="question-palette"
+                    onClick={() => setPickerOpen(!pickerOpen)}
+                  >
+                    {pickerOpen ? 'Close question types' : '+ Add a question'}
+                  </button>
+                  <div
+                    className="question-palette"
+                    id="question-palette"
+                    data-open={pickerOpen}
+                  >
+                    {Object.entries(blockNames)
+                      .filter(([value]) => value !== 'file')
+                      .map(([value, label]) => (
+                        <button
+                          type="button"
+                          key={value}
+                          disabled={
+                            value === 'heading' || value === 'help'
+                              ? blocks.length - answerCount >= 100
+                              : answerCount >= 50
+                          }
+                          onClick={() => {
+                            add(value as Block['type']);
+                            setPickerOpen(false);
+                          }}
+                        >
+                          <span aria-hidden="true">+</span>{' '}
+                          {value === 'acknowledgment' ? 'Consent' : label}
+                        </button>
+                      ))}
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="editor-empty">
-                <span className="empty-symbol" aria-hidden="true">
-                  ↗
-                </span>
-                <h2>
-                  {activePage.blocks.length
-                    ? 'Keep shaping your form.'
-                    : 'This page is ready for questions.'}
-                </h2>
-                <p>
-                  {activePage.blocks.length
-                    ? 'Choose a question from the outline to edit it.'
-                    : 'Choose a type from the outline to add it to this page.'}
-                </p>
-              </div>
-            )}
+                </div>
+              )}
+            </aside>
+            <div className="editor-canvas">
+              {block ? (
+                <>
+                  <fieldset disabled={!editable}>
+                    <BlockInspector block={block} onChange={update} />
+                  </fieldset>
+                  {editable && (
+                    <div className="block-actions">
+                      {definition.pages.length > 1 && selectedPage && (
+                        <div className="field move-page-field">
+                          <label htmlFor="move-question-page">
+                            Move to page
+                          </label>
+                          <select
+                            id="move-question-page"
+                            value={selectedPage.id}
+                            onChange={(event) => {
+                              const next = moveBlockToPage(
+                                definition,
+                                block.id,
+                                event.target.value,
+                              );
+                              if (!next) return;
+                              form.setFieldValue('pages', next.pages);
+                              setActivePageId(event.target.value);
+                            }}
+                          >
+                            {definition.pages.map((page) => (
+                              <option key={page.id} value={page.id}>
+                                {page.title || 'Untitled page'}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <button
+                        className="text-button"
+                        type="button"
+                        disabled={selectedIndex <= 0}
+                        onClick={() => move(-1)}
+                      >
+                        Move up ↑
+                      </button>
+                      <button
+                        className="text-button"
+                        type="button"
+                        disabled={
+                          !selectedPage ||
+                          selectedIndex >= selectedPage.blocks.length - 1
+                        }
+                        onClick={() => move(1)}
+                      >
+                        Move down ↓
+                      </button>
+                      <button
+                        className="text-button"
+                        type="button"
+                        onClick={duplicate}
+                        disabled={
+                          'required' in block
+                            ? answerCount >= 50
+                            : blocks.length - answerCount >= 100
+                        }
+                      >
+                        Duplicate
+                      </button>
+                      <button
+                        className="text-button danger-text"
+                        type="button"
+                        onClick={() => {
+                          form.setFieldValue('pages', (pages) =>
+                            pages.map((page) => ({
+                              ...page,
+                              blocks: page.blocks.filter(
+                                (item) => item.id !== block.id,
+                              ),
+                            })),
+                          );
+                          setSelected(null);
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="editor-empty">
+                  <span className="empty-symbol" aria-hidden="true">
+                    ↗
+                  </span>
+                  <h2>
+                    {activePage.blocks.length
+                      ? 'Choose a question to edit.'
+                      : 'What would you like to ask?'}
+                  </h2>
+                  <p>
+                    {activePage.blocks.length
+                      ? 'Choose a question from the outline to edit it.'
+                      : 'Choose Add a question, pick a type and start writing. Your changes save automatically.'}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </fieldset>
@@ -575,9 +618,10 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                   <button
                     className="text-button"
                     type="button"
-                    onClick={() =>
-                      issue.targetId && setSelected(issue.targetId)
-                    }
+                    onClick={() => {
+                      setPanel('build');
+                      if (issue.targetId) setSelected(issue.targetId);
+                    }}
                   >
                     {issue.message}
                   </button>
