@@ -20,6 +20,8 @@ import { FormSettings } from './FormSettings';
 import { RuleControls } from './RuleControls';
 import { moveBlockToPage } from './pages';
 import { insertQuestion } from './insert-question';
+import { DraftPreview } from './DraftPreview';
+import './preview.css';
 export function FormEditor({
   workspaceId,
   formId,
@@ -75,6 +77,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   );
   const [panel, setPanel] = useState<'build' | 'settings' | 'share'>('build');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [loading, setLoading] = useState(false),
     [loadError, setLoadError] = useState('');
   const [backup, setBackup] = useState<typeof snapshot.definition | null>(null);
@@ -302,7 +305,20 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
               }
             </button>
           ))}
+          <button
+            type="button"
+            className="preview-trigger"
+            onClick={() => setPreviewOpen(true)}
+          >
+            Preview
+          </button>
         </nav>
+        {previewOpen && (
+          <DraftPreview
+            definition={definition}
+            onClose={() => setPreviewOpen(false)}
+          />
+        )}
         <div hidden={panel !== 'share'}>
           <PublicationControls
             expanded={panel === 'share'}
