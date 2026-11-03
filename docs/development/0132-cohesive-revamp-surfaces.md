@@ -1,0 +1,22 @@
+# Cohesive public and response surfaces
+
+The public landing page now contains a keyboard-operable sample instead of a decorative mockup. Its choice and reset states remain local. Auth, collector and information pages use the same white-sheet/blue-grey foundation as the studio. Foundation 0.3 centralizes the new workspace colors. The response inbox opens on answers; notifications/webhooks have their own view. Empty inboxes no longer ask users to select a nonexistent response. Deletion controls wait for loaded response content, removing the two simultaneous detail loaders found in browser testing. Version information remains visible.
+
+## Actual verification, 3 November 2026
+
+- In-app browser: normal sign-in and workspace navigation, keyboard sample selection/continue/reset, starter creation, saved editing, preview, publication, respondent submission and owner inbox detail. Desktop/tablet/phone coverage across the changed surfaces; editor 390/768/1440px, landing 390/1440px, collector and inbox 390px plus desktop. Checked document width against viewport, visible form labels, button names, IDs and focus. This is desktop viewport emulation, not a real-device or screen-reader audit.
+- Power paths: insertion after selection, duplicate/reorder, reload persistence, native Escape/Enter preview focus, page/card preview, respondent review/correction, disclosure controls and native CSV export.
+- Adversarial paths: malformed/missing email validation, literal HTML/event-handler text in editor, collector and stored inbox answer; zero injected images. Existing API runtime tests cover unauthorized, malformed, stale and duplicate requests. No unrelated services were attacked.
+- The synthetic agency form produced a durable receipt and exactly one corresponding inbox response. Preview earlier left the inbox empty. Chrome downloaded the version CSV: two rows including header, 13 consistent columns and the expected synthetic response ID. Download event listeners timed out in both browsers; the supported HTTP file-link download succeeded and its CSV was inspected. No internal browser-page workaround was used.
+- Clean landing/auth tab console had no warnings/errors. The development collector recorded Turnstile cleanup warnings after hot reload; production console must be checked separately. No warnings were suppressed.
+- Semantic token contrast: ink/white 17.43:1, secondary/workspace 6.53:1, cobalt/white 5.67:1, ink/lime 14.79:1. This does not replace a complete rendered contrast audit.
+
+## Automated gates and review
+
+Format/types/lint, 265 pure tests and coverage (99.19% statements, 97.68% branches, 100% functions, 99.84% lines), 95 API boundary tests, 66 rollback-only database tests and three auth integration tests passed. Production web build and Worker dry runs passed. Built SSR/CSP/service-binding checks and two dev reloads with three auth cleanup cycles passed. The SSR content assertion initially failed on the deliberately replaced headline; it now checks the new heading and interactive-example notice, preserving all security/transport assertions. Preview/reload runners were run after stopping the development server they require to be absent.
+
+Final artifact sizes: home 120.85 KiB, editor 186.49 KiB, inbox 167.97 KiB, collector 162.19 KiB, all JS 216.54 KiB and CSS 12.00 KiB gzip; primary font 36.07 KiB. Production dependency audit found no known vulnerabilities; no dependency changed. These measurements do not establish field INP/CLS or production latency SLOs.
+
+Design Taste source lint has zero failures with the documented app mode for app screens. Remaining warnings refer to CSS hiding old decorative labels and the intentional hairline on auth/collector/info sheets. Its separate CDP inspector was not used because this session requires CUA for browser control; actual CUA screenshot, DOM and keyboard checks supplied browser evidence instead.
+
+Review checked pure starter/preview helpers, idempotent creation retries, account-scoped cache, native modal focus, safe React text rendering, unchanged server permissions, secondary delivery settings and honest loading/empty states. No API, Jobs, billing, database schema or infrastructure configuration belongs to this UI slice. Existing operational work is kept separate. Release rollback is the previously verified snapform-web version `dbf85a21-33f5-4e15-ae00-5fda8b944acf`; no data migration is needed.

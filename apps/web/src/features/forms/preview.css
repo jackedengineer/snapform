@@ -19,7 +19,7 @@
   align-items: center;
   gap: 20px;
   padding: 12px 24px;
-  background: #f3f5f8;
+  background: var(--surface-workspace);
   border-bottom: 1px solid var(--border-default);
   font-size: 12px;
   color: var(--text-secondary);

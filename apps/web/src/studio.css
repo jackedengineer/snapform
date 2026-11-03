@@ -1,10 +1,10 @@
 /* A framed workspace: quiet navigation, a white sheet, questions in focus. */
 .app-shell {
   min-height: 100svh;
-  background: #f3f5f8;
-  --surface-canvas: #f3f5f8;
-  --surface-subtle: #e9edf3;
-  --border-default: #e0e5ed;
+  background: var(--surface-workspace);
+  --surface-canvas: var(--surface-workspace);
+  --surface-subtle: var(--surface-workspace-subtle);
+  --border-default: var(--border-workspace);
 }
 .app-shell .topbar {
   height: 64px;
@@ -30,7 +30,9 @@
   font-weight: 600;
   letter-spacing: -1px;
 }
-.app-shell .eyebrow {
+.app-shell .account-home > .eyebrow,
+.app-shell .workspace-heading .eyebrow,
+.app-shell .workspace-section .eyebrow {
   display: none;
 }
 .app-shell .intro-copy {
@@ -451,4 +453,35 @@
   .starter-list {
     gap: 8px;
   }
+}
+
+.app-shell .response-layout[data-empty='true'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.app-shell .response-list {
+  background: white;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.app-shell .response-list a[aria-current] {
+  background: var(--surface-action-tint);
+}
+.app-shell .email-notifications {
+  border-radius: 12px;
+  border-color: var(--border-default);
+  background: white;
+}
+.app-shell .response-placeholder {
+  padding-block: 40px;
+}
+@media (max-width: 640px) {
+  .app-shell .editor-navigation button {
+    font-size: 13px;
+  }
+}
+.app-shell .editor-header > .button {
+  background: white;
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
 }
