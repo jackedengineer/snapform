@@ -14,7 +14,6 @@ export function BlockInspector({
   const content = block.type === 'heading' || block.type === 'help';
   return (
     <section className="block-inspector" aria-labelledby="inspector-title">
-      <p className="eyebrow">MAKE IT YOURS</p>
       <h2 id="inspector-title">{blockNames[block.type]}</h2>
       <div className="field">
         <label htmlFor={`label-${block.id}`}>

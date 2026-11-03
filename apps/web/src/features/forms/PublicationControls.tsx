@@ -12,6 +12,7 @@ import {
   FormRequestError,
 } from './api';
 type Props = {
+  expanded?: boolean;
   workspaceId: string;
   formId: string;
   editable: boolean;
@@ -29,12 +30,13 @@ export function PublicationControls(props: Props) {
   return (
     <details
       className="page-controls"
+      open={props.expanded || undefined}
       onToggle={(event) => {
         if (event.currentTarget.open) setLoaded(true);
       }}
     >
       <summary>Publish & share</summary>
-      {loaded && <PublicationPanel {...props} />}
+      {(loaded || props.expanded) && <PublicationPanel {...props} />}
     </details>
   );
 }

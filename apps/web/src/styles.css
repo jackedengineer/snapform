@@ -2,6 +2,7 @@
 @import './features/forms/forms.css';
 @import './features/intake/intake.css';
 @import './features/intake/landing.css';
+@import './studio.css';
 * {
   box-sizing: border-box;
 }
