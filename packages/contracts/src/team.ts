@@ -86,8 +86,9 @@ export const teamSchema = z.strictObject({
   members: z.array(memberSchema).max(200),
 });
 export type Team = { role: Role; members: Member[] };
-const invitationSchema = z.strictObject({
-  id: z.uuid(),
+export const invitationIdSchema = z.uuid();
+export const invitationSchema = z.strictObject({
+  id: invitationIdSchema,
   email: z.string().max(254),
   role: inviteRoleSchema,
   createdAt: z.iso.datetime(),
