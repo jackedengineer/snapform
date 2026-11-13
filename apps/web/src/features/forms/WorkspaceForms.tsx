@@ -18,6 +18,7 @@ import {
   useDeletionStatus,
 } from '../deletion/DeletionControl';
 import { WorkspaceDeleted } from '../deletion/WorkspaceDeleted';
+import { UsageMeter } from '../billing/UsageMeter';
 const dates = new Intl.DateTimeFormat('en', { dateStyle: 'medium' });
 const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
 const counts = new Intl.NumberFormat('en');
@@ -150,6 +151,7 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
               </button>
             )}
           </div>
+          <UsageMeter workspaceId={workspaceId} />
           {query.data.workspace.role === 'owner' &&
             deletion.isError &&
             !dataOpen && (
