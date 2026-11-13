@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 type Widget = {
   render: (
     element: HTMLElement,
@@ -6,6 +6,7 @@ type Widget = {
       sitekey: string;
       action: string;
       theme: string;
+      size: 'normal' | 'compact';
       callback: (token: string) => void;
       'expired-callback': () => void;
       'error-callback': () => void;
@@ -49,14 +50,17 @@ function load() {
 export function Turnstile({
   siteKey,
   onToken,
+  onError,
 }: {
   siteKey: string;
   onToken: (token: string) => void;
+  onError: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null),
-    callback = useRef(onToken);
+    callback = useRef(onToken),
+    failed = useRef(onError);
   callback.current = onToken;
-  const [error, setError] = useState(false);
+  failed.current = onError;
   useEffect(() => {
     let active = true,
       id: string | undefined;
@@ -67,31 +71,23 @@ export function Turnstile({
           sitekey: siteKey,
           action: 'intake_start',
           theme: 'light',
+          // The standard widget is 300px wide; narrow phones need the compact one.
+          size: host.current.clientWidth < 300 ? 'compact' : 'normal',
           callback: (token) => callback.current(token),
           'expired-callback': () => callback.current(''),
           'error-callback': () => {
             callback.current('');
-            setError(true);
+            failed.current();
           },
         });
       })
       .catch(() => {
-        if (active) setError(true);
+        if (active) failed.current();
       });
     return () => {
       active = false;
       if (id) window.turnstile?.remove(id);
     };
   }, [siteKey]);
-  return (
-    <>
-      <div ref={host} />
-      {error && (
-        <p role="alert">
-          The security check couldn’t load. Check your connection and reload to
-          try again.
-        </p>
-      )}
-    </>
-  );
+  return <div ref={host} className="intake-turnstile" />;
 }
