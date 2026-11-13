@@ -17,6 +17,7 @@ import './responses.css';
 import { WebhookSettings } from './WebhookSettings';
 import { EmailNotifications } from './EmailNotifications';
 import { DeletionControl } from '../deletion/DeletionControl';
+import { responseReference } from '../intake/reference';
 const dates = new Intl.DateTimeFormat('en', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -350,8 +351,11 @@ export function ResponseInbox({
                       </time>
                       {versioned && `, from version ${detail.data.version}`}
                     </p>
-                    <p className="response-full-reference">
-                      Reference {detail.data.id}
+                    <p
+                      className="response-full-reference"
+                      title={detail.data.id}
+                    >
+                      Reference {responseReference(detail.data.id)}
                     </p>
                     <dl className="response-answers">
                       {detail.data.definition.pages
