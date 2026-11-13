@@ -23,7 +23,12 @@ const environment = (values: Partial<AuthEnvironment>) =>
   values as AuthEnvironment;
 
 it('matches only the UUID-scoped billing resource as a private path', () => {
-  expect(matchBillingRoute(path)).toEqual({ workspaceId });
+  expect(matchBillingRoute(path)).toEqual({ workspaceId, action: 'read' });
+  expect(matchBillingRoute(path + '/checkout')).toEqual({
+    workspaceId,
+    action: 'checkout',
+  });
+  expect(isPrivatePath(path + '/cancel')).toBe(true);
   expect(isPrivatePath(path)).toBe(true);
   for (const candidate of [
     path + '/',
@@ -34,13 +39,40 @@ it('matches only the UUID-scoped billing resource as a private path', () => {
     expect(matchBillingRoute(candidate)).toBeNull();
 });
 
-it('requires a verified account before reading plan usage', async () => {
-  const response = await SELF.fetch(origin + path);
-  expect(response.status).toBe(401);
-  expect(response.headers.get('Cache-Control')).toBe('no-store');
-  expect(await response.json()).toEqual({
-    error: { code: 'UNAUTHENTICATED' },
+it('requires a verified account before reading plan usage or changing billing', async () => {
+  for (const [suffix, method] of [
+    ['', 'GET'],
+    ['/checkout', 'POST'],
+    ['/cancel', 'POST'],
+  ] as const) {
+    const response = await SELF.fetch(origin + path + suffix, {
+      method,
+      ...(method === 'POST'
+        ? {
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ interval: 'monthly', currency: 'INR' }),
+          }
+        : {}),
+    });
+    expect(response.status).toBe(401);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(await response.json()).toEqual({
+      error: { code: 'UNAUTHENTICATED' },
+    });
+  }
+});
+it('refuses cross-site billing changes before authentication', async () => {
+  const response = await SELF.fetch(origin + path + '/checkout', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: 'https://attacker.example',
+      Cookie: 'better-auth.session_token=forged',
+    },
+    body: JSON.stringify({ interval: 'monthly', currency: 'INR' }),
   });
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({ error: { code: 'ORIGIN_REJECTED' } });
 });
 
 it('maps plan limits to stable codes without leaking database detail', () => {
@@ -48,6 +80,8 @@ it('maps plan limits to stable codes without leaking database detail', () => {
   expect(intakeConflicts.has('FORM_NOT_ACCEPTING')).toBe(true);
   expect(billingFailures.get('WORKSPACE_NOT_FOUND')).toBe(404);
   expect(billingFailures.get('FORBIDDEN')).toBe(403);
+  expect(billingFailures.get('BILLING_ALREADY_ACTIVE')).toBe(409);
+  expect(billingFailures.get('BILLING_NOT_CONFIGURED')).toBe(503);
 });
 
 it('configures billing only with a complete Razorpay test-mode setup', () => {

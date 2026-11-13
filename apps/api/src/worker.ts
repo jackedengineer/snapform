@@ -12,6 +12,10 @@ import { intakeConfigRoutes } from './intake-config.ts';
 import { intakeRoutes } from './intake-routes.ts';
 import { authFailure, checkAuthRequest } from './auth-boundary.ts';
 import type { AuthEnvironment } from './environment.ts';
+import {
+  handleRazorpayWebhook,
+  razorpayWebhookPath,
+} from './billing-webhook.ts';
 
 const app = express();
 app.disable('x-powered-by');
@@ -128,6 +132,9 @@ export default {
         );
       }
     }
+    // Raw body and provider signature, so this never passes through Express parsers.
+    if (new URL(request.url).pathname === razorpayWebhookPath)
+      return handleRazorpayWebhook(request, environment);
     if (new URL(request.url).pathname.startsWith('/api/auth/')) {
       const checked = await checkAuthRequest(
         request,

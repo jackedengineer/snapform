@@ -55,6 +55,8 @@ export const privateBody: RequestHandler = (req, res, next) => {
     matchDeletionRoute(req.path) !== null && req.method === 'POST';
   const isRetention =
     matchRetentionRoute(req.path) !== null && req.method === 'PUT';
+  const isBilling =
+    matchBillingRoute(req.path) !== null && req.method === 'POST';
   if (
     !isWebhook &&
     !isForm &&
@@ -62,6 +64,7 @@ export const privateBody: RequestHandler = (req, res, next) => {
     !isNotification &&
     !isDeletion &&
     !isRetention &&
+    !isBilling &&
     (req.path !== workspacePath || req.method !== 'POST')
   )
     return next();

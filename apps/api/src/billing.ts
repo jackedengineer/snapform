@@ -1,21 +1,38 @@
 import type { Request, Response } from 'express';
 import type { Database } from '@snapform/database';
-import { getBilling } from '@snapform/database/billing';
+import {
+  getBilling,
+  markCancellation,
+  recordSubscription,
+} from '@snapform/database/billing';
+import { checkoutInputSchema } from '@snapform/contracts/billing';
 import { billingSummary } from '@snapform/contracts/billing-server';
 import { createWorkspaceSchema } from '@snapform/contracts/workspace';
 import { requestScope } from './request-context.ts';
-import { razorpayConfig } from './razorpay.ts';
+import {
+  cancelSubscription,
+  createSubscription,
+  razorpayConfig,
+} from './razorpay.ts';
 
-const pattern = /^\/api\/v1\/workspaces\/([A-Fa-f0-9-]{36})\/billing$/;
+const pattern =
+  /^\/api\/v1\/workspaces\/([A-Fa-f0-9-]{36})\/billing(?:\/(checkout|cancel))?$/;
 export function matchBillingRoute(path: string) {
   const match = path.match(pattern);
   if (!match) return null;
   const workspaceId = createWorkspaceSchema.shape.id.safeParse(match[1]);
-  return workspaceId.success ? { workspaceId: workspaceId.data } : null;
+  const action =
+    match[2] === 'checkout' || match[2] === 'cancel' ? match[2] : 'read';
+  return workspaceId.success ? { workspaceId: workspaceId.data, action } : null;
 }
 export const billingFailures = new Map([
   ['WORKSPACE_NOT_FOUND', 404],
   ['FORBIDDEN', 403],
+  ['WORKSPACE_DELETION_PENDING', 409],
+  ['BILLING_ALREADY_ACTIVE', 409],
+  ['BILLING_NOT_ACTIVE', 409],
+  ['BILLING_PROVIDER_UNAVAILABLE', 502],
+  ['BILLING_NOT_CONFIGURED', 503],
 ]);
 export async function handleBillingRequest(
   req: Request,
@@ -24,17 +41,66 @@ export async function handleBillingRequest(
   actor: string,
   route: NonNullable<ReturnType<typeof matchBillingRoute>>,
 ) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
+  const method = route.action === 'read' ? 'GET' : 'POST';
+  if (req.method !== method) {
+    res.setHeader('Allow', method);
     res.status(405).json({ error: { code: 'METHOD_NOT_ALLOWED' } });
     return;
   }
   const environment = requestScope.getStore()?.environment;
   if (!environment) throw new Error('Request context is required.');
+  const config = razorpayConfig(environment),
+    { workspaceId } = route;
   try {
-    const record = await getBilling(db, actor, route.workspaceId);
+    if (route.action === 'read') {
+      const record = await getBilling(db, actor, workspaceId);
+      res.json({ billing: billingSummary(record, config !== null) });
+      return;
+    }
+    const input =
+      route.action === 'checkout'
+        ? checkoutInputSchema.safeParse(req.body)
+        : null;
+    if (input && !input.success) {
+      res.status(422).json({ error: { code: 'INVALID_BILLING_REQUEST' } });
+      return;
+    }
+    if (!config) throw Error('BILLING_NOT_CONFIGURED');
+    // Authorize and read before any provider call; no transaction stays open
+    // across the Razorpay request.
+    const record = await getBilling(db, actor, workspaceId);
+    if (record.role !== 'owner') throw Error('FORBIDDEN');
+    const live =
+      record.status === 'active' &&
+      record.plan === 'pro' &&
+      record.subscriptionId !== null;
+    if (input?.success) {
+      if (live && !record.cancelAtPeriodEnd)
+        throw Error('BILLING_ALREADY_ACTIVE');
+      // Reopen an unpaid checkout for the same price instead of creating another.
+      const subscriptionId =
+        record.status === 'created' &&
+        record.subscriptionId &&
+        record.interval === input.data.interval &&
+        record.currency === input.data.currency
+          ? record.subscriptionId
+          : await createSubscription(config, input.data, workspaceId);
+      await recordSubscription(
+        db,
+        actor,
+        workspaceId,
+        subscriptionId,
+        input.data,
+      );
+      res.json({ checkout: { key: config.keyId, subscriptionId } });
+      return;
+    }
+    if (!live || !record.subscriptionId || record.cancelAtPeriodEnd)
+      throw Error('BILLING_NOT_ACTIVE');
+    await cancelSubscription(config, record.subscriptionId);
+    await markCancellation(db, actor, workspaceId, record.subscriptionId);
     res.json({
-      billing: billingSummary(record, razorpayConfig(environment) !== null),
+      billing: billingSummary(await getBilling(db, actor, workspaceId), true),
     });
   } catch (error) {
     const status =
