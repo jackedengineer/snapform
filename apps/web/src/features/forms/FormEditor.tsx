@@ -1,17 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useForm, useStore } from '@tanstack/react-form';
 import type { Block } from '@snapform/contracts/form';
 import type { FormSnapshot } from '@snapform/contracts/draft';
-import { compileDefinition } from '@snapform/contracts/compile';
 import { can } from '@snapform/contracts/workspace';
 import { useAccountUser } from '../auth/AccountLayout';
 import { fetchForm } from './api';
-import { PublicationControls } from './PublicationControls';
-import { preparePublication } from './prepare-publication';
+import {
+  PublicationControls,
+  PublishAction,
+  StatusChip,
+  usePublication,
+} from './PublicationControls';
+import {
+  preparePublication,
+  publishingIssues,
+  type PublishingIssue,
+} from './prepare-publication';
 import { useDraftAutosave } from './use-draft-autosave';
-import { blockNames, newBlock, duplicateBlock, blockCaption } from './new-form';
+import {
+  blockNames,
+  newBlock,
+  duplicateBlock,
+  blockCaption,
+  questionNumbers,
+} from './new-form';
 import { BlockInspector } from './BlockInspector';
 import { DraftRecovery } from './DraftRecovery';
 import { recoverDraft } from './recover-draft';
@@ -78,6 +92,8 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   const [panel, setPanel] = useState<'build' | 'settings' | 'share'>('build');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [focusLink, setFocusLink] = useState(false);
+  const linkFocused = useCallback(() => setFocusLink(false), []);
   const [loading, setLoading] = useState(false),
     [loadError, setLoadError] = useState('');
   const [backup, setBackup] = useState<typeof snapshot.definition | null>(null);
@@ -95,7 +111,38 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   useEffect(() => {
     if (editable && ready) autosave.edit({ ...values, rules });
   }, [values, rules, editable, ready, autosave.edit]);
-  const compilation = compileDefinition(definition);
+  const issues = publishingIssues(definition);
+  const numbers = questionNumbers(definition);
+  const publication = usePublication({
+    workspaceId: snapshot.workspaceId,
+    formId: snapshot.id,
+    editable: editable && ready && !conflict && status !== 'blocked',
+    revision,
+    dirty,
+    onBusy: setPublishing,
+    prepare: () =>
+      preparePublication({ ...form.state.values, rules }, autosave.flush, () =>
+        fetchForm(snapshot.workspaceId, snapshot.id),
+      ),
+  });
+  function showIssue({ targetId }: PublishingIssue) {
+    const page = definition.pages.find((item) =>
+      item.blocks.some((block) => block.id === targetId),
+    );
+    if (page && targetId) {
+      setPanel('build');
+      setActivePageId(page.id);
+      setSelected(targetId);
+      return;
+    }
+    setPanel('settings');
+    requestAnimationFrame(() => {
+      const summary = document.getElementById(`rule-${targetId}`);
+      if (summary?.parentElement instanceof HTMLDetailsElement)
+        summary.parentElement.open = true;
+      summary?.focus();
+    });
+  }
   const blocks = definition.pages.flatMap((page) => page.blocks),
     block = blocks.find((item) => item.id === selected);
   const selectedPage = definition.pages.find((page) =>
@@ -227,47 +274,76 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
         <div className="editor-header">
           <div>
             <p className="editor-context">Your form studio</p>
-            <form.Field name="title">
-              {(field) => (
-                <textarea
-                  className="form-title-input"
-                  aria-label="Form title"
-                  placeholder="Untitled form"
-                  rows={1}
-                  maxLength={120}
-                  readOnly={!editable}
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  onBlur={field.handleBlur}
-                />
-              )}
-            </form.Field>
+            <div className="editor-title-row">
+              <form.Field name="title">
+                {(field) => (
+                  <textarea
+                    className="form-title-input"
+                    aria-label="Form title"
+                    placeholder="Untitled form"
+                    rows={1}
+                    maxLength={120}
+                    readOnly={!editable}
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
+              <StatusChip publication={publication} />
+            </div>
             <p role="status" className="save-status" data-revision={revision}>
               {!ready && editable
                 ? 'Preparing local recovery…'
                 : saving
                   ? 'Saving…'
                   : conflict
-                    ? 'Conflicting edits — your version is still here'
+                    ? 'This form changed elsewhere. Your edits are kept here.'
                     : status === 'blocked'
-                      ? 'Saving paused — review the message below'
+                      ? 'Saving paused. Review the message below.'
                       : status === 'offline'
                         ? autosave.state?.buffered
-                          ? 'Saved on this device — reconnect to sync'
-                          : 'Not saved — keep this tab open'
+                          ? 'Saved on this device. Reconnect to sync.'
+                          : 'Not saved yet. Keep this tab open.'
                         : dirty
                           ? 'Saving shortly…'
                           : 'All changes saved'}
             </p>
           </div>
           {editable && (
+            <PublishAction
+              publication={publication}
+              issues={issues.length}
+              save={
+                conflict
+                  ? 'conflict'
+                  : status === 'blocked'
+                    ? 'blocked'
+                    : dirty
+                      ? 'saving'
+                      : 'saved'
+              }
+              onReview={() => {
+                setPanel('share');
+                requestAnimationFrame(() =>
+                  document.getElementById('readiness-title')?.focus(),
+                );
+              }}
+              onPublished={(first) => {
+                if (!first) return;
+                setPanel('share');
+                setFocusLink(true);
+              }}
+            />
+          )}
+          {/* Keeps Enter in a field as "save now"; Publish is never a submit. */}
+          {editable && (
             <button
-              className="button primary compact-button"
               type="submit"
+              hidden
               disabled={!dirty || conflict || saving || status === 'blocked'}
             >
-              {saving ? 'Saving…' : 'Save now'}
-              <span aria-hidden="true">↗</span>
+              Save now
             </button>
           )}
         </div>
@@ -321,27 +397,11 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
         )}
         <div hidden={panel !== 'share'}>
           <PublicationControls
-            expanded={panel === 'share'}
-            workspaceId={snapshot.workspaceId}
-            formId={snapshot.id}
-            editable={editable && ready && !conflict && status !== 'blocked'}
-            revision={revision}
-            dirty={dirty}
-            onBusy={setPublishing}
-            blocked={
-              !compilation.ok
-                ? 'Fix the form’s validation issues before publishing.'
-                : blocks.some((block) => block.type === 'file')
-                  ? 'File collection is not ready. Remove file questions before sharing this form.'
-                  : ''
-            }
-            prepare={() =>
-              preparePublication(
-                { ...form.state.values, rules },
-                autosave.flush,
-                () => fetchForm(snapshot.workspaceId, snapshot.id),
-              )
-            }
+            publication={publication}
+            issues={issues}
+            focusLink={focusLink && panel === 'share'}
+            onLinkFocused={linkFocused}
+            onIssue={showIssue}
           />
         </div>
         <div hidden={panel !== 'settings'}>
@@ -358,7 +418,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
           <RuleControls
             definition={definition}
             editable={editable}
-            issues={compilation.ok ? [] : compilation.issues}
+            issues={issues}
             onChange={setRules}
           />
           <PageControls
@@ -391,7 +451,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                     </button>
                   </h3>
                   <ol>
-                    {page.blocks.map((item, index) => (
+                    {page.blocks.map((item) => (
                       <li key={item.id}>
                         <button
                           id={`question-${item.id}`}
@@ -402,7 +462,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                             setSelected(item.id);
                           }}
                         >
-                          <span>{index + 1}</span>
+                          <span>{numbers.get(item.id)}</span>
                           <span>{blockCaption(item)}</span>
                           <small>{blockNames[item.type]}</small>
                         </button>
@@ -541,9 +601,6 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                 </>
               ) : (
                 <div className="editor-empty">
-                  <span className="empty-symbol" aria-hidden="true">
-                    ↗
-                  </span>
                   <h2>
                     {activePage.blocks.length
                       ? 'Choose a question to edit.'
@@ -624,31 +681,6 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
         <p role="alert" className="request-error">
           {loadError}
         </p>
-      )}
-      {!compilation.ok && (
-        <section className="definition-checks" aria-labelledby="checks-title">
-          <h2 id="checks-title">Before this form can go live</h2>
-          <ul>
-            {compilation.issues.map((issue, index) => (
-              <li key={`${issue.code}-${index}`}>
-                {blocks.some((item) => item.id === issue.targetId) ? (
-                  <button
-                    className="text-button"
-                    type="button"
-                    onClick={() => {
-                      setPanel('build');
-                      if (issue.targetId) setSelected(issue.targetId);
-                    }}
-                  >
-                    {issue.message}
-                  </button>
-                ) : (
-                  <span>{issue.message}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
       )}
     </form>
   );

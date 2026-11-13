@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import type {
   PublishForm,
@@ -11,78 +11,75 @@ import {
   stopPublicationRequest,
   FormRequestError,
 } from './api';
-type Props = {
-  expanded?: boolean;
+import {
+  publishLabel,
+  publishReason,
+  publishStatus,
+  statusLabels,
+  type OperationPhase,
+  type PublishingIssue,
+} from './prepare-publication';
+type Options = {
   workspaceId: string;
   formId: string;
   editable: boolean;
   revision: number;
   dirty: boolean;
-  blocked: string;
   prepare: () => Promise<number>;
   onBusy: (busy: boolean) => void;
 };
 type Operation =
   | { kind: 'publish'; input: PublishForm }
   | { kind: 'stop'; input: UnpublishForm };
-export function PublicationControls(props: Props) {
-  const [loaded, setLoaded] = useState(false);
-  return (
-    <details
-      className="page-controls"
-      open={props.expanded || undefined}
-      onToggle={(event) => {
-        if (event.currentTarget.open) setLoaded(true);
-      }}
-    >
-      <summary>Publish & share</summary>
-      {(loaded || props.expanded) && <PublicationPanel {...props} />}
-    </details>
-  );
-}
-function PublicationPanel(props: Props) {
+// One publication state for the header action and the share panel, so both
+// use the same saved-revision check and the same retry identity.
+export function usePublication(options: Options) {
   const user = useAccountUser(),
     pending = useRef<Operation | null>(null),
-    running = useRef(false),
-    dialog = useRef<HTMLDialogElement>(null),
-    link = useRef<HTMLInputElement>(null);
+    running = useRef(false);
   const [message, setMessage] = useState('');
+  const [phase, setPhase] = useState<{
+    kind: Operation['kind'];
+    state: OperationPhase;
+  }>({ kind: 'publish', state: 'idle' });
   const query = useQuery({
-    queryKey: ['publication', user.id, props.workspaceId, props.formId],
+    queryKey: ['publication', user.id, options.workspaceId, options.formId],
     queryFn: ({ signal }) =>
-      fetchPublication(props.workspaceId, props.formId, signal),
+      fetchPublication(options.workspaceId, options.formId, signal),
     refetchOnWindowFocus: false,
   });
   const mutation = useMutation({
     mutationFn: async (operation: Operation) => {
       if (operation.kind === 'publish')
         await publishFormRequest(
-          props.workspaceId,
-          props.formId,
+          options.workspaceId,
+          options.formId,
           operation.input,
         );
       else
         await stopPublicationRequest(
-          props.workspaceId,
-          props.formId,
+          options.workspaceId,
+          options.formId,
           operation.input,
         );
     },
   });
-  const publication = query.data;
-  const url = publication
-    ? new URL('/f/' + publication.publicId, window.location.origin).href
-    : '';
+  const publication = query.data ?? null;
+  const status = query.isSuccess
+    ? publishStatus(publication, options.revision, options.dirty)
+    : null;
+  /** Resolves true only after the server confirmed the operation. */
   async function run(kind: Operation['kind']) {
     if (
       running.current ||
-      !props.editable ||
+      !options.editable ||
       (pending.current && pending.current.kind !== kind)
     )
-      return;
+      return false;
     running.current = true;
-    props.onBusy(true);
-    setMessage('Checking the saved revision…');
+    options.onBusy(true);
+    setPhase({ kind, state: 'running' });
+    setMessage('');
     try {
       const operation =
         pending.current ||
@@ -91,7 +88,7 @@ function PublicationPanel(props: Props) {
               kind,
               input: {
                 versionId: crypto.randomUUID(),
-                expectedRevision: await props.prepare(),
+                expectedRevision: await options.prepare(),
               },
             } as const)
           : publication
@@ -106,8 +103,12 @@ function PublicationPanel(props: Props) {
       pending.current = null;
       await query.refetch();
       setMessage(
-        kind === 'publish' ? 'Publication confirmed.' : 'Collection stopped.',
+        kind === 'publish'
+          ? 'Published. New responses use this version.'
+          : 'Collection stopped. Submitted responses stay saved.',
       );
+      setPhase({ kind, state: 'idle' });
+      return true;
     } catch (error) {
       if (
         error instanceof FormRequestError &&
@@ -121,17 +122,130 @@ function PublicationPanel(props: Props) {
           ? error.message
           : 'Publication could not be confirmed. Retry the same operation.',
       );
+      setPhase({ kind, state: pending.current ? 'failed' : 'idle' });
+      return false;
     } finally {
       running.current = false;
-      props.onBusy(false);
+      options.onBusy(false);
     }
   }
-  const current =
-    publication?.active &&
-    publication.sourceRevision === props.revision &&
-    !props.dirty;
+  return {
+    query,
+    publication,
+    status,
+    message,
+    phase,
+    editable: options.editable,
+    run,
+  };
+}
+type Publication = ReturnType<typeof usePublication>;
+export function PublishAction({
+  publication,
+  issues,
+  save,
+  onPublished,
+  onReview,
+}: {
+  publication: Publication;
+  issues: number;
+  save: Parameters<typeof publishReason>[1];
+  onPublished: (first: boolean) => void;
+  onReview: () => void;
+}) {
+  const { status, phase } = publication;
+  const publishing = phase.kind === 'publish' ? phase.state : 'idle';
+  const reason = publishReason(issues, save);
   return (
-    <div className="publication-panel">
+    <div className="publish-action">
+      <button
+        type="button"
+        className="button primary compact-button"
+        aria-describedby={reason ? 'publish-reason' : undefined}
+        disabled={
+          !publication.editable ||
+          // An exact retry of a prepared operation stays available.
+          (Boolean(reason) && publishing !== 'failed') ||
+          publication.query.isPending ||
+          publishing === 'running' ||
+          (phase.kind === 'stop' && phase.state !== 'idle') ||
+          (status === 'live' && publishing === 'idle')
+        }
+        onClick={() => {
+          const first = !publication.publication;
+          void publication.run('publish').then((done) => {
+            if (done) onPublished(first);
+          });
+        }}
+      >
+        {publishLabel(status || 'draft', publishing)}
+      </button>
+      {reason && (
+        <p id="publish-reason" className="publish-reason">
+          {reason}{' '}
+          {issues > 0 && (
+            <button type="button" className="text-button" onClick={onReview}>
+              Review
+            </button>
+          )}
+        </p>
+      )}
+      {publication.message && (
+        <p role="status" className="publish-reason">
+          {publication.message}
+        </p>
+      )}
+    </div>
+  );
+}
+export function StatusChip({ publication }: { publication: Publication }) {
+  if (!publication.status) return null;
+  return (
+    <span className="status-chip" data-status={publication.status}>
+      {statusLabels[publication.status]}
+    </span>
+  );
+}
+const summaries = {
+  draft:
+    'This form isn’t collecting responses yet. Publish it to get a share link.',
+  live: 'Live and collecting responses.',
+  changes:
+    'Live and collecting responses. Your latest edits aren’t live yet. Publishing updates new responses; existing responses keep the version they started with.',
+  stopped:
+    'Collection is stopped. Publish again to reopen the same share link.',
+};
+export function PublicationControls({
+  publication,
+  issues,
+  focusLink,
+  onLinkFocused,
+  onIssue,
+}: {
+  publication: Publication;
+  issues: PublishingIssue[];
+  focusLink: boolean;
+  onLinkFocused: () => void;
+  onIssue: (issue: PublishingIssue) => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null),
+    link = useRef<HTMLInputElement>(null),
+    copy = useRef<HTMLButtonElement>(null);
+  const [copied, setCopied] = useState('');
+  const { query, status, phase } = publication;
+  const current = publication.publication;
+  const url = current
+    ? new URL('/f/' + current.publicId, window.location.origin).href
+    : '';
+  useEffect(() => {
+    if (!focusLink || !copy.current) return;
+    copy.current.focus();
+    onLinkFocused();
+  }, [focusLink, url, onLinkFocused]);
+  const stopping = phase.kind === 'stop' ? phase.state : 'idle';
+  return (
+    <section className="publication-panel" aria-labelledby="share-title">
+      <h2 id="share-title">Publish & share</h2>
       {query.isPending ? (
         <p role="status">Checking publication…</p>
       ) : query.isError ? (
@@ -147,12 +261,32 @@ function PublicationPanel(props: Props) {
         </>
       ) : (
         <>
-          <p>
-            {publication?.active
-              ? `Live · version ${publication.number} · draft revision ${publication.sourceRevision}`
-              : 'Not collecting responses'}
-          </p>
-          {publication?.active && (
+          {status && <p>{summaries[status]}</p>}
+          {issues.length > 0 && (
+            <div className="definition-checks">
+              <h3 id="readiness-title" tabIndex={-1}>
+                Before this form can go live
+              </h3>
+              <ul>
+                {issues.map((issue, index) => (
+                  <li key={`${issue.targetId}-${index}`}>
+                    {issue.targetId ? (
+                      <button
+                        className="text-button"
+                        type="button"
+                        onClick={() => onIssue(issue)}
+                      >
+                        {issue.message}
+                      </button>
+                    ) : (
+                      <span>{issue.message}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {current?.active && (
             <>
               <label htmlFor="public-form-link">Share link</label>
               <input
@@ -164,16 +298,17 @@ function PublicationPanel(props: Props) {
               />
               <div className="publication-actions">
                 <button
+                  ref={copy}
                   type="button"
-                  className="text-button"
+                  className="button primary compact-button"
                   onClick={() => {
                     void (async () => {
                       try {
                         await navigator.clipboard.writeText(url);
-                        setMessage('Link copied.');
+                        setCopied('Link copied.');
                       } catch {
                         link.current?.select();
-                        setMessage('Select and copy the link above.');
+                        setCopied('Select and copy the link above.');
                       }
                     })();
                   }}
@@ -184,62 +319,33 @@ function PublicationPanel(props: Props) {
                   Open published form ↗
                 </a>
               </div>
+              {copied && <p role="status">{copied}</p>}
             </>
           )}
-          {props.blocked && (
-            <p role="alert" className="request-error">
-              {props.blocked}
-            </p>
-          )}
-          {!current && publication?.active && (
-            <p>
-              Draft changes are not live yet. Publishing updates new responses;
-              existing responses keep their original version.
-            </p>
-          )}
-          <div className="publication-actions">
+          {(current?.active || stopping === 'failed') && (
             <button
               type="button"
-              className="button primary compact-button"
+              className="text-button danger-text"
               disabled={
-                !props.editable ||
-                Boolean(props.blocked && pending.current?.kind !== 'publish') ||
-                mutation.isPending ||
-                Boolean(current && !pending.current) ||
-                pending.current?.kind === 'stop'
+                !publication.editable ||
+                stopping === 'running' ||
+                (phase.kind === 'publish' && phase.state !== 'idle')
               }
-              onClick={() => void run('publish')}
+              onClick={() =>
+                stopping === 'failed'
+                  ? void publication.run('stop')
+                  : dialog.current?.showModal()
+              }
             >
-              {pending.current?.kind === 'publish'
-                ? 'Retry publication'
-                : current
-                  ? 'Published'
-                  : 'Publish saved changes'}
-            </button>
-            {(publication?.active || pending.current?.kind === 'stop') && (
-              <button
-                type="button"
-                className="text-button"
-                disabled={
-                  !props.editable ||
-                  mutation.isPending ||
-                  pending.current?.kind === 'publish'
-                }
-                onClick={() =>
-                  pending.current?.kind === 'stop'
-                    ? void run('stop')
-                    : dialog.current?.showModal()
-                }
-              >
-                {pending.current?.kind === 'stop'
+              {stopping === 'running'
+                ? 'Stopping…'
+                : stopping === 'failed'
                   ? 'Retry stopping'
                   : 'Stop collection'}
-              </button>
-            )}
-          </div>
+            </button>
+          )}
         </>
       )}
-      {message && <p role="status">{message}</p>}
       <dialog ref={dialog} className="settings-dialog">
         <h2>Stop collection?</h2>
         <p>
@@ -259,13 +365,13 @@ function PublicationPanel(props: Props) {
             className="button primary"
             onClick={() => {
               dialog.current?.close();
-              void run('stop');
+              void publication.run('stop');
             }}
           >
             Stop collection
           </button>
         </div>
       </dialog>
-    </div>
+    </section>
   );
 }

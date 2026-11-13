@@ -1,10 +1,10 @@
 import { useId } from 'react';
 import type { FormDefinition } from '@snapform/contracts/form';
-import type { CompileIssue } from '@snapform/contracts/compile';
 import type { Rule } from '@snapform/contracts/rules';
 import { ConditionEditor } from './ConditionEditor';
 import { addRule, moveRule, removeRule, ruleFields } from './rule-editing';
 import { blockCaption } from './new-form';
+import type { PublishingIssue } from './prepare-publication';
 function ReferenceSelect({
   label,
   value,
@@ -26,7 +26,7 @@ function ReferenceSelect({
         onChange={(event) => onChange(event.target.value)}
       >
         {!options.some((option) => option.id === value) && (
-          <option value={value}>Missing reference — choose another</option>
+          <option value={value}>Missing. Choose another.</option>
         )}
         {options.map((option) => (
           <option key={option.id} value={option.id}>
@@ -45,7 +45,7 @@ export function RuleControls({
 }: {
   definition: FormDefinition;
   editable: boolean;
-  issues: CompileIssue[];
+  issues: PublishingIssue[];
   onChange: (rules: Rule[]) => void;
 }) {
   const fields = ruleFields(definition),
@@ -82,7 +82,7 @@ export function RuleControls({
         return (
           <details className="rule-card" key={rule.id}>
             <summary id={`rule-${rule.id}`}>
-              Rule {index + 1} —{' '}
+              Rule {index + 1}:{' '}
               {action.type === 'show'
                 ? 'Show a question'
                 : action.type === 'go-to'

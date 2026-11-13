@@ -2,9 +2,49 @@ import {
   formDefinitionSchema,
   type FormDefinition,
 } from '@snapform/contracts/form';
-import { compilePublication } from '@snapform/contracts/publication';
+import {
+  compilePublication,
+  type Publication,
+} from '@snapform/contracts/publication';
 import { definitionKey } from './autosave';
 import { blockCaption, blockNames, questionNumbers } from './new-form';
+
+export type PublishStatus = 'draft' | 'live' | 'changes' | 'stopped';
+export function publishStatus(
+  publication: Publication | null,
+  revision: number,
+  dirty: boolean,
+): PublishStatus {
+  if (!publication) return 'draft';
+  if (!publication.active) return 'stopped';
+  return publication.sourceRevision === revision && !dirty ? 'live' : 'changes';
+}
+export const statusLabels: Record<PublishStatus, string> = {
+  draft: 'Draft',
+  live: 'Live',
+  changes: 'Live · unpublished changes',
+  stopped: 'Stopped',
+};
+// "failed" means the same operation is kept for an exact retry.
+export type OperationPhase = 'idle' | 'running' | 'failed';
+export function publishLabel(status: PublishStatus, phase: OperationPhase) {
+  if (phase === 'running') return 'Publishing…';
+  if (phase === 'failed') return 'Retry publishing';
+  return status === 'live'
+    ? 'Published'
+    : status === 'changes'
+      ? 'Publish changes'
+      : 'Publish';
+}
+export function publishReason(
+  issues: number,
+  save: 'saved' | 'saving' | 'conflict' | 'blocked',
+) {
+  if (save === 'conflict') return 'Review the edit conflict before publishing.';
+  if (save === 'blocked') return 'Saving is paused. Review the message below.';
+  if (!issues) return '';
+  return `${issues} ${issues === 1 ? 'thing' : 'things'} to fix before publishing.`;
+}
 
 export type PublishingIssue = { message: string; targetId?: string };
 // Readiness names what needs attention, using the outline's numbering.

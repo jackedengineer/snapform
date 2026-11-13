@@ -1,6 +1,13 @@
 import { expect, it, vi } from 'vitest';
 import { newBlankDefinition, newBlock } from './new-form';
-import { preparePublication, publishingIssues } from './prepare-publication';
+import {
+  preparePublication,
+  publishingIssues,
+  publishStatus,
+  publishLabel,
+  publishReason,
+  statusLabels,
+} from './prepare-publication';
 
 function question(type: Parameters<typeof newBlock>[0], label: string) {
   const block = newBlock(type);
@@ -76,4 +83,46 @@ it('names the question, rule or ending behind each publishing issue', () => {
       targetId: file.id,
     },
   ]);
+});
+it('derives the header status from the saved publication and local edits', () => {
+  const live = {
+    publicId: crypto.randomUUID(),
+    versionId: crypto.randomUUID(),
+    number: 2,
+    sourceRevision: 7,
+    active: true,
+    updatedAt: '2026-11-12T09:30:00.000Z',
+  };
+  expect(publishStatus(null, 1, false)).toBe('draft');
+  expect(publishStatus(live, 7, false)).toBe('live');
+  expect(publishStatus(live, 8, false)).toBe('changes');
+  expect(publishStatus(live, 7, true)).toBe('changes');
+  expect(publishStatus({ ...live, active: false }, 7, false)).toBe('stopped');
+  expect(statusLabels).toEqual({
+    draft: 'Draft',
+    live: 'Live',
+    changes: 'Live · unpublished changes',
+    stopped: 'Stopped',
+  });
+});
+it('says Publishing while a publish is in flight and Retry only after a failure', () => {
+  expect(publishLabel('draft', 'idle')).toBe('Publish');
+  expect(publishLabel('stopped', 'idle')).toBe('Publish');
+  expect(publishLabel('changes', 'idle')).toBe('Publish changes');
+  expect(publishLabel('live', 'idle')).toBe('Published');
+  for (const status of ['draft', 'changes', 'stopped'] as const) {
+    expect(publishLabel(status, 'running')).toBe('Publishing…');
+    expect(publishLabel(status, 'failed')).toBe('Retry publishing');
+  }
+});
+it('explains why Publish is unavailable with a count of what to fix', () => {
+  expect(publishReason(0, 'saved')).toBe('');
+  expect(publishReason(1, 'saved')).toBe('1 thing to fix before publishing.');
+  expect(publishReason(3, 'saving')).toBe('3 things to fix before publishing.');
+  expect(publishReason(2, 'conflict')).toBe(
+    'Review the edit conflict before publishing.',
+  );
+  expect(publishReason(0, 'blocked')).toBe(
+    'Saving is paused. Review the message below.',
+  );
 });

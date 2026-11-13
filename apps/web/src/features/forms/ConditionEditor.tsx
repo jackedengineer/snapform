@@ -83,7 +83,7 @@ export function ConditionEditor({
         >
           {!operators.includes(condition.op) && (
             <option value={condition.op}>
-              {labels[condition.op]} — review this comparison
+              {labels[condition.op]}. Review this comparison.
             </option>
           )}
           {operators.map((op) => (
@@ -169,7 +169,7 @@ export function ConditionEditor({
             >
               {!fields.some((field) => field.id === condition.fieldId) && (
                 <option value={condition.fieldId}>
-                  Missing question — choose another
+                  Missing question. Choose another.
                 </option>
               )}
               {fields.map((field, index) => (
