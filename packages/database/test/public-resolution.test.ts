@@ -51,11 +51,24 @@ it('resolves only live pinned definitions without granting anonymous table acces
           publicId,
           versionId: published.versionId,
           definition,
+          businessName: 'Public lookup QA',
         });
         expect(Object.keys(visible!)).toEqual([
           'publicId',
           'versionId',
           'definition',
+          'businessName',
+        ]);
+        // The query deployed before migration 0044 still reads named columns.
+        const deployed = await tx.execute(
+          sql`select public_id, version_id, definition from public.resolve_published_form(${publicId}::uuid)`,
+        );
+        expect(deployed.rows).toEqual([
+          {
+            public_id: publicId,
+            version_id: published.versionId,
+            definition,
+          },
         ]);
         expect(await resolvePublicForm(tx, crypto.randomUUID())).toBeNull();
         await expect(
@@ -76,3 +89,34 @@ it('resolves only live pinned definitions without granting anonymous table acces
     await close();
   }
 }, 30000);
+it('keeps the public lookup runtime-only after adding the business name', async () => {
+  if (!process.env.DATABASE_URL)
+    throw new Error('Runtime database configuration is required');
+  const { db, close } = await openDatabase(process.env.DATABASE_URL);
+  try {
+    expect(
+      (
+        await db.execute(sql`select
+          has_function_privilege(current_user,'public.resolve_published_form(uuid)','EXECUTE') as app,
+          has_function_privilege('snapform_jobs','public.resolve_published_form(uuid)','EXECUTE') as jobs,
+          exists(select 1 from aclexplode(p.proacl) a where a.grantee = 0) as anyone,
+          p.prosecdef as definer,p.provolatile as volatility,p.proconfig as config,
+          pg_get_function_result(p.oid) as result
+          from pg_proc p where p.oid='public.resolve_published_form(uuid)'::regprocedure`)
+      ).rows,
+    ).toEqual([
+      {
+        app: true,
+        jobs: false,
+        anyone: false,
+        definer: true,
+        volatility: 's',
+        config: ['search_path=pg_catalog'],
+        result:
+          'TABLE(public_id uuid, version_id uuid, definition jsonb, business_name text)',
+      },
+    ]);
+  } finally {
+    await close();
+  }
+});
