@@ -1,5 +1,8 @@
 import { expect, it } from 'vitest';
-import { formatResponseAnswer } from './response-display.ts';
+import {
+  formatRelativeTime,
+  formatResponseAnswer,
+} from './response-display.ts';
 import { formFixture } from '../test/form-fixture.ts';
 it('preserves zero, explicit answer states and the labels in the published version', () => {
   const { definition, ids } = formFixture();
@@ -77,4 +80,18 @@ it('formats choice arrays, booleans and number units without losing explicit fal
   expect(
     formatResponseAnswer(choice, { state: 'value', value: 'unknown' }),
   ).toBe('Unavailable choice');
+});
+it('describes submission times relative to now without future drift', () => {
+  const now = Date.parse('2026-11-13T12:00:00Z');
+  for (const [iso, expected] of [
+    ['2026-11-13T11:59:31Z', 'just now'],
+    ['2026-11-13T12:03:00Z', 'just now'],
+    ['2026-11-13T11:58:00Z', '2 minutes ago'],
+    ['2026-11-13T09:30:00Z', '2 hours ago'],
+    ['2026-11-12T08:00:00Z', 'yesterday'],
+    ['2026-11-01T12:00:00Z', 'last week'],
+    ['2026-08-13T12:00:00Z', '3 months ago'],
+    ['2024-11-13T12:00:00Z', '2 years ago'],
+  ] as const)
+    expect(formatRelativeTime(iso, now)).toBe(expected);
 });
