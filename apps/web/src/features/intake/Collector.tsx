@@ -222,9 +222,10 @@ export function Collector({
       />
     ));
   }
+  const embed = search.embed === 1;
   if (intake.unavailable)
     return (
-      <RespondentFrame>
+      <RespondentFrame embed={embed}>
         <Unavailable closed={intake.unavailable === 'closed'} />
       </RespondentFrame>
     );
@@ -242,6 +243,7 @@ export function Collector({
     <RespondentFrame
       title={session ? definition?.title : undefined}
       card={card && !review}
+      embed={embed}
     >
       <p role="status" className="intake-cleared">
         {cleared}

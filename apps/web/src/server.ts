@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry';
 import { withTransportSecurity } from './transport';
 import { formatExportDownload } from './export-download';
+import { contentSecurityPolicy } from './content-security';
 import styles from './styles.css?url';
 
 export default createServerEntry({
@@ -27,15 +28,11 @@ export default createServerEntry({
       'Permissions-Policy',
       'camera=(), microphone=(), geolocation=()',
     );
-    if (import.meta.env.PROD) {
-      const challenge = new URL(request.url).pathname.startsWith('/f/')
-        ? ' https://challenges.cloudflare.com'
-        : '';
+    if (import.meta.env.PROD)
       secured.headers.set(
         'Content-Security-Policy',
-        `default-src 'self'; script-src 'self' 'nonce-${nonce}'${challenge}; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'${challenge}; frame-src 'self'${challenge}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`,
+        contentSecurityPolicy(new URL(request.url).pathname, nonce),
       );
-    }
     return withTransportSecurity(secured, request.url);
   },
 });

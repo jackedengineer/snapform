@@ -118,6 +118,41 @@ it('reports unavailable native browser recovery instead of pretending to persist
   );
 });
 
+it('still saves and submits when browser storage throws, and says so', async () => {
+  vi.useFakeTimers();
+  const entry = record();
+  if (!entry.session) throw new Error('Missing session');
+  const field = entry.session.definition.pages[0].blocks.find(
+    (block) => block.type === 'long-text',
+  );
+  if (!field) throw new Error('Missing field');
+  const persist = vi
+    .fn()
+    .mockRejectedValue(
+      new DOMException('Access is denied for this document.', 'SecurityError'),
+    );
+  const send = vi.fn(
+    async (input: IntakeMutation, kind: 'save' | 'submit') => ({
+      operationId: input.operationId,
+      revision: input.expectedRevision + 1,
+      currentRevision: input.expectedRevision + 1,
+      status:
+        kind === 'submit' ? ('submitted' as const) : ('collecting' as const),
+    }),
+  );
+  const progress = new IntakeProgress(
+    entry,
+    {},
+    { persist, send, changed: () => {} },
+  );
+  progress.edit({ [field.id]: { state: 'value', value: 'Embedded answer' } });
+  expect(await progress.submit()).toBe(true);
+  expect(send.mock.calls.map((call) => call[1])).toEqual(['save', 'submit']);
+  expect(progress.state.status).toBe('submitted');
+  expect(progress.state.storageError).toBe(true);
+  expect(persist).toHaveBeenCalled();
+  await progress.close();
+});
 it('keeps an uncertain submission frozen and retries the same final operation', async () => {
   const entry = record();
   if (!entry.session) throw new Error('Missing session');

@@ -30,6 +30,14 @@ it('keeps respondents on the form with quiet links that open new tabs', () => {
   expect(markup).toContain('Report abuse');
   expect(markup).toContain('(opens in a new tab)');
 });
+it('marks only an embedded frame for the host page surface', () => {
+  expect(html(createElement(RespondentFrame, { embed: true }))).toContain(
+    'class="intake-shell intake-embed"',
+  );
+  expect(html(createElement(RespondentFrame, {}))).toContain(
+    'class="intake-shell"',
+  );
+});
 it('names a missing or closed form without sending the respondent away', () => {
   const missing = html(
     createElement(

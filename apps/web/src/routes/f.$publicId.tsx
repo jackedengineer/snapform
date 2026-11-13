@@ -25,7 +25,7 @@ function PublicForm() {
   const navigate = Route.useNavigate();
   if (!publicIdPattern.test(publicId))
     return (
-      <RespondentFrame>
+      <RespondentFrame embed={search.embed === 1}>
         <Unavailable closed={false} />
       </RespondentFrame>
     );
@@ -35,8 +35,13 @@ function PublicForm() {
       publicId={publicId.toLowerCase()}
       search={search}
       onNavigate={(next, replace = false) =>
-        // The collector moves focus and scroll itself after each step.
-        void navigate({ search: next, replace, resetScroll: false })
+        // The collector moves focus and scroll itself after each step, and
+        // an embedded form stays embedded.
+        void navigate({
+          search: search.embed ? { ...next, embed: search.embed } : next,
+          replace,
+          resetScroll: false,
+        })
       }
     />
   );

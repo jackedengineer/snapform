@@ -4,6 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { PublicForm } from '@snapform/contracts/public-form';
 import type { IntakeRecovery } from '@snapform/contracts/intake-progress';
 import { getRecovery, putRecovery, removeRecovery } from './storage';
+import { withTabLock } from './tab-lock';
+import type { TabAccess } from './tab-lock';
 import { newRecovery } from './recovery';
 import { IntakeProgress } from './progress';
 import type { ProgressState } from './progress';
@@ -37,6 +39,9 @@ export function useIntake(publicId: string) {
   useEffect(() => {
     let ownedController: IntakeProgress | null = null;
     let active = true,
+      // Without the tab lock this frame has no browser storage either (such as
+      // a third-party embed with storage blocked), so answers stay in memory.
+      recoverable = true,
       release: () => void = () => {};
     const held = new Promise<void>((resolve) => {
       release = resolve;
@@ -51,7 +56,10 @@ export function useIntake(publicId: string) {
       acknowledged: NonNullable<IntakeRecovery['session']>['answers'],
     ) {
       const next = new IntakeProgress(record, acknowledged, {
-        persist: putRecovery,
+        persist: (state) =>
+          recoverable
+            ? putRecovery(state)
+            : Promise.reject(Error('Browser recovery is unavailable.')),
         send: (input, kind) =>
           writeIntakeRequest(publicId, record.identity, input, kind),
         changed: (state) => {
@@ -63,21 +71,23 @@ export function useIntake(publicId: string) {
       setProgress({ ...next.state });
       return next;
     }
-    async function run(lock: Lock | null) {
+    async function run(access: TabAccess) {
       if (!active) return;
-      if (!lock) {
+      if (access === 'busy') {
         setError(
           'This form is already open in another tab. Close that tab, then retry here.',
         );
         setLoading(false);
         return;
       }
+      recoverable = access === 'held';
+      if (!recoverable) setStorageError(true);
       actions.current.forget = async () => {
         setBusy(true);
         try {
           await controller.current?.close();
           controller.current = null;
-          await removeRecovery(publicId);
+          if (recoverable) await removeRecovery(publicId);
           replaceSaved.current = false;
           if (active) setReload((value) => value + 1);
         } catch {
@@ -92,13 +102,14 @@ export function useIntake(publicId: string) {
       let record = newRecovery(publicId),
         stored = false;
       try {
-        try {
-          const recovered = await getRecovery(publicId);
-          stored = Boolean(recovered);
-          record = recovered || record;
-        } catch {
-          if (active) setStorageError(true);
-        }
+        if (recoverable)
+          try {
+            const recovered = await getRecovery(publicId);
+            stored = Boolean(recovered);
+            record = recovered || record;
+          } catch {
+            if (active) setStorageError(true);
+          }
         if (!active) return;
         let resumed = false;
         if (stored)
@@ -159,11 +170,12 @@ export function useIntake(publicId: string) {
           setBusy(true);
           setError('');
           try {
-            try {
-              await putRecovery(record);
-            } catch {
-              if (active) setStorageError(true);
-            }
+            if (recoverable)
+              try {
+                await putRecovery(record);
+              } catch {
+                if (active) setStorageError(true);
+              }
             const session = await startIntakeRequest(
               publicId,
               record.identity,
@@ -176,11 +188,12 @@ export function useIntake(publicId: string) {
               pending: null,
               expiresAt: Date.parse(session.expiresAt),
             };
-            try {
-              await putRecovery(record);
-            } catch {
-              setStorageError(true);
-            }
+            if (recoverable)
+              try {
+                await putRecovery(record);
+              } catch {
+                setStorageError(true);
+              }
             attach(record, session.answers);
             setForm({
               publicId,
@@ -247,16 +260,16 @@ export function useIntake(publicId: string) {
       setLoading(false);
     } else
       lifecycle.current = lifecycle.current.then(() =>
-        navigator.locks
-          .request('snapform-intake:' + publicId, { ifAvailable: true }, run)
-          .catch(() => {
+        withTabLock(navigator.locks, 'snapform-intake:' + publicId, run).catch(
+          () => {
             if (active) {
               setError(
                 'This browser couldn’t open the saved form. Retry to continue.',
               );
               setLoading(false);
             }
-          }),
+          },
+        ),
       );
     return () => {
       active = false;

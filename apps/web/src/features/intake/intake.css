@@ -515,3 +515,20 @@
 .intake-option input:focus-visible {
   outline: none;
 }
+/* Embedded on a customer's page, their page is the surface: no background or
+   outer margins, and no viewport height that would feed back into the frame. */
+body:has(.intake-embed) {
+  background: transparent;
+}
+.intake-shell.intake-embed {
+  display: flow-root;
+  min-height: 0;
+  padding-top: 0;
+  background: transparent;
+}
+.intake-embed :is(.intake-bar, .intake-main, .intake-footer) {
+  width: 100%;
+}
+.intake-embed .intake-footer {
+  padding-bottom: 0;
+}

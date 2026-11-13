@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { resizeMessage } from './embed';
 import { responseReference } from './reference';
 import type { ReviewRow, ReviewSection } from './summary';
 import type { ProgressState } from './progress';
@@ -13,14 +15,32 @@ const newTab = (
 export function RespondentFrame({
   title,
   card = false,
+  embed = false,
   children,
 }: {
   title?: string;
   card?: boolean;
+  embed?: boolean;
   children?: ReactNode;
 }) {
+  const shell = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = shell.current;
+    if (!embed || !element || window.parent === window) return;
+    const observer = new ResizeObserver(() =>
+      window.parent.postMessage(
+        resizeMessage(element.getBoundingClientRect().height),
+        '*',
+      ),
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [embed]);
   return (
-    <div className="intake-shell">
+    <div
+      ref={shell}
+      className={'intake-shell' + (embed ? ' intake-embed' : '')}
+    >
       {/* A business name and logo belong beside the title once forms carry them. */}
       {title && (
         <header className="intake-bar">

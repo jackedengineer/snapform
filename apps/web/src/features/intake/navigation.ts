@@ -1,13 +1,18 @@
 import type { FormEvaluation } from '@snapform/contracts/evaluate';
 import type { CollectionStep } from './steps';
-export type CollectorSearch = { step?: number | 'review'; edit?: true };
+export type CollectorSearch = {
+  step?: number | 'review';
+  edit?: true;
+  embed?: 1;
+};
 export type Position = { index: number; review: boolean };
-// The address carries only a position, never answers or capabilities.
+// The address carries only a position and embed mode, never answers or
+// capabilities.
 export function readCollectorSearch(
   search: Record<string, unknown>,
 ): CollectorSearch {
   const step = search.step;
-  const result: CollectorSearch = {};
+  const result: CollectorSearch = search.embed === 1 ? { embed: 1 } : {};
   if (step === 'review') result.step = step;
   else if (
     typeof step === 'number' &&

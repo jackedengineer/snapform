@@ -24,6 +24,16 @@ it('keeps only a bounded step position and edit flag from the address', () => {
     readCollectorSearch({ step: 1, capability: 'secret', answers: 'raw' }),
   ).toEqual({ step: 1 });
 });
+it('keeps embed mode only for the exact embed flag', () => {
+  expect(readCollectorSearch({ embed: 1 })).toEqual({ embed: 1 });
+  expect(readCollectorSearch({ embed: 1, step: 2, edit: true })).toEqual({
+    embed: 1,
+    step: 2,
+    edit: true,
+  });
+  for (const embed of ['1', true, 2, 0, '<script>', [1], { height: 1 }])
+    expect(readCollectorSearch({ embed })).toEqual({});
+});
 it('never places the respondent past an unfinished step', () => {
   const blank = setup({});
   expect(
