@@ -3,16 +3,24 @@ import { previewState } from './preview-state';
 import { newBlankDefinition, newBlock } from './new-form';
 
 // A local fixture keeps these preview checks independent of starter content.
+// New questions start unlabelled; an author labels them before previewing.
+function question(
+  type: 'short-text' | 'long-text' | 'email',
+  label: string,
+  required = false,
+) {
+  const block = newBlock(type);
+  if (!('required' in block)) throw new Error('Expected a question block.');
+  return { ...block, label, required };
+}
 function contactForm() {
   const definition = newBlankDefinition();
-  const email = newBlock('email');
-  if (email.type !== 'email') throw new Error('Expected an email block.');
   definition.pages[0].blocks = [
-    newBlock('short-text'),
-    { ...email, required: true },
-    newBlock('short-text'),
-    newBlock('long-text'),
-    newBlock('long-text'),
+    question('short-text', 'Your name'),
+    question('email', 'Work email', true),
+    question('short-text', 'Company'),
+    question('long-text', 'What do you need?'),
+    question('long-text', 'Anything else?'),
   ];
   return definition;
 }
