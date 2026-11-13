@@ -84,6 +84,27 @@ it('names the question, rule or ending behind each publishing issue', () => {
     },
   ]);
 });
+it('names the rule and both questions when a move breaks a rule’s order', () => {
+  const definition = draft();
+  const shown = question('short-text', 'Company name');
+  definition.pages[0].blocks.unshift(shown);
+  const rule = {
+    id: crypto.randomUUID(),
+    priority: 0,
+    condition: {
+      op: 'answered' as const,
+      fieldId: definition.pages[0].blocks[1].id,
+    },
+    action: { type: 'show' as const, fieldId: shown.id },
+  };
+  expect(publishingIssues({ ...definition, rules: [rule] })).toEqual([
+    {
+      message:
+        'Rule 1 shows “Company name”, which now comes before “Where can we reach you?”. Pick a later question.',
+      targetId: rule.id,
+    },
+  ]);
+});
 it('derives the header status from the saved publication and local edits', () => {
   const live = {
     publicId: crypto.randomUUID(),

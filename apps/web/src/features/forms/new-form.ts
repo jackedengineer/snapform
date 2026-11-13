@@ -87,6 +87,19 @@ export function duplicateBlock(block: Block): Block {
   return copy;
 }
 
+type ChoiceField = Extract<Block, { options: unknown }>;
+export function insertOption<T extends ChoiceField>(block: T, afterId: string) {
+  if (block.options.length >= 20) return null;
+  const optionId = crypto.randomUUID();
+  const index = block.options.findIndex((option) => option.id === afterId);
+  const options = [...block.options];
+  options.splice(index < 0 ? options.length : index + 1, 0, {
+    id: optionId,
+    label: '',
+  });
+  return { block: { ...block, options }, optionId };
+}
+
 // One numbering for the outline, rules and readiness: answer questions in
 // form order across pages. Headings and help text are not numbered.
 export function questionNumbers(definition: FormDefinition) {

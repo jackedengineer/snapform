@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Block } from '@snapform/contracts/form';
-import { blockNames } from './new-form';
+import { blockNames, insertOption } from './new-form';
 import { AnswerSettings } from './AnswerSettings';
 export function BlockInspector({
   block,
@@ -12,6 +12,16 @@ export function BlockInspector({
   const labelInput = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   useEffect(() => labelInput.current?.focus(), [block.id]);
   const content = block.type === 'heading' || block.type === 'help';
+  function addOption(afterId: string) {
+    if (block.type !== 'single-choice' && block.type !== 'multiple-choice')
+      return;
+    const next = insertOption(block, afterId);
+    if (!next) return;
+    onChange(next.block);
+    requestAnimationFrame(() =>
+      document.getElementById(`option-${next.optionId}`)?.focus(),
+    );
+  }
   return (
     <section className="block-inspector" aria-labelledby="inspector-title">
       <h2 id="inspector-title">{blockNames[block.type]}</h2>
@@ -83,9 +93,18 @@ export function BlockInspector({
           {block.options.map((option, index) => (
             <div className="choice-row" key={option.id}>
               <input
+                id={`option-${option.id}`}
                 aria-label={`Option ${index + 1}`}
+                placeholder={`Option ${index + 1}`}
                 maxLength={500}
                 value={option.label}
+                onKeyDown={(event) => {
+                  // Enter adds the next option here instead of saving the form.
+                  if (event.key !== 'Enter' || event.nativeEvent.isComposing)
+                    return;
+                  event.preventDefault();
+                  addOption(option.id);
+                }}
                 onChange={(event) =>
                   onChange({
                     ...block,
@@ -118,18 +137,7 @@ export function BlockInspector({
             className="text-button"
             type="button"
             disabled={block.options.length >= 20}
-            onClick={() =>
-              onChange({
-                ...block,
-                options: [
-                  ...block.options,
-                  {
-                    id: crypto.randomUUID(),
-                    label: `Option ${block.options.length + 1}`,
-                  },
-                ],
-              })
-            }
+            onClick={() => addOption(block.options.at(-1)?.id || '')}
           >
             + Add option
           </button>

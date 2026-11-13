@@ -93,6 +93,8 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [focusLink, setFocusLink] = useState(false);
+  const [moveNote, setMoveNote] = useState('');
+  useEffect(() => setMoveNote(''), [selected]);
   const linkFocused = useCallback(() => setFocusLink(false), []);
   const [loading, setLoading] = useState(false),
     [loadError, setLoadError] = useState('');
@@ -200,10 +202,32 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
         return { ...page, blocks: reordered };
       }),
     );
+    if (selectedPage)
+      setMoveNote(
+        `Moved ${direction < 0 ? 'up' : 'down'} to position ${selectedIndex + direction + 1} of ${selectedPage.blocks.length}.`,
+      );
     requestAnimationFrame(() => {
       if (trigger instanceof HTMLButtonElement && trigger.disabled)
         document.getElementById(`question-${block.id}`)?.focus();
     });
+  }
+  function moveToPage(pageId: string) {
+    if (!block) return;
+    const next = moveBlockToPage(definition, block.id, pageId);
+    if (!next) return;
+    const ruleIssues = (value: typeof definition) =>
+      publishingIssues(value).filter(({ targetId }) =>
+        value.rules.some((rule) => rule.id === targetId),
+      ).length;
+    const index = next.pages.findIndex((page) => page.id === pageId);
+    form.setFieldValue('pages', next.pages);
+    setActivePageId(pageId);
+    setMoveNote(
+      `Moved to ${next.pages[index].title || `page ${index + 1}`}.` +
+        (ruleIssues(next) > ruleIssues(definition)
+          ? ' A rule now needs attention. Review it in Publish & share.'
+          : ''),
+    );
   }
   function duplicate() {
     if (!block) return;
@@ -528,16 +552,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                           <select
                             id="move-question-page"
                             value={selectedPage.id}
-                            onChange={(event) => {
-                              const next = moveBlockToPage(
-                                definition,
-                                block.id,
-                                event.target.value,
-                              );
-                              if (!next) return;
-                              form.setFieldValue('pages', next.pages);
-                              setActivePageId(event.target.value);
-                            }}
+                            onChange={(event) => moveToPage(event.target.value)}
                           >
                             {definition.pages.map((page) => (
                               <option key={page.id} value={page.id}>
@@ -596,6 +611,9 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                       >
                         Remove
                       </button>
+                      <p role="status" className="move-note">
+                        {moveNote}
+                      </p>
                     </div>
                   )}
                 </>

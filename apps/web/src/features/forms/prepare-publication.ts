@@ -8,6 +8,7 @@ import {
 } from '@snapform/contracts/publication';
 import { definitionKey } from './autosave';
 import { blockCaption, blockNames, questionNumbers } from './new-form';
+import { conditionFields } from './rule-editing';
 
 export type PublishStatus = 'draft' | 'live' | 'changes' | 'stopped';
 export function publishStatus(
@@ -58,23 +59,59 @@ export function publishingIssues(
     definition.pages.flatMap((page) => page.blocks).map((b) => [b.id, b]),
   );
   const rules = [...definition.rules].sort((a, b) => a.priority - b.priority);
-  return result.issues.map(({ message, targetId }) => {
-    const block = targetId ? blocks.get(targetId) : undefined;
-    const rule = rules.findIndex((item) => item.id === targetId);
-    const ending = definition.endings.findIndex((item) => item.id === targetId);
-    const subject = !block
-      ? rule >= 0
-        ? `Rule ${rule + 1}`
-        : ending >= 0
-          ? `Ending ${ending + 1}`
-          : ''
-      : !('label' in block)
-        ? blockNames[block.type]
-        : block.label.trim()
-          ? `Question ${numbers.get(block.id)}, “${blockCaption(block)}”`
-          : `Question ${numbers.get(block.id)} (${blockNames[block.type]})`;
-    return { message: subject ? `${subject}: ${message}` : message, targetId };
-  });
+  const name = (id: string) => {
+    const block = blocks.get(id);
+    return block && 'label' in block && block.label.trim()
+      ? `“${blockCaption(block)}”`
+      : `question ${numbers.get(id)}`;
+  };
+  const seen = new Set<string>();
+  return result.issues
+    .map(({ code, message, targetId }) => {
+      const block = targetId ? blocks.get(targetId) : undefined;
+      const rule = rules.findIndex((item) => item.id === targetId);
+      const ending = definition.endings.findIndex(
+        (item) => item.id === targetId,
+      );
+      if (code === 'FORWARD_DEPENDENCY' && rule >= 0) {
+        const { action, condition } = rules[rule];
+        if (action.type !== 'show')
+          return {
+            message: `Rule ${rule + 1} checks an answer that comes after the page it leaves from. Pick an earlier question or a later page.`,
+            targetId,
+          };
+        const shown = numbers.get(action.fieldId) ?? 0;
+        const later = conditionFields(condition).find(
+          (id) => (numbers.get(id) ?? 0) >= shown,
+        );
+        if (later)
+          return {
+            message: `Rule ${rule + 1} shows ${name(action.fieldId)}, which now comes before ${name(later)}. Pick a later question.`,
+            targetId,
+          };
+      }
+      const subject = !block
+        ? rule >= 0
+          ? `Rule ${rule + 1}`
+          : ending >= 0
+            ? `Ending ${ending + 1}`
+            : ''
+        : !('label' in block)
+          ? blockNames[block.type]
+          : block.label.trim()
+            ? `Question ${numbers.get(block.id)}, “${blockCaption(block)}”`
+            : `Question ${numbers.get(block.id)} (${blockNames[block.type]})`;
+      return {
+        message: subject ? `${subject}: ${message}` : message,
+        targetId,
+      };
+    })
+    .filter(({ message, targetId }) => {
+      const key = `${targetId}:${message}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 export async function preparePublication(

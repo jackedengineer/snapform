@@ -8,7 +8,29 @@ import {
   newBlankDefinition,
   duplicateBlock,
   questionNumbers,
+  insertOption,
 } from './new-form';
+it('adds an empty option after the one being edited and stops at twenty', () => {
+  const block = newBlock('single-choice');
+  if (block.type !== 'single-choice') throw new Error('Expected choices');
+  const next = insertOption(block, block.options[0].id);
+  if (!next) throw new Error('Expected another option');
+  expect(next.block.options.map((option) => option.label)).toEqual([
+    'Option 1',
+    '',
+    'Option 2',
+  ]);
+  expect(next.block.options[1].id).toBe(next.optionId);
+  expect(block.options).toHaveLength(2);
+  const full = {
+    ...block,
+    options: Array.from({ length: 20 }, () => ({
+      id: crypto.randomUUID(),
+      label: 'Choice',
+    })),
+  };
+  expect(insertOption(full, full.options[0].id)).toBeNull();
+});
 it('starts new questions and the first page empty so authors write their own words', () => {
   const definition = newBlankDefinition();
   expect(definition.pages[0].title).toBe('');
