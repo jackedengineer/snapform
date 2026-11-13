@@ -20,6 +20,11 @@ function routeFamily(path: string) {
     return 'intake';
   if (/^\/api\/v1\/public\/forms\/[0-9a-f-]{36}$/i.test(path))
     return 'public-form';
+  if (
+    path === '/api/v1/invitations/accept' ||
+    /^\/api\/v1\/workspaces\/[^/]+\/(?:members|invitations)(?:\/|$)/.test(path)
+  )
+    return 'team';
   if (/^\/api\/v1\/workspaces(?:\/|$)/.test(path)) {
     if (/\/webhook(?:\/|$)/.test(path)) return 'webhook';
     if (/\/responses(?:\/|$)/.test(path)) return 'response';

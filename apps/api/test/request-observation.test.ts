@@ -60,6 +60,12 @@ it('distinguishes completed responses from disconnects and handles known route f
       'public-form',
     ],
     ['/api/v1/workspaces', 'workspace'],
+    ['/api/v1/workspaces/242c6529-f3d5-416d-a376-eca248b44478/members', 'team'],
+    [
+      '/api/v1/workspaces/242c6529-f3d5-416d-a376-eca248b44478/invitations',
+      'team',
+    ],
+    ['/api/v1/invitations/accept', 'team'],
     ['/api/v1/public/intake-config', 'intake'],
     ['/api/v1/brief/review', 'brief'],
   ])

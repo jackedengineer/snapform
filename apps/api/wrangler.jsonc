@@ -59,6 +59,12 @@
       "namespace_id": "1007",
       "simple": { "limit": 600, "period": 60 },
     },
+    {
+      // Per owner, for team invitations.
+      "name": "INVITE_RATE_LIMIT",
+      "namespace_id": "1009",
+      "simple": { "limit": 10, "period": 60 },
+    },
   ],
   "observability": { "enabled": true, "logs": { "invocation_logs": false } },
 }

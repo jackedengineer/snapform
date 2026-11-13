@@ -13,6 +13,7 @@ import {
   createInvitation,
   listInvitations,
   listTeam,
+  noSeatLimit,
   removeMember,
   revokeInvitation,
 } from '../src/team.ts';
@@ -88,7 +89,7 @@ it('lets only owners invite, list and revoke, and keeps the table private', () =
       workspaceId,
       { email: email(people.invitee).toUpperCase(), role: 'viewer' },
       first,
-      null,
+      noSeatLimit,
     );
     expect(workspaceName).toBe('Team QA');
     expect(invitation).toMatchObject({
@@ -109,7 +110,7 @@ it('lets only owners invite, list and revoke, and keeps the table private', () =
           workspaceId,
           { email: email(people.outsider), role: 'viewer' },
           hash(),
-          null,
+          noSeatLimit,
         ),
       ).rejects.toThrow('FORBIDDEN');
       await expect(listInvitations(tx, actor, workspaceId)).rejects.toThrow(
@@ -129,7 +130,7 @@ it('lets only owners invite, list and revoke, and keeps the table private', () =
         workspaceId,
         { email: email(people.editor), role: 'viewer' },
         hash(),
-        null,
+        noSeatLimit,
       ),
     ).rejects.toThrow('ALREADY_MEMBER');
     // Inviting the same address again replaces the earlier link.
@@ -139,7 +140,7 @@ it('lets only owners invite, list and revoke, and keeps the table private', () =
       workspaceId,
       { email: email(people.invitee), role: 'editor' },
       hash(),
-      null,
+      noSeatLimit,
     );
     expect(
       (await listInvitations(tx, people.owner, workspaceId)).invitations,
@@ -182,7 +183,7 @@ it('counts members and live invitations against a seat limit', () =>
         workspaceId,
         { email: address, role: 'viewer' },
         hash(),
-        limit,
+        async (_tx, id) => (id === workspaceId ? limit : 0),
       );
     await expect(invite(email(people.invitee), 3)).rejects.toThrow(
       'SEAT_LIMIT_REACHED',
@@ -206,7 +207,7 @@ it('binds acceptance to the verified invited address and spends the link once', 
       workspaceId,
       { email: email(people.invitee), role: 'viewer' },
       token,
-      null,
+      noSeatLimit,
     );
     await createInvitation(
       tx,
@@ -214,7 +215,7 @@ it('binds acceptance to the verified invited address and spends the link once', 
       workspaceId,
       { email: email(people.unverified), role: 'editor' },
       unverified,
-      null,
+      noSeatLimit,
     );
     await expect(acceptInvitation(tx, people.invitee, hash())).rejects.toThrow(
       'INVITATION_NOT_FOUND',
@@ -327,7 +328,7 @@ it('freezes invitations and member changes while the workspace awaits deletion',
       workspaceId,
       { email: email(people.invitee), role: 'viewer' },
       token,
-      null,
+      noSeatLimit,
     );
     await scheduleDeletion(
       tx,
@@ -350,7 +351,7 @@ it('freezes invitations and member changes while the workspace awaits deletion',
         workspaceId,
         { email: email(people.outsider), role: 'viewer' },
         hash(),
-        null,
+        noSeatLimit,
       ),
     ).rejects.toThrow('WORKSPACE_DELETION_PENDING');
     await expect(

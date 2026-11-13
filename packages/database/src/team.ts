@@ -82,24 +82,32 @@ export async function listTeam(db: Connection, actor: string, id: string) {
     });
   });
 }
-// seatLimit is the billing hook: null means the plan sets no seat limit.
+// The billing hook. It runs inside the invitation transaction, after the
+// owner check and workspace lock, so a plan lookup cannot race the insert.
+// null means no seat limit; members plus live invitations use seats.
+export type SeatLimit = (
+  tx: Transaction,
+  workspaceId: string,
+) => Promise<number | null>;
+export const noSeatLimit: SeatLimit = async () => null;
 export async function createInvitation(
   db: Connection,
   actor: string,
   id: string,
   raw: unknown,
   tokenHash: string,
-  seatLimit: number | null,
+  seatLimit: SeatLimit,
 ) {
   const workspace = workspaceId.parse(id),
     input = createInvitationSchema.parse(raw),
     hash = invitationHashSchema.parse(tokenHash);
-  if (seatLimit !== null && !(Number.isSafeInteger(seatLimit) && seatLimit > 0))
-    throw Error('INVALID_INVITATION');
   return inWorkspace(db, actor, workspace, 'members.manage', async (tx) => {
+    const limit = await seatLimit(tx, workspace);
+    if (limit !== null && !(Number.isSafeInteger(limit) && limit > 0))
+      throw Error('INVALID_SEAT_LIMIT');
     const [row] = await call<{ invitation: unknown }>(
       tx,
-      sql`select public.create_workspace_invitation(${workspace}::uuid,${input.email},${input.role},${hash},${seatLimit}::integer) as invitation`,
+      sql`select public.create_workspace_invitation(${workspace}::uuid,${input.email},${input.role},${hash},${limit}::integer) as invitation`,
     );
     const created = row?.invitation;
     if (
