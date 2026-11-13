@@ -2,7 +2,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { AuthFrame } from './AuthFrame';
 import { AuthFields } from './AuthFields';
 import { useAccountForm } from './useAccountForm';
-import { accountRedirect } from './redirect';
+import { signInDestination } from './sign-in-destination';
 import type { AuthMode } from './useAccountForm';
 
 const copy = {
@@ -55,7 +55,7 @@ export function AuthPage({
   const navigate = useNavigate();
   const { form, mutation, complete, sentTo, heading, busy, startAgain, ready } =
     useAccountForm(mode, token, () =>
-      navigate({ href: accountRedirect(redirect) }),
+      navigate({ href: signInDestination(redirect, window.location.hash) }),
     );
   const brokenReset = mode === 'reset' && (!token || invalidLink);
   return (

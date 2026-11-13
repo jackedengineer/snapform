@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { accountRedirect, signInSearch } from './redirect';
+import { signInDestination } from './sign-in-destination';
 
 describe('sign-in link for a signed-out account page', () => {
   it('remembers a deep account page so sign-in can return to it', () => {
@@ -48,5 +49,29 @@ describe('post sign-in redirect', () => {
       `/app?${'a'.repeat(600)}`,
     ])
       expect(accountRedirect(value)).toBe('/app');
+  });
+});
+
+describe('returning to an invite after sign-in', () => {
+  const token = 'A'.repeat(42) + 'Q';
+  it('keeps the invite token in the fragment only', () => {
+    expect(signInDestination('/invite', `#token=${token}`)).toBe(
+      `/invite#token=${token}`,
+    );
+    expect(signInDestination('/workspaces/ws_1', `#token=${token}`)).toBe(
+      '/workspaces/ws_1',
+    );
+  });
+  it('drops malformed or extra fragment content', () => {
+    for (const fragment of [
+      '',
+      '#token=short',
+      `#token=${token}&next=https://evil.example`,
+      `#next=/app`,
+    ])
+      expect(signInDestination('/invite', fragment)).toBe('/app');
+    expect(signInDestination('/invite?token=x', `#token=${token}`)).toBe(
+      '/app',
+    );
   });
 });
