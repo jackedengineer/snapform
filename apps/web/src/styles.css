@@ -9,7 +9,8 @@
 }
 body {
   margin: 0;
-  background: var(--surface-canvas);
+  /* One product surface: the cool workspace grey, so pages never change tone. */
+  background: var(--surface-workspace);
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: 15px;
@@ -622,11 +623,18 @@ dd small {
     max-width: 480px;
     margin: 40px auto 56px;
   }
-  .auth-intro h1 {
-    font-size: 50px;
-    letter-spacing: -2px;
-    margin: 14px 0;
+  /* Grid items default to min-content width; let long headings wrap instead. */
+  .auth-layout > * {
+    min-width: 0;
   }
+  .auth-intro h1 {
+    font-size: clamp(32px, 10vw, 44px);
+    letter-spacing: -1.5px;
+    margin: 0;
+    overflow-wrap: break-word;
+  }
+  .auth-intro .eyebrow,
+  .auth-panel > .eyebrow,
   .auth-intro .intro-copy,
   .auth-specimen,
   .auth-caption {

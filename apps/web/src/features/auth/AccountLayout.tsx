@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useRef } from 'react';
-import { Link, Outlet, useNavigate } from '@tanstack/react-router';
+import { Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authPost, currentUser } from './api';
+import { signInSearch } from './redirect';
 import type { User } from './api';
 import {
   endDraftSession,
@@ -31,6 +32,18 @@ export function AccountLayout() {
     staleTime: 0,
     gcTime: 0,
   });
+  const location = useLocation();
+  const signedOut = !profile.data && !profile.isPending && !profile.isError;
+  const returnTo = signInSearch(location.pathname, location.searchStr);
+  const redirected = useRef(false);
+  useEffect(() => {
+    // Send signed-out visitors straight to sign-in once, and bring them back
+    // here afterwards. The layout can briefly outlive the navigation, so the
+    // guard prevents re-redirecting from the sign-in page itself.
+    if (!signedOut || redirected.current) return;
+    redirected.current = true;
+    void navigate({ to: '/login', search: returnTo, replace: true });
+  }, [signedOut, returnTo, navigate]);
   const signOutGuard = useRef<(() => Promise<void>) | null>(null);
   const logout = useMutation({
     mutationFn: async () => {
@@ -108,10 +121,9 @@ export function AccountLayout() {
           </div>
         ) : (
           <div className="account-home">
-            <h1>Let’s get you signed in.</h1>
-            <p className="intro-copy">Sign in to access your account.</p>
-            <Link className="button primary" to="/login">
-              Sign in <span aria-hidden="true">↗</span>
+            <p role="status">Taking you to sign in…</p>
+            <Link to="/login" search={returnTo}>
+              Sign in
             </Link>
           </div>
         )}

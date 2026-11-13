@@ -1,8 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { AuthPage } from '../features/auth/AuthPage';
 export const Route = createFileRoute('/login')({
-  validateSearch: (search: Record<string, unknown>): { error?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { error?: string; redirect?: string } => ({
     error: typeof search.error === 'string' ? search.error : undefined,
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
   }),
   head: () => ({
     meta: [
@@ -13,6 +16,8 @@ export const Route = createFileRoute('/login')({
   component: Login,
 });
 function Login() {
-  const { error } = Route.useSearch();
-  return <AuthPage mode="login" invalidLink={Boolean(error)} />;
+  const { error, redirect } = Route.useSearch();
+  return (
+    <AuthPage mode="login" invalidLink={Boolean(error)} redirect={redirect} />
+  );
 }

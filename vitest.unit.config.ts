@@ -5,6 +5,7 @@ export default defineConfig({
       'packages/contracts/**/*.test.ts',
       'apps/web/src/*.test.ts',
       'apps/web/src/features/auth/api.test.ts',
+      'apps/web/src/features/auth/redirect.test.ts',
       'apps/web/src/features/workspaces/api.test.ts',
       'apps/web/src/features/forms/*.test.ts',
       'apps/web/src/features/deletion/*.test.ts',

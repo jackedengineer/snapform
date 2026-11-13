@@ -2,6 +2,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { AuthFrame } from './AuthFrame';
 import { AuthFields } from './AuthFields';
 import { useAccountForm } from './useAccountForm';
+import { accountRedirect } from './redirect';
 import type { AuthMode } from './useAccountForm';
 
 const copy = {
@@ -43,22 +44,23 @@ export function AuthPage({
   mode,
   token,
   invalidLink = false,
+  redirect,
 }: {
   mode: AuthMode;
   token?: string;
   invalidLink?: boolean;
+  redirect?: string;
 }) {
   const text = copy[mode];
   const navigate = useNavigate();
   const { form, mutation, complete, sentTo, heading, busy, startAgain, ready } =
-    useAccountForm(mode, token, () => navigate({ to: '/app' }));
+    useAccountForm(mode, token, () =>
+      navigate({ href: accountRedirect(redirect) }),
+    );
   const brokenReset = mode === 'reset' && (!token || invalidLink);
   return (
     <AuthFrame title={text.title} signup={mode === 'signup'}>
       <section className="auth-panel" aria-label={text.action}>
-        <span className="eyebrow">
-          {complete ? 'ONE STEP CLOSER' : 'YOUR WORK STARTS HERE'}
-        </span>
         <h2 ref={heading} tabIndex={-1}>
           {brokenReset
             ? 'Let’s get you a new link.'
@@ -85,12 +87,12 @@ export function AuthPage({
         )}
         {brokenReset ? (
           <Link className="button primary" to="/forgot-password">
-            Request a new link <span aria-hidden="true">↗</span>
+            Request a new link
           </Link>
         ) : complete ? (
           <>
             <Link className="button primary" to="/login">
-              Back to sign in <span aria-hidden="true">↗</span>
+              Back to sign in
             </Link>
             {mode === 'signup' ? (
               <Link className="text-button" to="/verify-email">
@@ -130,7 +132,6 @@ export function AuthPage({
                   : mutation.isPending
                     ? 'One moment…'
                     : text.action}
-                <span aria-hidden="true">↗</span>
               </button>
             </fieldset>
           </form>
@@ -141,9 +142,7 @@ export function AuthPage({
           </p>
         )}
         <p className="auth-fine-print">
-          Your account belongs to you.
-          <br />
-          We’ll only email you about your account and your work.
+          We only email you about your account and your forms.
         </p>
       </section>
     </AuthFrame>
