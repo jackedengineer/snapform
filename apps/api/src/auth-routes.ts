@@ -11,7 +11,53 @@ import {
   handlePrivateRequest,
 } from './private-routes.ts';
 
+const signedToken =
+  /^[A-Za-z0-9_-]{1,256}\.[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$/;
+// Mirrors better-call's signed-cookie reader: the first cookie with the name
+// wins and its value is URL-decoded before `${token}.${base64 HMAC}` checks.
+// Better Auth still verifies the signature and stored session afterwards.
+function hasSessionCookie(
+  header: string | undefined,
+  authUrl: string | undefined,
+) {
+  const secure =
+    authUrl !== undefined &&
+    URL.canParse(authUrl) &&
+    new URL(authUrl).protocol === 'https:';
+  const name = (secure ? '__Secure-' : '') + 'snapform.session_token';
+  for (const part of header?.split(';') ?? []) {
+    const separator = part.indexOf('=');
+    if (separator < 0 || part.slice(0, separator).trim() !== name) continue;
+    const value = part.slice(separator + 1).trim();
+    return (
+      /^(?:[A-Za-z0-9_.+/=-]|%2[BbFf]|%3[Dd]){1,512}$/.test(value) &&
+      signedToken.test(
+        value.replace(/%2B/gi, '+').replace(/%2F/gi, '/').replace(/%3D/gi, '='),
+      )
+    );
+  }
+  return false;
+}
+
 export const authRoutes = Router();
+// Cheap checks precede body parsing and every private database connection.
+authRoutes.use(async (req, res, next) => {
+  if (!isPrivatePath(req.path)) return next();
+  const scope = requestScope.getStore();
+  if (!scope) throw new Error('Request context is required.');
+  const settings = scope.environment;
+  if (!hasSessionCookie(req.headers.cookie, settings.BETTER_AUTH_URL)) {
+    res.status(401).json({ error: { code: 'UNAUTHENTICATED' } });
+    return;
+  }
+  const key = req.get('cf-connecting-ip') || 'local';
+  if (!(await settings.PRIVATE_IP_RATE_LIMIT.limit({ key })).success) {
+    res.setHeader('Retry-After', '60');
+    res.status(429).json({ error: { code: 'RATE_LIMITED' } });
+    return;
+  }
+  next();
+});
 authRoutes.use(privateBody);
 authRoutes.use(async (req, res, next) => {
   if (!(req.path.startsWith('/api/auth/') || isPrivatePath(req.path)))
@@ -42,10 +88,6 @@ async function handleAuth(
   res: Response,
   scope: NonNullable<ReturnType<typeof requestScope.getStore>>,
 ) {
-  if (isPrivatePath(req.path) && !req.headers.cookie) {
-    res.status(401).json({ error: { code: 'UNAUTHENTICATED' } });
-    return;
-  }
   if (req.path === '/api/auth/sign-out' && !req.headers.cookie) {
     res.json({ success: true });
     return;

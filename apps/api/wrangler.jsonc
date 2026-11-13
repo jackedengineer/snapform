@@ -45,6 +45,12 @@
       "namespace_id": "1005",
       "simple": { "limit": 60, "period": 60 },
     },
+    {
+      // Per address, before any private-path database connection.
+      "name": "PRIVATE_IP_RATE_LIMIT",
+      "namespace_id": "1007",
+      "simple": { "limit": 600, "period": 60 },
+    },
   ],
   "observability": { "enabled": true, "logs": { "invocation_logs": false } },
 }

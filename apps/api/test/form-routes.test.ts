@@ -1,6 +1,7 @@
 import { SELF } from 'cloudflare:test';
 import { expect, it } from 'vitest';
 import { formsPageBody } from '../src/forms.ts';
+import { sessionCookie } from './session-cookie.ts';
 it('serializes list status and bounded response counts inside workerd', () => {
   const workspace = {
     id: crypto.randomUUID(),
@@ -58,13 +59,19 @@ it('requires a verified identity for every form resource', async () => {
 });
 it('bounds authoring bodies and rejects non-JSON or cross-origin writes', async () => {
   expect(
-    (await SELF.fetch(draft, { method: 'PUT', body: 'text' })).status,
+    (
+      await SELF.fetch(draft, {
+        method: 'PUT',
+        headers: { Cookie: sessionCookie },
+        body: 'text',
+      })
+    ).status,
   ).toBe(415);
   expect(
     (
       await SELF.fetch(draft, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Cookie: sessionCookie },
         body: JSON.stringify({ value: 'x'.repeat(310000) }),
       })
     ).status,

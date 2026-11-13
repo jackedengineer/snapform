@@ -153,11 +153,10 @@ export default {
         environment.AUTH_ALLOWED_RECIPIENT,
       );
       if (checked instanceof Response) return checked;
-      if (request.method === 'POST') {
-        const key = request.headers.get('cf-connecting-ip') || 'local';
-        if (!(await environment.AUTH_RATE_LIMIT.limit({ key })).success)
-          return authFailure('RATE_LIMITED', 429);
-      }
+      // Emailed link callbacks also open a database connection.
+      const key = request.headers.get('cf-connecting-ip') || 'local';
+      if (!(await environment.AUTH_RATE_LIMIT.limit({ key })).success)
+        return authFailure('RATE_LIMITED', 429);
       request = checked;
     }
     return requestScope.run(

@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 import { compilePublication } from '@snapform/contracts/publication';
 import { matchPublicationRoute } from '../src/publication.ts';
 import { formFixture } from '../../../packages/contracts/test/form-fixture.ts';
+import { sessionCookie } from './session-cookie.ts';
 it('refuses file questions with the publication compiler inside workerd', () => {
   const { definition } = formFixture();
   expect(compilePublication(definition).ok).toBe(true);
@@ -50,12 +51,23 @@ it('requires verified identity for publication reads and mutations', async () =>
 });
 it('bounds publication and unpublication input before database access', async () => {
   for (const method of ['POST', 'DELETE']) {
-    expect((await SELF.fetch(url, { method, body: 'plain' })).status).toBe(415);
     expect(
       (
         await SELF.fetch(url, {
           method,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { Cookie: sessionCookie },
+          body: 'plain',
+        })
+      ).status,
+    ).toBe(415);
+    expect(
+      (
+        await SELF.fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: sessionCookie,
+          },
           body: JSON.stringify({ value: 'x'.repeat(17000) }),
         })
       ).status,

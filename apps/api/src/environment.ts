@@ -10,4 +10,5 @@ export interface AuthEnvironment {
   AUTH_ALLOWED_RECIPIENT?: string;
   AUTH_RATE_LIMIT: RateLimit;
   WRITE_RATE_LIMIT: RateLimit;
+  PRIVATE_IP_RATE_LIMIT: RateLimit;
 }
