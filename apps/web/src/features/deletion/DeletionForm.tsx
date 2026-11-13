@@ -66,8 +66,8 @@ export function DeletionForm({
         {target.kind === 'workspace'
           ? 'new responses, edits and delivery across this workspace'
           : 'respondent access and delivery for this response'}{' '}
-        immediately. Deletion starts after 24 hours. After that, it cannot be
-        undone.
+        immediately. You can cancel for 24 hours. After that, it can’t be undone
+        and the data is queued for permanent removal.
       </p>
       <div className="field">
         <label htmlFor={id}>
@@ -110,8 +110,8 @@ export function DeletionForm({
             }
           />
           <span>
-            I understand this data will be permanently deleted after the 24-hour
-            cancellation window.
+            I understand this can’t be undone after the 24-hour cancellation
+            window.
           </span>
         </label>
         {invalid.acknowledge && (

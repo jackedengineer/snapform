@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createWorkspaceSchema } from '@snapform/contracts/workspace';
@@ -13,6 +13,7 @@ const segments = {
 };
 export function WorkspaceHome({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const key = ['workspaces', userId];
   const query = useQuery({
     queryKey: key,
@@ -28,7 +29,6 @@ export function WorkspaceHome({ userId }: { userId: string }) {
     <section className="workspace-section" aria-labelledby="workspaces-title">
       <div className="workspace-heading">
         <div>
-          <p className="eyebrow">A PLACE FOR YOUR WORK</p>
           <h2 id="workspaces-title">Your workspaces</h2>
         </div>
         {!adding && (
@@ -68,8 +68,12 @@ export function WorkspaceHome({ userId }: { userId: string }) {
             );
             setCreated(workspace.name);
             setAdding(false);
-            requestAnimationFrame(() => confirmation.current?.focus());
             void queryClient.invalidateQueries({ queryKey: key });
+            // A new workspace is empty; take its owner straight to it.
+            void navigate({
+              to: '/workspaces/$workspaceId',
+              params: { workspaceId: workspace.id },
+            });
           }}
         />
       )}
@@ -86,13 +90,22 @@ export function WorkspaceHome({ userId }: { userId: string }) {
         </div>
       ) : query.data.length === 0 ? (
         <div className="workspace-empty">
-          <span className="empty-symbol" aria-hidden="true">
-            ↗
-          </span>
-          <h3>Good work needs a home.</h3>
+          <h3>Create your first workspace</h3>
           <p>
-            Create a workspace for your team, forms and incoming conversations.
+            A workspace holds your forms and the responses they collect. Most
+            teams need just one.
           </p>
+          {!adding && (
+            <button
+              className="button primary compact-button"
+              onClick={() => {
+                setAdding(true);
+                setCreated('');
+              }}
+            >
+              Create workspace
+            </button>
+          )}
         </div>
       ) : (
         <ul className="workspace-list">
@@ -109,14 +122,10 @@ export function WorkspaceHome({ userId }: { userId: string }) {
                 </span>
                 <div>
                   <h3>{workspace.name}</h3>
-                  <p>
-                    {segments[workspace.segment]} · {workspace.role}
-                  </p>
+                  <p>{segments[workspace.segment]}</p>
                 </div>
-                <span className="workspace-role" aria-hidden="true">
-                  {workspace.role}
-                </span>
-                <span aria-hidden="true">↗</span>
+                <span className="workspace-role">{workspace.role}</span>
+                <span aria-hidden="true">→</span>
               </Link>
             </li>
           ))}

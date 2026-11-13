@@ -14,13 +14,12 @@ function Account() {
   const user = useAccountUser();
   return (
     <div className="account-home">
-      <p className="eyebrow">YOUR WORK, IN GOOD COMPANY</p>
       <h1>
         Welcome, {user.name}
         <span className="accent-dot">.</span>
       </h1>
       <p className="intro-copy">
-        Choose a workspace to build your next conversation.
+        Your forms and their responses live in a workspace.
       </p>
       <WorkspaceHome key={user.id} userId={user.id} />
     </div>
