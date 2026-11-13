@@ -7,7 +7,7 @@ import { createWorkspace } from '../src/workspaces.ts';
 import { createForm } from '../src/forms.ts';
 import { publishForm } from '../src/publication.ts';
 import { startIntake } from '../src/intake.ts';
-import { trialResponseUsage } from '../src/intake-schema.ts';
+import { workspaceResponseUsage } from '../src/billing-schema.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
 async function fixture(
   expired: boolean,
@@ -58,46 +58,42 @@ async function fixture(
     await close();
   }
 }
+const hashes = (workspaceId: string) =>
+  sql`replace(${workspaceId}::text,'-','') || lpad(to_hex(n),32,'0')`;
+const capability = () => crypto.randomUUID().replaceAll('-', '').repeat(2);
 it(
-  'reserves fifty trial response slots and refuses another without billing an overage',
+  'reserves the Free monthly allowance and then reports the form as not accepting',
   async () =>
     fixture(false, async (tx, _actor, workspaceId, publicId) => {
       const reserved = await tx.execute<{ id: string | null }>(
-        sql`select public.start_response_session(${publicId}::uuid,gen_random_uuid(),replace(${workspaceId}::text,'-','') || lpad(to_hex(n),32,'0')) as id from generate_series(1,50) n`,
+        sql`select public.start_response_session(${publicId}::uuid,gen_random_uuid(),${hashes(workspaceId)}) as id from generate_series(1,100) n`,
       );
-      expect(reserved.rows.filter((row) => row.id)).toHaveLength(50);
+      expect(reserved.rows.filter((row) => row.id)).toHaveLength(100);
       await expect(
-        startIntake(
-          tx,
-          publicId,
-          crypto.randomUUID(),
-          crypto.randomUUID().replaceAll('-', '').repeat(2),
+        tx.transaction((attempt) =>
+          startIntake(attempt, publicId, crypto.randomUUID(), capability()),
         ),
-      ).rejects.toThrow('INTAKE_UNAVAILABLE');
+      ).rejects.toThrow('FORM_NOT_ACCEPTING');
     }),
   30000,
 );
 it(
-  'does not restart an expired creator trial by creating another workspace',
+  'keeps collecting for a creator who signed up before the old trial window',
   async () =>
     fixture(true, async (tx, _actor, _workspaceId, publicId) => {
-      await expect(
-        startIntake(
-          tx,
-          publicId,
-          crypto.randomUUID(),
-          crypto.randomUUID().replaceAll('-', '').repeat(2),
-        ),
-      ).rejects.toThrow('INTAKE_UNAVAILABLE');
+      const id = crypto.randomUUID();
+      expect((await startIntake(tx, publicId, id, capability())).status).toBe(
+        'collecting',
+      );
     }),
   30000,
 );
 it(
-  'shares the one trial allowance across a creator’s workspaces',
+  'gives each workspace its own monthly allowance',
   async () =>
     fixture(false, async (tx, actor, workspaceId, publicId) => {
       await tx.execute(
-        sql`select public.start_response_session(${publicId}::uuid,gen_random_uuid(),replace(${workspaceId}::text,'-','') || lpad(to_hex(n),32,'0')) from generate_series(1,50) n`,
+        sql`select public.start_response_session(${publicId}::uuid,gen_random_uuid(),${hashes(workspaceId)}) from generate_series(1,100) n`,
       );
       const other = await createWorkspace(tx, actor, {
           id: crypto.randomUUID(),
@@ -114,31 +110,33 @@ it(
         expectedRevision: 1,
       });
       if (!publication.publication) throw new Error('Expected publication');
-      await expect(
-        startIntake(
-          tx,
-          publication.publication.publicId,
-          crypto.randomUUID(),
-          crypto.randomUUID().replaceAll('-', '').repeat(2),
-        ),
-      ).rejects.toThrow('INTAKE_UNAVAILABLE');
+      expect(
+        (
+          await startIntake(
+            tx,
+            publication.publication.publicId,
+            crypto.randomUUID(),
+            capability(),
+          )
+        ).status,
+      ).toBe('collecting');
     }),
   30000,
 );
 it(
-  'does not allow the runtime to reset consumed trial usage',
+  'does not allow the runtime to read or reset monthly usage directly',
   async () =>
     fixture(false, async (tx, _actor, _workspaceId, publicId) => {
-      await startIntake(
-        tx,
-        publicId,
-        crypto.randomUUID(),
-        crypto.randomUUID().replaceAll('-', '').repeat(2),
-      );
+      await startIntake(tx, publicId, crypto.randomUUID(), capability());
       await expect(
         tx.transaction(async (nested) => {
-          await nested.update(trialResponseUsage).set({ responsesUsed: 0 });
+          await nested.update(workspaceResponseUsage).set({ responsesUsed: 0 });
         }),
+      ).rejects.toMatchObject({ cause: { code: '42501' } });
+      await expect(
+        tx.transaction((nested) =>
+          nested.select().from(workspaceResponseUsage),
+        ),
       ).rejects.toMatchObject({ cause: { code: '42501' } });
     }),
   30000,

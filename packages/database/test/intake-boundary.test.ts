@@ -25,7 +25,8 @@ it('authorizes each intake statement and rolls rejected effects back without los
         );
         if (!publication.publication) throw Error('Publication required');
         // A session-ID collision occurs after the canonical admission function
-        // touches this new owner's quota row. Rejection must undo that insert.
+        // touches this workspace's monthly counter. Rejection must undo it and
+        // leave no reservation behind.
         await expect(
           startIntake(
             tx,
@@ -35,12 +36,19 @@ it('authorizes each intake statement and rolls rejected effects back without los
           ),
         ).rejects.toThrow('INTAKE_UNAVAILABLE');
         expect(
-          (
-            await tx.execute(
-              sql`select owner_id from public.trial_response_usage where owner_id=${second.actor}`,
-            )
-          ).rows,
-        ).toEqual([]);
+          await inWorkspace(
+            tx,
+            second.actor,
+            second.workspaceId,
+            'responses.read',
+            async (scoped) =>
+              (
+                await scoped.execute(
+                  sql`select responses_used as used,responses_reserved as reserved from public.workspace_billing(${second.workspaceId}::uuid)`,
+                )
+              ).rows,
+          ),
+        ).toEqual([{ used: 0, reserved: 0 }]);
         await expect(
           getIntake(tx, first.publicId, first.partial, 'f'.repeat(64)),
         ).rejects.toThrow('INTAKE_UNAVAILABLE');
@@ -84,7 +92,7 @@ it('authorizes each intake statement and rolls rejected effects back without los
             async (scoped) =>
               (
                 await scoped.execute(
-                  sql`select (select responses_used from public.trial_response_usage where owner_id=${first.actor}) as used,(select count(*)::int from public.response_outbox where session_id=${first.partial}::uuid) as events`,
+                  sql`select (select responses_used from public.workspace_billing(${first.workspaceId}::uuid)) as used,(select count(*)::int from public.response_outbox where session_id=${first.partial}::uuid) as events`,
                 )
               ).rows,
           );

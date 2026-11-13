@@ -6,6 +6,7 @@ import { saveDraft } from '../src/forms.ts';
 import { publishForm, unpublishForm } from '../src/publication.ts';
 import { responseSession } from '../src/intake-schema.ts';
 import { startIntake, getIntake, mutateIntake } from '../src/intake.ts';
+import { getBilling } from '../src/billing.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
 import { seedForm } from './fixtures/forms.ts';
 async function fixture(
@@ -222,7 +223,7 @@ it(
 it(
   'rolls back a submission, usage and its outbox event together',
   async () =>
-    fixture(async (tx, actor, _workspaceId, _formId, publicId) => {
+    fixture(async (tx, actor, workspaceId, _formId, publicId) => {
       const id = crypto.randomUUID(),
         hash = '6'.repeat(64);
       const session = await startIntake(tx, publicId, id, hash);
@@ -265,16 +266,7 @@ it(
           )
         ).rows,
       ).toHaveLength(0);
-      await tx.execute(
-        sql`select set_config('snapform.user_id',${actor},true)`,
-      );
-      expect(
-        (
-          await tx.execute(
-            sql`select responses_used from public.trial_response_usage where owner_id=${actor}`,
-          )
-        ).rows,
-      ).toEqual([{ responses_used: 0 }]);
+      expect((await getBilling(tx, actor, workspaceId)).responsesUsed).toBe(0);
     }),
   30000,
 );
@@ -415,13 +407,7 @@ it(
           expectedRevision: 3,
         }),
       ).rejects.toThrow('INTAKE_ALREADY_SUBMITTED');
-      await tx.execute(
-        sql`select set_config('snapform.user_id',${actor},true)`,
-      );
-      const used = await tx.execute<{ responses_used: number }>(
-        sql`select responses_used from public.trial_response_usage where owner_id=${actor}`,
-      );
-      expect(used.rows[0]?.responses_used).toBe(1);
+      expect((await getBilling(tx, actor, workspaceId)).responsesUsed).toBe(1);
       expect(
         (
           await tx.execute(
