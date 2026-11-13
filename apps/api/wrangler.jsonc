@@ -36,14 +36,22 @@
       "simple": { "limit": 60, "period": 60 },
     },
     {
+      // Per address; Turnstile and quota reservations still gate each start.
       "name": "INTAKE_START_RATE_LIMIT",
       "namespace_id": "1004",
-      "simple": { "limit": 20, "period": 60 },
+      "simple": { "limit": 60, "period": 60 },
     },
     {
+      // Per respondent session (route + bearer digest).
       "name": "INTAKE_WRITE_RATE_LIMIT",
       "namespace_id": "1005",
       "simple": { "limit": 60, "period": 60 },
+    },
+    {
+      // Per address across sessions; sized for shared and carrier NAT.
+      "name": "INTAKE_IP_WRITE_RATE_LIMIT",
+      "namespace_id": "1008",
+      "simple": { "limit": 300, "period": 60 },
     },
     {
       // Per address, before any private-path database connection.

@@ -56,25 +56,25 @@ intakeRoutes.use(async (req, res, next) => {
   if (!scope) throw new Error('Request context is required.');
   const settings = scope.environment;
   const mutationRequest = route.kind === 'submit' || req.method === 'PATCH';
+  // Per-session limits are primary; address limits leave room for NAT.
   const limiter =
     route.kind === 'start'
       ? settings.INTAKE_START_RATE_LIMIT
       : mutationRequest
-        ? settings.INTAKE_WRITE_RATE_LIMIT
+        ? settings.INTAKE_IP_WRITE_RATE_LIMIT
         : settings.PUBLIC_READ_RATE_LIMIT;
   const address = req.get('cf-connecting-ip') || 'local';
-  if (
-    !(await limiter.limit({ key: (mutationRequest ? 'ip:' : '') + address }))
-      .success
-  )
-    return rateLimited(res);
+  if (!(await limiter.limit({ key: address })).success) return rateLimited(res);
   const hash = mutationRequest
     ? await intakeAuthorizationHash(req.get('authorization'))
     : null;
   if (
     hash &&
-    !(await limiter.limit({ key: 'session:' + route.publicId + ':' + hash }))
-      .success
+    !(
+      await settings.INTAKE_WRITE_RATE_LIMIT.limit({
+        key: 'session:' + route.publicId + ':' + hash,
+      })
+    ).success
   )
     return rateLimited(res);
   next();
