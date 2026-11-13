@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import { email } from './auth.ts';
-import { can, roleSchema } from './workspace.ts';
+import { roleSchema } from './workspace.ts';
 import type { Role } from './workspace.ts';
+import { invitationTokenPattern } from './invitation-token.ts';
+export { invitationTokenFromFragment } from './invitation-token.ts';
+export { roleChangeDecision, removalDecision } from './team-rules.ts';
 
 // Ownership grants billing and deletion, so it is given by promoting an
 // existing member deliberately, never by a link that can be forwarded.
@@ -12,11 +15,7 @@ export const createInvitationSchema = z.strictObject({
 });
 export type CreateInvitation = z.infer<typeof createInvitationSchema>;
 
-// 32 random bytes as unpadded base64url: 43 characters, the last carrying
-// only 4 bits, so a canonical token ends in one of 16 characters.
-export const invitationTokenSchema = z
-  .string()
-  .regex(/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/);
+export const invitationTokenSchema = z.string().regex(invitationTokenPattern);
 export const invitationHashSchema = z.string().regex(/^[0-9a-f]{64}$/);
 export const acceptInvitationSchema = z.strictObject({
   token: invitationTokenSchema,
@@ -37,40 +36,6 @@ export async function hashInvitationToken(token: string) {
     byte.toString(16).padStart(2, '0'),
   ).join('');
 }
-// The link carries the token in its fragment, which browsers never send to a server.
-export function invitationTokenFromFragment(fragment: string) {
-  const match = /^#token=([^&=#]*)$/.exec(fragment);
-  const token = invitationTokenSchema.safeParse(match?.[1]);
-  return token.success ? token.data : null;
-}
-
-export type TeamDecision = 'allowed' | 'FORBIDDEN' | 'LAST_OWNER';
-// The database repeats these checks under a workspace lock; this copy lets the
-// API and screens explain a refusal before asking.
-export function roleChangeDecision(
-  actor: unknown,
-  target: unknown,
-  next: unknown,
-  owners: number,
-): TeamDecision {
-  if (
-    !can(actor, 'members.manage') ||
-    !roleSchema.safeParse(target).success ||
-    !roleSchema.safeParse(next).success
-  )
-    return 'FORBIDDEN';
-  return target === 'owner' && next !== 'owner' && owners <= 1
-    ? 'LAST_OWNER'
-    : 'allowed';
-}
-export function removalDecision(
-  actor: unknown,
-  target: unknown,
-  owners: number,
-): TeamDecision {
-  return roleChangeDecision(actor, target, 'viewer', owners);
-}
-
 export const memberIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
 export const roleChangeSchema = z.strictObject({ role: roleSchema });
 const memberSchema = z.strictObject({

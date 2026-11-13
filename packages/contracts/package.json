@@ -7,6 +7,8 @@
     "./auth": "./src/auth.ts",
     "./workspace": "./src/workspace.ts",
     "./team": "./src/team.ts",
+    "./invitation-token": "./src/invitation-token.ts",
+    "./team-rules": "./src/team-rules.ts",
     "./form": "./src/form.ts",
     "./currency": "./src/currency.ts",
     "./answers": "./src/answers.ts",

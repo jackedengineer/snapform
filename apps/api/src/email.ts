@@ -1,4 +1,4 @@
-import { invitationTokenFromFragment } from '@snapform/contracts/team';
+import { invitationTokenFromFragment } from '@snapform/contracts/invitation-token';
 export type AuthMessage = { kind: 'verify' | 'reset'; to: string; url: string };
 
 type MailSettings = {
