@@ -1,9 +1,24 @@
 import { expect, it } from 'vitest';
 import { previewState } from './preview-state';
-import { newStarterDefinition } from './starters';
+import { newBlankDefinition, newBlock } from './new-form';
+
+// A local fixture keeps these preview checks independent of starter content.
+function contactForm() {
+  const definition = newBlankDefinition();
+  const email = newBlock('email');
+  if (email.type !== 'email') throw new Error('Expected an email block.');
+  definition.pages[0].blocks = [
+    newBlock('short-text'),
+    { ...email, required: true },
+    newBlock('short-text'),
+    newBlock('long-text'),
+    newBlock('long-text'),
+  ];
+  return definition;
+}
 
 it('blocks incomplete preview steps and allows a valid contact answer', () => {
-  const definition = newStarterDefinition('agency');
+  const definition = contactForm();
   const empty = previewState(definition, {}, '');
   expect(empty.ok).toBe(true);
   if (!empty.ok) throw new Error('Invalid starter');
@@ -20,7 +35,7 @@ it('blocks incomplete preview steps and allows a valid contact answer', () => {
   expect(valid.ok && valid.index).toBe(0);
 });
 it('uses the collector card steps and rejects an invalid definition', () => {
-  const definition = newStarterDefinition('agency');
+  const definition = contactForm();
   definition.presentation = 'card';
   const state = previewState(definition, {}, definition.pages[0].blocks[1].id);
   expect(state.ok && state.index).toBe(1);
