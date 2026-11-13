@@ -50,6 +50,9 @@ export async function configureWebhookDelivery(
         current.configurationId !== input.configurationId
       )
         throw Error('WEBHOOK_SETTINGS_CONFLICT');
+      // Disabling stays possible; enabling needs a readable replacement.
+      if (input.enabled && current.attention)
+        throw Error('WEBHOOK_REPLACEMENT_REQUIRED');
       if (input.enabled && !current.verifiedAt)
         throw Error('WEBHOOK_TEST_REQUIRED');
       const [updated] = await tx
@@ -111,20 +114,27 @@ async function readSettings(
       configurationId: null,
       url: null,
       verifiedAt: null,
+      attention: null,
     };
   if (row.sealed === null || row.revision === null || row.enabled === null)
     throw Error('WEBHOOK_DESTINATION_UNAVAILABLE');
-  const destination = await openWebhookDestination(row.sealed, master, {
+  // A rotated key or a target rule added after saving leaves the endpoint
+  // unusable. Report that state, never the stored value, so it can be replaced.
+  const url = await openWebhookDestination(row.sealed, master, {
     workspaceId,
     formId,
     configurationId: row.configurationId,
-  });
+  }).then(
+    (destination) => destination.url,
+    () => null,
+  );
   return {
     enabled: row.enabled,
     revision: row.revision,
     configurationId: row.configurationId,
-    url: destination.url,
+    url,
     verifiedAt: row.verifiedAt?.toISOString() ?? null,
+    attention: url === null ? ('DESTINATION_UNAVAILABLE' as const) : null,
   };
 }
 export async function getWebhookSettings(

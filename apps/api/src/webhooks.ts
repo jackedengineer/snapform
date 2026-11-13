@@ -47,6 +47,29 @@ export function matchWebhookRoute(path: string): WebhookRoute | null {
       }
     : null;
 }
+// The shared contract cannot describe an endpoint that must be replaced yet,
+// so that state is an explicit allowlist; everything else matches the contract.
+export function webhookSettingsBody({
+  attention,
+  ...settings
+}: {
+  enabled: boolean;
+  revision: number;
+  configurationId: string | null;
+  url: string | null;
+  verifiedAt: string | null;
+  attention: 'DESTINATION_UNAVAILABLE' | null;
+}) {
+  if (!attention) return webhookSettingsSchema.parse(settings);
+  return {
+    enabled: settings.enabled,
+    revision: settings.revision,
+    configurationId: settings.configurationId,
+    url: null,
+    verifiedAt: settings.verifiedAt,
+    attention,
+  };
+}
 export async function handleWebhookRequest(
   req: Request,
   res: Response,
@@ -70,7 +93,8 @@ export async function handleWebhookRequest(
     res.status(422).json({ error: { code: 'INVALID_WEBHOOK_SETTINGS' } });
     return;
   }
-  if (!master) {
+  // Only a well-formed 32-byte key may report endpoints as needing attention.
+  if (!/^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$/.test(master)) {
     res.status(503).json({ error: { code: 'WEBHOOK_UNAVAILABLE' } });
     return;
   }
@@ -156,7 +180,7 @@ export async function handleWebhookRequest(
         return;
       }
       res.json(
-        webhookSettingsSchema.parse(
+        webhookSettingsBody(
           await configureWebhookDelivery(
             db,
             actor,
@@ -171,7 +195,7 @@ export async function handleWebhookRequest(
     }
     if (req.method === 'GET') {
       res.json(
-        webhookSettingsSchema.parse(
+        webhookSettingsBody(
           await getWebhookSettings(
             db,
             actor,
@@ -189,7 +213,7 @@ export async function handleWebhookRequest(
       return;
     }
     res.json(
-      webhookSettingsSchema.parse(
+      webhookSettingsBody(
         await saveWebhookConfiguration(
           db,
           actor,
@@ -212,6 +236,7 @@ export async function handleWebhookRequest(
               'OPERATION_CONFLICT',
               'PUBLICATION_REQUIRED',
               'WEBHOOK_TEST_REQUIRED',
+              'WEBHOOK_REPLACEMENT_REQUIRED',
             ].includes(code)
           ? 409
           : ['WORKSPACE_NOT_FOUND', 'FORM_NOT_FOUND'].includes(code)
