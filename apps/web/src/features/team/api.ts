@@ -144,6 +144,19 @@ export function memberControls(
       manage && removalDecision(viewer, member.role, owners) === 'LAST_OWNER',
   };
 }
+// Shown when the API refuses an invite with SEAT_LIMIT_REACHED. Pro is the
+// largest plan, so only Free is offered an upgrade.
+export function seatNotice(plan?: { plan: 'free' | 'pro'; seatLimit: number }) {
+  if (!plan)
+    return { text: 'Every seat on your plan is in use.', upgrade: true };
+  const seats = `${plan.seatLimit} ${plan.seatLimit === 1 ? 'seat' : 'seats'}`;
+  return plan.plan === 'free'
+    ? { text: `Your plan includes ${seats}.`, upgrade: true }
+    : {
+        text: `Your plan includes ${seats}. Revoke an invite or remove someone to free a seat.`,
+        upgrade: false,
+      };
+}
 export const roleHelp: Record<Role, string> = {
   owner: 'Manages the team, billing and deletion.',
   editor: 'Builds forms and reads every response.',

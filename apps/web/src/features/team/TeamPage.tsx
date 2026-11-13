@@ -13,7 +13,10 @@ import {
   removeMember,
   revokeInvite,
   roleHelp,
+  seatNotice,
+  TeamRequestError,
 } from './api';
+import { billingQueryKey, fetchBilling } from '../billing/api';
 import './team.css';
 
 const names: Record<Role, string> = {
@@ -70,6 +73,16 @@ export function TeamPage({ workspaceId }: { workspaceId: string }) {
       requestAnimationFrame(() => heading.current?.focus());
     },
   });
+  const full =
+    invite.error instanceof TeamRequestError &&
+    invite.error.code === 'SEAT_LIMIT_REACHED';
+  // The plan is read only to explain a refused invite; the API enforces it.
+  const billing = useQuery({
+    queryKey: billingQueryKey(user.id, workspaceId),
+    queryFn: ({ signal }) => fetchBilling(workspaceId, signal),
+    enabled: full,
+  });
+  const seats = full ? seatNotice(billing.data) : null;
   function ask(next: Ask) {
     change.reset();
     setAsking(next);
@@ -190,7 +203,21 @@ export function TeamPage({ workspaceId }: { workspaceId: string }) {
             </fieldset>
             {invite.isError && (
               <p id="invite-error" role="alert" className="request-error">
-                {invite.error.message}
+                {seats ? (
+                  <>
+                    {seats.text}{' '}
+                    {seats.upgrade && (
+                      <Link
+                        to="/workspaces/$workspaceId/billing"
+                        params={{ workspaceId }}
+                      >
+                        Upgrade to invite more.
+                      </Link>
+                    )}
+                  </>
+                ) : (
+                  invite.error.message
+                )}
               </p>
             )}
           </form>

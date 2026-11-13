@@ -6,6 +6,7 @@ import {
   fetchTeam,
   memberControls,
   removeMember,
+  seatNotice,
   TeamRequestError,
 } from './api';
 
@@ -149,5 +150,20 @@ describe('team display rules', () => {
         manage: false,
         lastOwner: false,
       });
+  });
+  it('names the plan seats and offers an upgrade only on Free', () => {
+    expect(seatNotice({ plan: 'free', seatLimit: 1 })).toEqual({
+      text: 'Your plan includes 1 seat.',
+      upgrade: true,
+    });
+    expect(seatNotice({ plan: 'pro', seatLimit: 3 })).toEqual({
+      text: 'Your plan includes 3 seats. Revoke an invite or remove someone to free a seat.',
+      upgrade: false,
+    });
+    // Without the plan the owner still learns why and where to look.
+    expect(seatNotice(undefined)).toEqual({
+      text: 'Every seat on your plan is in use.',
+      upgrade: true,
+    });
   });
 });
