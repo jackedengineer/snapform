@@ -78,9 +78,10 @@ authRoutes.use(async (req, res, next) => {
   );
   try {
     await completion;
-  } catch {
+  } catch (error) {
+    // The error handler logs only the sanitized class and stable codes.
     if (res.headersSent) res.destroy();
-    else next(new Error('Authentication request could not be completed.'));
+    else next(error);
   }
 });
 async function handleAuth(
