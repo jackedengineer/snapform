@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, it, vi } from 'vitest';
-import { EmailOffer } from './PublicationControls';
+import { EmailOffer, embedCode } from './PublicationControls';
 
 vi.mock('../auth/AccountLayout', () => ({
   useAccountUser: () => ({ id: 'qa-user' }),
@@ -49,4 +49,13 @@ it('names the workspace owner for editors and stays quiet when already on', () =
   const on = render(true, true);
   expect(on).not.toContain('type="checkbox"');
   expect(on).toContain('Email notifications are on.');
+});
+it('gives a paste-ready embed snippet for the current Snapform origin', () => {
+  const publicId = '11111111-1111-4111-8111-111111111111';
+  expect(embedCode('https://snapform.jacked.dev', publicId)).toBe(
+    `<div data-snapform="${publicId}"></div>\n<script async src="https://snapform.jacked.dev/embed.js"></script>`,
+  );
+  expect(embedCode('http://127.0.0.1:5173', publicId)).toContain(
+    'src="http://127.0.0.1:5173/embed.js"',
+  );
 });

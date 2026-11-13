@@ -771,7 +771,8 @@
   font-weight: 600;
   margin-bottom: 8px;
 }
-.publication-panel input:not([type='checkbox']) {
+.publication-panel input:not([type='checkbox']),
+.embed-code textarea {
   width: 100%;
   min-height: 48px;
   border: 1px solid var(--border-control);
@@ -779,6 +780,27 @@
   padding: 12px;
   font-size: 14px;
   background: var(--surface-panel);
+}
+.embed-code {
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+.embed-code summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.embed-code p {
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+}
+.embed-code textarea {
+  display: block;
+  font: 13px/1.5 var(--font-mono);
+  resize: vertical;
+  margin-bottom: 12px;
 }
 .email-offer {
   display: flex;

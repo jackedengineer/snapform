@@ -211,6 +211,8 @@ export function StatusChip({ publication }: { publication: Publication }) {
     </span>
   );
 }
+export const embedCode = (origin: string, publicId: string) =>
+  `<div data-snapform="${publicId}"></div>\n<script async src="${origin}/embed.js"></script>`;
 const summaries = {
   draft:
     'This form isn’t collecting responses yet. Publish it to get a share link.',
@@ -240,18 +242,31 @@ export function PublicationControls({
 }) {
   const dialog = useRef<HTMLDialogElement>(null),
     link = useRef<HTMLInputElement>(null),
+    code = useRef<HTMLTextAreaElement>(null),
     copy = useRef<HTMLButtonElement>(null);
   const [copied, setCopied] = useState('');
   const { query, status, phase } = publication;
   const current = publication.publication;
-  const url = current
-    ? new URL('/f/' + current.publicId, window.location.origin).href
-    : '';
+  const { origin } = window.location;
+  const url = current ? new URL('/f/' + current.publicId, origin).href : '';
   useEffect(() => {
     if (!focusLink || !copy.current) return;
     copy.current.focus();
     onLinkFocused();
   }, [focusLink, url, onLinkFocused]);
+  async function copyField(
+    field: HTMLInputElement | HTMLTextAreaElement | null,
+    name: string,
+  ) {
+    if (!field) return;
+    try {
+      await navigator.clipboard.writeText(field.value);
+      setCopied(name + ' copied.');
+    } catch {
+      field.select();
+      setCopied(`Select and copy the ${name.toLowerCase()} above.`);
+    }
+  }
   const stopping = phase.kind === 'stop' ? phase.state : 'idle';
   return (
     <section className="publication-panel" aria-labelledby="share-title">
@@ -311,17 +326,7 @@ export function PublicationControls({
                   ref={copy}
                   type="button"
                   className="button primary compact-button"
-                  onClick={() => {
-                    void (async () => {
-                      try {
-                        await navigator.clipboard.writeText(url);
-                        setCopied('Link copied.');
-                      } catch {
-                        link.current?.select();
-                        setCopied('Select and copy the link above.');
-                      }
-                    })();
-                  }}
+                  onClick={() => void copyField(link.current, 'Link')}
                 >
                   Copy link
                 </button>
@@ -329,6 +334,27 @@ export function PublicationControls({
                   Open published form ↗
                 </a>
               </div>
+              <details className="embed-code">
+                <summary>Embed on your website</summary>
+                <p>
+                  Paste this code into your website’s HTML where the form should
+                  appear.
+                </p>
+                <textarea
+                  ref={code}
+                  aria-label="Embed code"
+                  readOnly
+                  rows={3}
+                  value={embedCode(origin, current.publicId)}
+                />
+                <button
+                  type="button"
+                  className="button secondary compact-button"
+                  onClick={() => void copyField(code.current, 'Code')}
+                >
+                  Copy code
+                </button>
+              </details>
               {copied && <p role="status">{copied}</p>}
               {emailOffer && (
                 <EmailOffer
