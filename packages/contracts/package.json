@@ -33,7 +33,8 @@
     "./webhook-deliveries": "./src/webhook-deliveries.ts",
     "./retention": "./src/retention.ts",
     "./purge": "./src/purge.ts",
-    "./deletion": "./src/deletion.ts"
+    "./deletion": "./src/deletion.ts",
+    "./plans": "./src/plans.ts"
   },
   "dependencies": {
     "zod": "4.6.7"

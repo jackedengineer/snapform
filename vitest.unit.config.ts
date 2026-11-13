@@ -43,6 +43,7 @@ export default defineConfig({
         'packages/contracts/src/retention.ts',
         'packages/contracts/src/deletion.ts',
         'packages/contracts/src/purge.ts',
+        'packages/contracts/src/plans.ts',
       ],
       reporter: ['text', 'json-summary'],
       thresholds: { lines: 90, functions: 90, statements: 90, branches: 85 },
