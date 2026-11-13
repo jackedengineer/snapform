@@ -1,6 +1,6 @@
 {
   "id": "c7c75ca5-b520-41b3-8910-4b8588834c75",
-  "prevId": "492cdf15-e7ca-484d-94cd-b6955bbc1ad4",
+  "prevId": "10517418-a76e-4e2e-b099-5874536f4c27",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -597,6 +597,171 @@
         "workspace_segment": {
           "name": "workspace_segment",
           "value": "\"workspace\".\"segment\" in ('agency', 'coach', 'consultant', 'startup')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.workspace_invitation": {
+      "name": "workspace_invitation",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "workspace_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invited_by": {
+          "name": "invited_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "statement_timestamp()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "workspace_invitation_pending": {
+          "name": "workspace_invitation_pending",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"workspace_invitation\".\"accepted_at\" is null and \"workspace_invitation\".\"revoked_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workspace_invitation_recent": {
+          "name": "workspace_invitation_recent",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workspace_invitation_workspace_id_workspace_id_fk": {
+          "name": "workspace_invitation_workspace_id_workspace_id_fk",
+          "tableFrom": "workspace_invitation",
+          "tableTo": "workspace",
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "workspace_invitation_invited_by_user_id_fk": {
+          "name": "workspace_invitation_invited_by_user_id_fk",
+          "tableFrom": "workspace_invitation",
+          "tableTo": "user",
+          "columnsFrom": ["invited_by"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "workspace_invitation_token_hash_unique": {
+          "name": "workspace_invitation_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": ["token_hash"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "workspace_invitation_email": {
+          "name": "workspace_invitation_email",
+          "value": "\"workspace_invitation\".\"email\"=lower(\"workspace_invitation\".\"email\") and length(\"workspace_invitation\".\"email\") between 3 and 254 and \"workspace_invitation\".\"email\" ~ '^[^[:space:]@]+@[^[:space:]@]+$'"
+        },
+        "workspace_invitation_role": {
+          "name": "workspace_invitation_role",
+          "value": "\"workspace_invitation\".\"role\" in ('editor','viewer')"
+        },
+        "workspace_invitation_hash": {
+          "name": "workspace_invitation_hash",
+          "value": "\"workspace_invitation\".\"token_hash\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workspace_invitation_expiry": {
+          "name": "workspace_invitation_expiry",
+          "value": "\"workspace_invitation\".\"expires_at\"=\"workspace_invitation\".\"created_at\"+interval '7 days'"
+        },
+        "workspace_invitation_outcome": {
+          "name": "workspace_invitation_outcome",
+          "value": "\"workspace_invitation\".\"accepted_at\" is null or \"workspace_invitation\".\"revoked_at\" is null"
         }
       },
       "isRLSEnabled": true

@@ -285,8 +285,15 @@
     {
       "idx": 41,
       "version": "7",
-      "when": 1794573000000,
+      "when": 1794572800000,
       "tag": "0041_billing-plans",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794573000000,
+      "tag": "0042_team-invitations",
       "breakpoints": true
     },
     {
