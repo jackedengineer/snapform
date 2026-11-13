@@ -38,21 +38,17 @@
 .intake-shell {
   background: var(--surface-workspace);
 }
-.intake-shell .intake-header {
-  min-height: 80px;
-}
 .intake-shell .intake-main {
   background: white;
   border: 1px solid var(--border-workspace);
   border-radius: 16px;
   padding: 40px;
-  margin-top: 24px;
 }
 .intake-shell .intake-main h1 {
   font-size: clamp(30px, 5vw, 44px);
 }
 .intake-shell .intake-footer {
-  margin-top: 40px;
+  margin-top: 12px;
 }
 .info-shell {
   background: var(--surface-workspace);
@@ -77,12 +73,7 @@
     gap: 16px;
   }
   .intake-shell .intake-main {
-    width: calc(100% - 24px);
     padding: 24px 20px;
-    margin-top: 8px;
-  }
-  .intake-shell .intake-header {
-    padding-inline: 20px;
   }
   .info-shell .info-main {
     padding: 24px 20px;
