@@ -137,6 +137,13 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
               <p className="intro-copy">
                 Start with a question. Turn the answers into your next step.
               </p>
+              <Link
+                className="text-button"
+                to="/workspaces/$workspaceId/team"
+                params={{ workspaceId }}
+              >
+                Team
+              </Link>
             </div>
             {can(query.data.workspace.role, 'forms.write') && (
               <button
