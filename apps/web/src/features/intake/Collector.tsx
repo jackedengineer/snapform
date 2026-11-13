@@ -17,9 +17,9 @@ import {
   RespondentFrame,
   Review,
   Unavailable,
-  unavailableTitle,
   Welcome,
 } from './screens';
+import { unavailableTitle } from './titles';
 const saveLabels = {
   saved: 'Progress saved',
   saving: 'Saving…',

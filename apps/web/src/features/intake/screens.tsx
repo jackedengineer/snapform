@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { responseReference } from './reference';
 import type { ReviewRow, ReviewSection } from './summary';
 import type { ProgressState } from './progress';
-export const unavailableTitle = 'Form unavailable · Snapform';
 // Screens move keyboard and screen-reader focus to this element.
 export const focusTarget = 'intake-heading';
 const newTab = (
