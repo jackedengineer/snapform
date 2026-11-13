@@ -1,12 +1,53 @@
 import { expect, it } from 'vitest';
 import { blockSchema, formDefinitionSchema } from '@snapform/contracts/form';
 import type { Block } from '@snapform/contracts/form';
+import { compileDefinition } from '@snapform/contracts/compile';
 import {
   blockNames,
   newBlock,
   newBlankDefinition,
   duplicateBlock,
+  questionNumbers,
 } from './new-form';
+it('starts new questions and the first page empty so authors write their own words', () => {
+  const definition = newBlankDefinition();
+  expect(definition.pages[0].title).toBe('');
+  for (const type of Object.keys(blockNames) as Block['type'][]) {
+    const block = newBlock(type);
+    if ('label' in block) expect(block.label).toBe('');
+  }
+  const question = newBlock('short-text');
+  definition.pages[0].blocks.push(question);
+  expect(formDefinitionSchema.safeParse(definition).success).toBe(true);
+  const compiled = compileDefinition(definition);
+  expect(compiled.ok).toBe(false);
+  if (!compiled.ok)
+    expect(compiled.issues).toContainEqual(
+      expect.objectContaining({ code: 'MISSING_LABEL', targetId: question.id }),
+    );
+});
+it('numbers questions across pages and leaves content blocks unnumbered', () => {
+  const definition = newBlankDefinition();
+  const [first, heading, second, third] = [
+    newBlock('email'),
+    newBlock('heading'),
+    newBlock('date'),
+    newBlock('number'),
+  ];
+  definition.pages[0].blocks = [first, heading];
+  definition.pages.push({
+    id: crypto.randomUUID(),
+    title: '',
+    blocks: [second, third],
+  });
+  expect(questionNumbers(definition)).toEqual(
+    new Map([
+      [first.id, 1],
+      [second.id, 2],
+      [third.id, 3],
+    ]),
+  );
+});
 it('creates bounded fresh definitions and every supported editable block', () => {
   const first = newBlankDefinition(),
     second = newBlankDefinition();

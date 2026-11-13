@@ -39,6 +39,7 @@ export function BlockInspector({
             }}
             id={`label-${block.id}`}
             maxLength={500}
+            placeholder={content ? undefined : 'Type your question'}
             value={content ? block.text : block.label}
             onChange={(event) =>
               onChange(

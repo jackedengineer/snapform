@@ -20,7 +20,7 @@ export function newBlankDefinition(): FormDefinition {
     description: '',
     presentation: 'page',
     rules: [],
-    pages: [{ id: crypto.randomUUID(), title: 'Your questions', blocks: [] }],
+    pages: [{ id: crypto.randomUUID(), title: '', blocks: [] }],
     endings: [
       {
         id: endingId,
@@ -35,7 +35,7 @@ export function newBlock(type: Block['type']): Block {
   const id = crypto.randomUUID();
   const common = {
     id,
-    label: blockNames[type],
+    label: '',
     description: '',
     required: false,
     aiEnabled: false,
@@ -85,6 +85,16 @@ export function duplicateBlock(block: Block): Block {
       id: crypto.randomUUID(),
     }));
   return copy;
+}
+
+// One numbering for the outline, rules and readiness: answer questions in
+// form order across pages. Headings and help text are not numbered.
+export function questionNumbers(definition: FormDefinition) {
+  const numbers = new Map<string, number>();
+  for (const page of definition.pages)
+    for (const block of page.blocks)
+      if ('required' in block) numbers.set(block.id, numbers.size + 1);
+  return numbers;
 }
 
 const captionSegments = new Intl.Segmenter(undefined, {

@@ -8,9 +8,14 @@ import {
   operatorsFor,
   predicateFor,
 } from './rule-editing';
+// New questions start unlabeled; give fixtures a label so they can compile.
+function question(type: Parameters<typeof newBlock>[0]) {
+  const block = newBlock(type);
+  return 'label' in block ? { ...block, label: `About ${type}` } : block;
+}
 it('creates a valid visibility rule with stable identities and stops at thirty', () => {
   const original = newBlankDefinition();
-  original.pages[0].blocks.push(newBlock('email'), newBlock('long-text'));
+  original.pages[0].blocks.push(question('email'), question('long-text'));
   const next = addRule(original)!;
   expect(original.rules).toEqual([]);
   expect(next.rules[0].condition).toEqual({
@@ -100,7 +105,7 @@ it('generates compiler-compatible comparisons for all nine answer types', () => 
     'file',
   ] as const;
   for (const type of types) {
-    const field = newBlock(type);
+    const field = question(type);
     if (!('required' in field)) throw new Error('Expected answer field');
     const definition = newBlankDefinition();
     definition.pages[0].blocks.push(field);
