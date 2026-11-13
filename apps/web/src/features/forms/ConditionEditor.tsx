@@ -1,22 +1,12 @@
 import { useId } from 'react';
 import type { Field } from '@snapform/contracts/form';
 import type { Condition } from '@snapform/contracts/rules';
-import { operatorsFor, predicateFor } from './rule-editing';
+import {
+  operatorLabels as labels,
+  operatorsFor,
+  predicateFor,
+} from './rule-editing';
 import { blockCaption } from './new-form';
-const labels: Record<Condition['op'], string> = {
-  answered: 'Has an answer',
-  unanswered: 'Has no answer',
-  eq: 'Equals',
-  neq: 'Does not equal',
-  gt: 'Is greater than',
-  gte: 'Is at least',
-  lt: 'Is less than',
-  lte: 'Is at most',
-  contains: 'Includes choice',
-  and: 'All conditions',
-  or: 'Any condition',
-  not: 'Not this condition',
-};
 export function ConditionEditor({
   condition,
   fields,
@@ -54,45 +44,48 @@ export function ConditionEditor({
     ...operatorsFor(field),
     ...(depth < 4 ? (['and', 'or', 'not'] as const) : []),
   ];
+  const opSelect = (
+    <div className="field">
+      <label htmlFor={`${id}-type`}>Condition</label>
+      <select
+        id={`${id}-type`}
+        value={condition.op}
+        onChange={(event) => {
+          const op = event.target.value;
+          if (op === 'and' || op === 'or')
+            onChange({
+              op,
+              conditions: group
+                ? condition.conditions
+                : [predicateFor(field, 'answered')],
+            });
+          else if (op === 'not')
+            onChange({ op, condition: predicateFor(field, 'answered') });
+          else {
+            const valid = operatorsFor(field).find(
+              (candidate) => candidate === op,
+            );
+            if (valid) onChange(predicateFor(field, valid));
+          }
+        }}
+      >
+        {!operators.includes(condition.op) && (
+          <option value={condition.op}>
+            Review this comparison ({labels[condition.op]})
+          </option>
+        )}
+        {operators.map((op) => (
+          <option key={op} value={op}>
+            {labels[op]}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
   return (
     <fieldset id={id} className="condition-editor">
       <legend>{depth === 1 ? 'When' : 'Condition'}</legend>
-      <div className="field">
-        <label htmlFor={`${id}-type`}>Condition type</label>
-        <select
-          id={`${id}-type`}
-          value={condition.op}
-          onChange={(event) => {
-            const op = event.target.value;
-            if (op === 'and' || op === 'or')
-              onChange({
-                op,
-                conditions: group
-                  ? condition.conditions
-                  : [predicateFor(field, 'answered')],
-              });
-            else if (op === 'not')
-              onChange({ op, condition: predicateFor(field, 'answered') });
-            else {
-              const valid = operatorsFor(field).find(
-                (candidate) => candidate === op,
-              );
-              if (valid) onChange(predicateFor(field, valid));
-            }
-          }}
-        >
-          {!operators.includes(condition.op) && (
-            <option value={condition.op}>
-              {labels[condition.op]}. Review this comparison.
-            </option>
-          )}
-          {operators.map((op) => (
-            <option key={op} value={op}>
-              {labels[op]}
-            </option>
-          ))}
-        </select>
-      </div>
+      {(group || condition.op === 'not') && opSelect}
       {group ? (
         <>
           {condition.conditions.map((child, index) => (
@@ -154,9 +147,9 @@ export function ConditionEditor({
           onChange={(next) => onChange({ ...condition, condition: next })}
         />
       ) : (
-        <>
+        <div className="rule-sentence">
           <div className="field">
-            <label htmlFor={`${id}-field`}>Answer to compare</label>
+            <label htmlFor={`${id}-field`}>Question</label>
             <select
               id={`${id}-field`}
               value={condition.fieldId}
@@ -179,6 +172,7 @@ export function ConditionEditor({
               ))}
             </select>
           </div>
+          {opSelect}
           {condition.op === 'contains' ||
           ('value' in condition && field.type === 'single-choice') ? (
             <div className="field">
@@ -212,7 +206,7 @@ export function ConditionEditor({
           ) : (
             'value' in condition && (
               <div className="field">
-                <label htmlFor={`${id}-value`}>Comparison value</label>
+                <label htmlFor={`${id}-value`}>Answer</label>
                 {field.type === 'acknowledgment' ? (
                   <select
                     id={`${id}-value`}
@@ -254,7 +248,7 @@ export function ConditionEditor({
               </div>
             )
           )}
-        </>
+        </div>
       )}
     </fieldset>
   );

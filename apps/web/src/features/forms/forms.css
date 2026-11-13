@@ -726,6 +726,27 @@
 .condition-child {
   margin-bottom: 16px;
 }
+.rule-sentence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+}
+.rule-sentence .field {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.rule-draft {
+  border-left-color: var(--action-primary);
+}
+.move-note {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.move-note:empty {
+  display: none;
+}
 
 .publication-panel {
   padding: 8px 0 4px;
