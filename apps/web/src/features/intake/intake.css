@@ -30,6 +30,8 @@
   margin: 0;
   font-size: 15px;
   font-weight: 600;
+  /* Small text: reset the display-heading tracking it would otherwise inherit. */
+  letter-spacing: 0;
   line-height: 1.4;
   color: var(--text-secondary);
   overflow-wrap: anywhere;
