@@ -40,7 +40,9 @@
     "./plans": "./src/plans.ts",
     "./billing": "./src/billing.ts",
     "./billing-server": "./src/billing-server.ts",
-    "./razorpay": "./src/razorpay.ts"
+    "./razorpay": "./src/razorpay.ts",
+    "./uploads": "./src/uploads.ts",
+    "./upload-checks": "./src/upload-checks.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
