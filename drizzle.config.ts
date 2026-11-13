@@ -14,6 +14,7 @@ export default defineConfig({
     './packages/database/src/retention-schema.ts',
     './packages/database/src/purge-schema.ts',
     './packages/database/src/deletion-schema.ts',
+    './packages/database/src/billing-schema.ts',
   ],
   out: './packages/database/migrations',
 });
