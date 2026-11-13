@@ -173,8 +173,13 @@
   color: var(--text-secondary);
   font-size: 13px;
 }
-.intake-progress-line p {
+.intake-progress-line p,
+.intake-main .intake-progress-line h2 {
   margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: normal;
   outline-offset: 4px;
 }
 .intake-main progress {

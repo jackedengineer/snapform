@@ -236,6 +236,8 @@ export function Collector({
       ? definition.endings.find((ending) => ending.id === evaluation.endingId)
       : undefined;
   const pageHeading = cardField ? cardField.label : step?.title;
+  // Untitled pages still need an H2 before any section headings (H3).
+  const StepLabel = review || pageHeading ? 'p' : 'h2';
   return (
     <RespondentFrame
       title={session ? definition?.title : undefined}
@@ -371,14 +373,14 @@ export function Collector({
           {session && !submitted && evaluation?.ok && step && (
             <>
               <div className="intake-progress-line">
-                <p
+                <StepLabel
                   id={review || pageHeading ? undefined : focusTarget}
                   tabIndex={-1}
                 >
                   {review
                     ? 'One last look'
                     : `${card ? 'Question' : 'Step'} ${index + 1} of ${steps.length}`}
-                </p>
+                </StepLabel>
                 <p role="status">{status && saveLabels[status]}</p>
               </div>
               <progress
