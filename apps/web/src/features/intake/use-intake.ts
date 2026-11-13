@@ -20,6 +20,7 @@ import {
 export function useIntake(publicId: string) {
   const query = useQueryClient();
   const [form, setForm] = useState<PublicForm | null>(null),
+    [business, setBusiness] = useState<PublicForm['business']>(),
     [siteKey, setSiteKey] = useState(''),
     [progress, setProgress] = useState<ProgressState | null>(null);
   const [loading, setLoading] = useState(true),
@@ -51,6 +52,7 @@ export function useIntake(publicId: string) {
     setUnavailable(null);
     setProgress(null);
     setForm(null);
+    setBusiness(undefined);
     function attach(
       record: IntakeRecovery,
       acknowledged: NonNullable<IntakeRecovery['session']>['answers'],
@@ -114,8 +116,17 @@ export function useIntake(publicId: string) {
         let resumed = false;
         if (stored)
           try {
-            const session = await readIntakeRequest(publicId, record.identity);
+            // The session alone decides whether to resume. The business name
+            // only labels the form; without it the generic wording stays.
+            const [session, named] = await Promise.all([
+              readIntakeRequest(publicId, record.identity),
+              readPublicForm(publicId).then(
+                (published) => published.business,
+                () => undefined,
+              ),
+            ]);
             if (!active) return;
+            setBusiness(named);
             const recovery = reconcileRecovery(
               record,
               session,
@@ -163,6 +174,7 @@ export function useIntake(publicId: string) {
           ]);
           if (!active) return;
           setForm(published);
+          setBusiness(published.business);
           setSiteKey(configuration.siteKey);
         }
         actions.current.start = async (token) => {
@@ -296,6 +308,7 @@ export function useIntake(publicId: string) {
   }, []);
   return {
     form,
+    business,
     siteKey,
     progress,
     controller: controller.current,

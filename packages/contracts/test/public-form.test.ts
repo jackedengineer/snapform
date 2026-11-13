@@ -1,21 +1,67 @@
 import { expect, it } from 'vitest';
-import { publicFormEnvelopeSchema } from '../src/public-form.ts';
+import {
+  publicBusiness,
+  publicFormEnvelopeSchema,
+} from '../src/public-form.ts';
 import { formFixture } from './form-fixture.ts';
+const form = () => ({
+  publicId: crypto.randomUUID(),
+  versionId: crypto.randomUUID(),
+  definition: formFixture().definition,
+});
 it('bounds the public form contract and rejects private metadata or another contract version', () => {
-  const form = {
-    publicId: crypto.randomUUID(),
-    versionId: crypto.randomUUID(),
-    definition: formFixture().definition,
-  };
-  expect(publicFormEnvelopeSchema.parse({ form }).form).toEqual(form);
+  const plain = form();
+  expect(publicFormEnvelopeSchema.parse({ form: plain }).form).toEqual(plain);
   expect(
     publicFormEnvelopeSchema.safeParse({
-      form: { ...form, workspaceId: crypto.randomUUID() },
+      form: { ...plain, workspaceId: crypto.randomUUID() },
     }).success,
   ).toBe(false);
   expect(
     publicFormEnvelopeSchema.safeParse({
-      form: { ...form, definition: { ...form.definition, contractVersion: 2 } },
+      form: {
+        ...plain,
+        definition: { ...plain.definition, contractVersion: 2 },
+      },
     }).success,
   ).toBe(false);
+});
+it('names the business behind a form, and stays valid without one', () => {
+  const named = { ...form(), business: { name: 'Studio North' } };
+  expect(publicFormEnvelopeSchema.parse({ form: named }).form).toEqual(named);
+  const older = form();
+  expect(
+    publicFormEnvelopeSchema.parse({ form: older }).form.business,
+  ).toBeUndefined();
+  for (const business of [
+    { name: '' },
+    { name: '   ' },
+    { name: 'x'.repeat(81) },
+    { name: 42 },
+    {},
+    null,
+    'Studio North',
+  ])
+    expect(
+      publicFormEnvelopeSchema.safeParse({ form: { ...older, business } })
+        .success,
+    ).toBe(false);
+});
+it('keeps room for later business details without breaking open forms', () => {
+  const parsed = publicFormEnvelopeSchema.parse({
+    form: {
+      ...form(),
+      business: { name: 'Studio North', logo: 'https://example.invalid/l' },
+    },
+  });
+  expect(parsed.form.business).toEqual({ name: 'Studio North' });
+});
+it('derives a trimmed, bounded business name from the workspace name', () => {
+  expect(publicBusiness('  Studio North  ')).toEqual({ name: 'Studio North' });
+  expect(publicBusiness('Ünïcødé Studio 🌿')).toEqual({
+    name: 'Ünïcødé Studio 🌿',
+  });
+  expect(publicBusiness('x'.repeat(80))).toEqual({ name: 'x'.repeat(80) });
+  for (const name of [null, undefined, '', '  ', 'x'.repeat(81), 'a\0b', 7])
+    expect(publicBusiness(name)).toBeUndefined();
 });

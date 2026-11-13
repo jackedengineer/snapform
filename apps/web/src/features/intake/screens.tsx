@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { resizeMessage } from './embed';
 import { responseReference } from './reference';
+import { responseTitle } from './titles';
 import type { ReviewRow, ReviewSection } from './summary';
 import type { ProgressState } from './progress';
 // Screens move keyboard and screen-reader focus to this element.
@@ -12,12 +13,16 @@ const newTab = (
     <span className="visually-hidden"> (opens in a new tab)</span>
   </>
 );
+export const documentTitle = (title?: string, business?: string) =>
+  title && business ? `${title} · ${business}` : responseTitle;
 export function RespondentFrame({
+  business,
   title,
   card = false,
   embed = false,
   children,
 }: {
+  business?: string;
   title?: string;
   card?: boolean;
   embed?: boolean;
@@ -41,10 +46,11 @@ export function RespondentFrame({
       ref={shell}
       className={'intake-shell' + (embed ? ' intake-embed' : '')}
     >
-      {/* A business name and logo belong beside the title once forms carry them. */}
-      {title && (
+      {/* A logo can join the business name once forms carry one. */}
+      {(business || title) && (
         <header className="intake-bar">
-          <h1>{title}</h1>
+          {business && <p className="intake-business">{business}</p>}
+          {title && <h1>{title}</h1>}
         </header>
       )}
       <main id="main" className={'intake-main' + (card ? ' intake-card' : '')}>
@@ -101,6 +107,7 @@ function Privacy({
 export function Welcome({
   title,
   description,
+  business,
   check,
   busy,
   onStart,
@@ -110,6 +117,7 @@ export function Welcome({
 }: {
   title: string;
   description: string;
+  business?: string;
   check: 'checking' | 'ready' | 'failed';
   busy: boolean;
   onStart: () => void;
@@ -124,7 +132,10 @@ export function Welcome({
       </h1>
       {description && <p className="intake-description">{description}</p>}
       <p className="intake-privacy-lead">
-        Your answers go to the business that shared this form.
+        {business
+          ? // A name such as "Studio North Inc." already ends the sentence.
+            `Your answers go to ${business}${/[.!?]$/.test(business) ? '' : '.'}`
+          : 'Your answers go to the business that shared this form.'}
       </p>
       {children}
       <div className="intake-start">

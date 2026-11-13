@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it } from 'vitest';
 import {
+  documentTitle,
   Receipt,
   RespondentFrame,
   Review,
@@ -81,6 +82,63 @@ it('explains the security check beside the start button', () => {
   const ready = html(createElement(Welcome, { ...props, check: 'ready' }));
   expect(ready).not.toContain('disabled');
   expect(ready).not.toContain('Checking your browser');
+});
+it('names the business above the form title and keeps Snapform in the footer', () => {
+  const steps = html(
+    createElement(RespondentFrame, {
+      business: 'Studio North',
+      title: 'Project enquiry',
+    }),
+  );
+  expect(steps).toMatch(
+    /<header class="intake-bar"><p class="intake-business">Studio North<\/p><h1>Project enquiry<\/h1><\/header>/,
+  );
+  expect(headings(steps, 1)).toBe(1);
+  expect(steps).toContain('Powered by Snapform');
+  // The welcome screen shows the title itself, so the header names only the business.
+  const welcome = html(
+    createElement(RespondentFrame, { business: 'Studio North' }),
+  );
+  expect(welcome).toMatch(
+    /<header class="intake-bar"><p class="intake-business">Studio North<\/p><\/header>/,
+  );
+  expect(headings(welcome, 1)).toBe(0);
+  expect(
+    html(createElement(RespondentFrame, { business: '<b>Studio</b>' })),
+  ).toContain('&lt;b&gt;Studio&lt;/b&gt;');
+  expect(html(createElement(RespondentFrame, {}))).not.toContain('<header');
+});
+it('tells respondents which business receives their answers', () => {
+  const props = {
+    title: 'Project enquiry',
+    description: '',
+    check: 'ready' as const,
+    busy: false,
+    onStart: none,
+    onRetryCheck: none,
+    onClear: none,
+  };
+  expect(
+    html(createElement(Welcome, { ...props, business: 'Studio North' })),
+  ).toContain('Your answers go to Studio North.');
+  expect(html(createElement(Welcome, props))).toContain(
+    'Your answers go to the business that shared this form.',
+  );
+  for (const business of ['Studio North Inc.', 'Yahoo!', 'Why Not?'])
+    expect(html(createElement(Welcome, { ...props, business }))).toContain(
+      `Your answers go to ${business}</p>`,
+    );
+});
+it('titles the page with the form and business, or the generic title', () => {
+  expect(documentTitle('Project enquiry', 'Studio North')).toBe(
+    'Project enquiry · Studio North',
+  );
+  expect(documentTitle('Project enquiry', undefined)).toBe(
+    'Your response · Snapform',
+  );
+  expect(documentTitle(undefined, 'Studio North')).toBe(
+    'Your response · Snapform',
+  );
 });
 it('gives a short reference and a way to start over after sending', () => {
   const sessionId = '3f9a1c2e-0b4d-4e8f-9a7b-112233445566';

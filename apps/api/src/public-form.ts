@@ -2,8 +2,12 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { openDatabase } from '@snapform/database';
 import { resolvePublicForm } from '@snapform/database/public-form';
-import { publicFormEnvelopeSchema } from '@snapform/contracts/public-form';
+import {
+  publicBusiness,
+  publicFormEnvelopeSchema,
+} from '@snapform/contracts/public-form';
 import { compileDefinition } from '@snapform/contracts/compile';
+import type { FormDefinition } from '@snapform/contracts/form';
 import { requestScope } from './request-context.ts';
 const identity = publicFormEnvelopeSchema.shape.form.shape.publicId;
 const pattern = /^\/api\/v1\/public\/forms\/([A-Fa-f0-9-]{36})$/;
@@ -81,16 +85,22 @@ async function handlePublicForm(
       res.status(503).json({ error: { code: 'FILE_COLLECTION_UNAVAILABLE' } });
       return;
     }
-    res.json(
-      publicFormEnvelopeSchema.parse({
-        form: {
-          publicId: record.publicId,
-          versionId: record.versionId,
-          definition: compiled.definition,
-        },
-      }),
-    );
+    res.json(publicFormBody(record, compiled.definition));
   } finally {
     await close();
   }
+}
+export function publicFormBody(
+  record: NonNullable<Awaited<ReturnType<typeof resolvePublicForm>>>,
+  definition: FormDefinition,
+) {
+  const business = publicBusiness(record.businessName);
+  return publicFormEnvelopeSchema.parse({
+    form: {
+      publicId: record.publicId,
+      versionId: record.versionId,
+      definition,
+      ...(business && { business }),
+    },
+  });
 }

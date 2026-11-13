@@ -26,6 +26,14 @@
 .intake-bar {
   margin-bottom: 16px;
 }
+.intake-business {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
 .intake-bar h1 {
   margin: 0;
   font-size: 15px;

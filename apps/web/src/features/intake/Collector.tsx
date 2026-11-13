@@ -12,6 +12,7 @@ import type { CollectorSearch } from './navigation';
 import { reviewSections } from './summary';
 import type { ReviewRow } from './summary';
 import {
+  documentTitle,
   focusTarget,
   Receipt,
   RespondentFrame,
@@ -124,14 +125,13 @@ export function Collector({
   useEffect(() => {
     setTouched(new Set());
   }, [session?.id]);
+  const business = intake.business?.name;
+  const pageTitle = intake.unavailable
+    ? unavailableTitle
+    : documentTitle(definition?.title, business);
   useEffect(() => {
-    if (!intake.unavailable) return;
-    const previous = document.title;
-    document.title = unavailableTitle;
-    return () => {
-      document.title = previous;
-    };
-  }, [intake.unavailable]);
+    document.title = pageTitle;
+  }, [pageTitle]);
   function firstUnfinished() {
     if (!evaluation?.ok) return -1;
     const ids = new Set(evaluation.issues.map((issue) => issue.targetId));
@@ -225,7 +225,7 @@ export function Collector({
   const embed = search.embed === 1;
   if (intake.unavailable)
     return (
-      <RespondentFrame embed={embed}>
+      <RespondentFrame business={business} embed={embed}>
         <Unavailable closed={intake.unavailable === 'closed'} />
       </RespondentFrame>
     );
@@ -241,6 +241,7 @@ export function Collector({
   const StepLabel = review || pageHeading ? 'p' : 'h2';
   return (
     <RespondentFrame
+      business={business}
       title={session ? definition?.title : undefined}
       card={card && !review}
       embed={embed}
@@ -324,6 +325,7 @@ export function Collector({
           {!session && definition && (
             <Welcome
               title={definition.title}
+              business={business}
               description={definition.description}
               check={
                 !intake.siteKey || checkFailed
