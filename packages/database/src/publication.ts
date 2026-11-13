@@ -148,6 +148,14 @@ export async function publishForm(
       .onConflictDoNothing()
       .returning({ id: formVersion.id });
     if (!inserted.length) throw new Error('OPERATION_CONFLICT');
+    // The database refuses a new live form over the plan limit (migration 0041).
+    const liveFormLimit = (error: unknown) => {
+      throw error instanceof Error &&
+        error.cause instanceof Error &&
+        error.cause.message === 'LIVE_FORM_LIMIT'
+        ? Error('LIVE_FORM_LIMIT', { cause: error })
+        : error;
+    };
     await tx
       .insert(formPublication)
       .values({
@@ -166,7 +174,8 @@ export async function publishForm(
           updatedBy: actor,
           updatedAt: sql`now()`,
         },
-      });
+      })
+      .catch(liveFormLimit);
     return {
       versionId: input.versionId,
       number,

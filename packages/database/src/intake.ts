@@ -33,10 +33,21 @@ export async function startIntake(
   publicId = identity.parse(publicId);
   id = identity.parse(id);
   const hash = capabilityHashSchema.parse(rawHash);
-  return read(
-    db,
-    sql`public.open_intake_session(${publicId}::uuid,${id}::uuid,${hash})`,
-  );
+  try {
+    return await read(
+      db,
+      sql`public.open_intake_session(${publicId}::uuid,${id}::uuid,${hash})`,
+    );
+  } catch (error) {
+    // Migration 0041 raises this when the workspace's monthly allowance is reserved.
+    if (
+      error instanceof Error &&
+      error.cause instanceof Error &&
+      error.cause.message === 'FORM_NOT_ACCEPTING'
+    )
+      throw Error('FORM_NOT_ACCEPTING', { cause: error });
+    throw error;
+  }
 }
 export async function getIntake(
   db: Connection,
