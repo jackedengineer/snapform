@@ -8,7 +8,7 @@ export const resetDay = new Intl.DateTimeFormat('en-GB', {
   month: 'long',
   timeZone: 'UTC',
 });
-const longDate = new Intl.DateTimeFormat('en-GB', {
+export const longDate = new Intl.DateTimeFormat('en-GB', {
   dateStyle: 'long',
   timeZone: 'UTC',
 });
