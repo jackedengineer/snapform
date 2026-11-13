@@ -1,14 +1,17 @@
 SET LOCAL lock_timeout = '5s';
 --> statement-breakpoint
 -- Jobs may read only the bounded fields an owner email shows, only for a delivery it currently holds.
--- The name-like rule mirrors the inbox: the first answered short text whose label contains the word "name".
+-- The name-like rule mirrors looksLikePersonName in packages/contracts/src/responses.ts:
+-- a label containing the word "name" that does not name a company, project or similar.
 CREATE OR REPLACE FUNCTION public.owner_email_summary(requested_id uuid,requested_token uuid)
 RETURNS TABLE(form_title text,submitted_at timestamptz,respondent_name text,respondent_email text)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
  SELECT left(coalesce(v.definition->>'title',''),120),r.submitted_at,
   (SELECT left(btrim(r.answers->(q.block->>'id')->>'value'),200)
    FROM jsonb_path_query(v.definition,'$.pages[*].blocks[*] ? (@.type == "short-text")') WITH ORDINALITY q(block,position)
-   WHERE q.block->>'label' ~* '\mname\M' AND r.answers->(q.block->>'id')->>'state'='value'
+   WHERE q.block->>'label' ~* '\mname\M'
+     AND q.block->>'label' !~* '\m(company|business|organi[sz]ation|agency|brand|project|product|team|school|store|shop|website|site|domain|file|event|app|pet)\M'
+     AND r.answers->(q.block->>'id')->>'state'='value'
     AND jsonb_typeof(r.answers->(q.block->>'id')->'value')='string' AND btrim(r.answers->(q.block->>'id')->>'value')<>''
    ORDER BY q.position LIMIT 1),
   (SELECT btrim(r.answers->(q.block->>'id')->>'value')
