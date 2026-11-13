@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
-import { compileDefinition } from '@snapform/contracts/compile';
 import {
+  compilePublication,
   publishFormSchema,
   unpublishFormSchema,
 } from '@snapform/contracts/publication';
@@ -119,7 +119,7 @@ export async function publishForm(
     }
     if (draft.revision !== input.expectedRevision)
       throw new Error('DRAFT_CONFLICT');
-    const compiled = compileDefinition(draft.definition);
+    const compiled = compilePublication(draft.definition);
     if (!compiled.ok) throw new Error('INVALID_PUBLICATION');
     const [last] = await tx
       .select({ number: formVersion.number })

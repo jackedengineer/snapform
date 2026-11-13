@@ -1,6 +1,31 @@
 import { SELF } from 'cloudflare:test';
 import { expect, it } from 'vitest';
+import { compilePublication } from '@snapform/contracts/publication';
 import { matchPublicationRoute } from '../src/publication.ts';
+import { formFixture } from '../../../packages/contracts/test/form-fixture.ts';
+it('refuses file questions with the publication compiler inside workerd', () => {
+  const { definition } = formFixture();
+  expect(compilePublication(definition).ok).toBe(true);
+  const fileId = crypto.randomUUID();
+  definition.pages[0].blocks.push({
+    id: fileId,
+    type: 'file',
+    label: 'Upload your brief',
+    description: '',
+    required: false,
+    aiEnabled: false,
+    maxFiles: 1,
+  });
+  const result = compilePublication(definition);
+  expect(result.ok).toBe(false);
+  if (!result.ok)
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: 'FILE_COLLECTION_UNAVAILABLE',
+        targetId: fileId,
+      }),
+    );
+});
 const workspaceId = crypto.randomUUID(),
   formId = crypto.randomUUID();
 const path = `/api/v1/workspaces/${workspaceId}/forms/${formId}/publication`;

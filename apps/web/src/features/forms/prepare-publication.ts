@@ -2,7 +2,7 @@ import {
   formDefinitionSchema,
   type FormDefinition,
 } from '@snapform/contracts/form';
-import { compileDefinition } from '@snapform/contracts/compile';
+import { compilePublication } from '@snapform/contracts/publication';
 import { definitionKey } from './autosave';
 
 export async function preparePublication(
@@ -10,13 +10,8 @@ export async function preparePublication(
   flush: () => Promise<void> | undefined,
   read: () => Promise<{ definition: FormDefinition; revision: number }>,
 ) {
-  const candidate = compileDefinition(definition);
-  if (
-    !candidate.ok ||
-    candidate.definition.pages.some((page) =>
-      page.blocks.some((block) => block.type === 'file'),
-    )
-  )
+  const candidate = compilePublication(definition);
+  if (!candidate.ok)
     throw new Error('Resolve the form’s publishing issues first.');
   await flush();
   const saved = await read();

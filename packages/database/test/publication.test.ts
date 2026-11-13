@@ -232,6 +232,36 @@ it(
 );
 
 it(
+  'refuses file questions the public form cannot collect',
+  async () =>
+    fixture(async (tx, actor, workspaceId, formId) => {
+      const { definition } = formFixture();
+      definition.pages[0].blocks.push({
+        id: crypto.randomUUID(),
+        type: 'file',
+        label: 'Upload your brief',
+        description: '',
+        required: false,
+        aiEnabled: false,
+        maxFiles: 1,
+      });
+      await saveDraft(tx, actor, workspaceId, formId, {
+        operationId: crypto.randomUUID(),
+        expectedRevision: 1,
+        definition,
+      });
+      await expect(
+        publishForm(tx, actor, workspaceId, formId, {
+          versionId: crypto.randomUUID(),
+          expectedRevision: 2,
+        }),
+      ).rejects.toThrow('INVALID_PUBLICATION');
+      expect(await getPublication(tx, actor, workspaceId, formId)).toBeNull();
+    }),
+  30000,
+);
+
+it(
   'denies missing forms and viewer publication writes',
   async () =>
     fixture(async (tx, actor, workspaceId, formId) => {
