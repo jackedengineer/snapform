@@ -1,4 +1,7 @@
-import { MAX_CSV_BYTES } from '@snapform/contracts/response-csv';
+import {
+  EXPORT_FILENAME_PATTERN,
+  MAX_CSV_BYTES,
+} from '@snapform/contracts/response-csv';
 const messages: Record<number, [string, string]> = {
   401: [
     'Sign in to download',
@@ -44,9 +47,9 @@ export async function formatExportDownload(
       'text/csv' &&
     /^[1-9]\d*$/.test(size) &&
     Number(size) <= MAX_CSV_BYTES &&
-    new RegExp(
-      `^attachment; filename="snapform-${match[2].toLowerCase()}-v[1-9]\\d*\\.csv"$`,
-    ).test(disposition);
+    EXPORT_FILENAME_PATTERN.test(
+      disposition.match(/^attachment; filename="([^"]*)"$/)?.[1] ?? '',
+    );
   if (validFile) return response;
   await response.body
     ?.cancel()
@@ -85,7 +88,7 @@ export async function formatExportDownload(
     "default-src 'none'; style-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
   );
   return new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>${title} · Snapform</title><link rel="stylesheet" href="${safeStylesheet}"></head><body><a class="skip-link" href="#main">Skip to content</a><header class="topbar"><a class="wordmark" href="/"><span class="brand-symbol" aria-hidden="true">s</span>snapform</a></header><main id="main" class="workspace-home"><div class="workspace-empty export-error"><p class="eyebrow">YOUR RESPONSE EXPORT</p><h1>${title}</h1><p role="alert">${message}</p><a class="button primary compact-button" href="${href}">${status === 401 ? 'Sign in' : 'Back to inbox'}</a></div></main></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>${title} · Snapform</title><link rel="stylesheet" href="${safeStylesheet}"></head><body><a class="skip-link" href="#main">Skip to content</a><header class="topbar"><a class="wordmark" href="/"><span class="brand-symbol" aria-hidden="true">s</span>snapform</a></header><main id="main" class="workspace-home"><div class="workspace-empty export-error"><h1>${title}</h1><p role="alert">${message}</p><a class="button primary compact-button" href="${href}">${status === 401 ? 'Sign in' : 'Back to inbox'}</a></div></main></body></html>`,
     { status, headers },
   );
 }
