@@ -140,3 +140,31 @@ it('separates a missing form, a form not accepting responses and an expired sess
     code: 'unavailable',
   });
 });
+it('shows the closed state when the workspace monthly allowance is reached', async () => {
+  for (const send of [
+    () => startIntakeRequest(publicId, identity, 'synthetic-challenge'),
+    () =>
+      writeIntakeRequest(
+        publicId,
+        identity,
+        { operationId: crypto.randomUUID(), expectedRevision: 1, answers: {} },
+        'submit',
+      ),
+  ]) {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { error: { code: 'FORM_NOT_ACCEPTING' } },
+            { status: 409 },
+          ),
+        ),
+    );
+    await expect(send()).rejects.toMatchObject({
+      code: 'quota',
+      message: expect.stringContaining('isn’t accepting responses right now'),
+    });
+  }
+});

@@ -79,10 +79,13 @@ async function request<T>(
           'challenge',
           'The security check needs another try.',
         );
+      // FORM_NOT_ACCEPTING: the workspace's monthly response allowance is used.
+      const full =
+        code === 'INTAKE_QUOTA_UNAVAILABLE' || code === 'FORM_NOT_ACCEPTING';
       if (response.status === 409)
         throw new IntakeRequestError(
-          code === 'INTAKE_QUOTA_UNAVAILABLE' ? 'quota' : 'conflict',
-          code === 'INTAKE_QUOTA_UNAVAILABLE'
+          full ? 'quota' : 'conflict',
+          full
             ? 'This form isn’t accepting responses right now. If you need to reach the business, contact whoever sent you the link.'
             : 'Your saved response changed. Reload the saved version before continuing.',
         );

@@ -20,6 +20,7 @@ import {
   handlePublicationRequest,
 } from './publication.ts';
 import { matchDeletionRoute, handleDeletionRequest } from './deletions.ts';
+import { matchBillingRoute, handleBillingRequest } from './billing.ts';
 
 export function isPrivatePath(path: string) {
   return (
@@ -32,6 +33,7 @@ export function isPrivatePath(path: string) {
     matchNotificationRoute(path) !== null ||
     matchWebhookRoute(path) !== null ||
     matchDeletionRoute(path) !== null ||
+    matchBillingRoute(path) !== null ||
     matchRetentionRoute(path) !== null
   );
 }
@@ -82,6 +84,7 @@ export async function handlePrivateRequest(
   const publicationRoute = matchPublicationRoute(req.path);
   const deletionRoute = matchDeletionRoute(req.path);
   const retentionRoute = matchRetentionRoute(req.path);
+  const billingRoute = matchBillingRoute(req.path);
   if (req.path === '/api/v1/me') {
     if (req.method !== 'GET') {
       res.setHeader('Allow', 'GET');
@@ -91,6 +94,8 @@ export async function handlePrivateRequest(
     await handleWorkspaceRequest(req, res, db, user.id);
   } else if (deletionRoute) {
     await handleDeletionRequest(req, res, db, user.id, deletionRoute);
+  } else if (billingRoute) {
+    await handleBillingRequest(req, res, db, user.id, billingRoute);
   } else if (retentionRoute) {
     await handleRetentionRequest(req, res, db, user.id, retentionRoute);
   } else if (webhookRoute) {

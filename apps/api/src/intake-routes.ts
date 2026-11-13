@@ -38,6 +38,15 @@ export function matchIntakeRoute(path: string): Route | null {
       }
     : null;
 }
+// FORM_NOT_ACCEPTING: the workspace's monthly response allowance is used up.
+// The collector shows its closed state; nothing about the plan is disclosed.
+export const intakeConflicts = new Set([
+  'INTAKE_CONFLICT',
+  'INTAKE_OPERATION_CONFLICT',
+  'INTAKE_ALREADY_SUBMITTED',
+  'INTAKE_QUOTA_UNAVAILABLE',
+  'FORM_NOT_ACCEPTING',
+]);
 export const intakeRoutes = Router();
 const body = json({ limit: 16384, strict: true, inflate: false });
 const progressBody = json({ limit: 2097152, strict: true, inflate: false });
@@ -220,15 +229,7 @@ async function handleIntake(
         .json({ error: { code: error.message, issues: error.issues } });
       return;
     }
-    if (
-      error instanceof Error &&
-      [
-        'INTAKE_CONFLICT',
-        'INTAKE_OPERATION_CONFLICT',
-        'INTAKE_ALREADY_SUBMITTED',
-        'INTAKE_QUOTA_UNAVAILABLE',
-      ].includes(error.message)
-    ) {
+    if (error instanceof Error && intakeConflicts.has(error.message)) {
       res.status(409).json({ error: { code: error.message } });
       return;
     }

@@ -23,7 +23,7 @@ export function matchPublicationRoute(path: string) {
     ? { workspaceId: workspaceId.data, formId: formId.data }
     : null;
 }
-const statuses = new Map([
+export const publicationFailures = new Map([
   ['WORKSPACE_DELETION_PENDING', 409],
   ['WORKSPACE_NOT_FOUND', 404],
   ['FORM_NOT_FOUND', 404],
@@ -34,6 +34,8 @@ const statuses = new Map([
   ['PUBLICATION_CONFLICT', 409],
   ['PUBLICATION_LIMIT', 409],
   ['INVALID_PUBLICATION', 422],
+  // Free workspaces may have three live forms; see migration 0041.
+  ['LIVE_FORM_LIMIT', 409],
 ]);
 function serialize(publication: Awaited<ReturnType<typeof getPublication>>) {
   return publication
@@ -105,7 +107,9 @@ export async function handlePublicationRequest(
     }
   } catch (error) {
     const status =
-      error instanceof Error ? statuses.get(error.message) : undefined;
+      error instanceof Error
+        ? publicationFailures.get(error.message)
+        : undefined;
     if (!status || !(error instanceof Error)) throw error;
     res.status(status).json({ error: { code: error.message } });
   }

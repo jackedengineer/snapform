@@ -9,3 +9,13 @@ AUTH_ALLOWED_RECIPIENT="your-approved-address@example.com"
 # One stable 32-byte base64 key shared with Jobs and production for this database.
 # Preserve it in encrypted recovery material; changing it makes saved endpoints unreadable.
 WEBHOOK_ENCRYPTION_KEY="replace-with-base64-encoded-32-random-bytes"
+# Razorpay TEST MODE only. A key that does not start with rzp_test_ leaves billing
+# unconfigured; live keys and live charges are not supported.
+RAZORPAY_KEY_ID="rzp_test_replace"
+RAZORPAY_KEY_SECRET="replace-with-the-test-key-secret"
+RAZORPAY_WEBHOOK_SECRET="replace-with-the-test-webhook-secret"
+# Plan IDs from Dashboard > Subscriptions > Plans (test mode), one per price.
+RAZORPAY_PLAN_PRO_MONTHLY_INR="plan_replace"
+RAZORPAY_PLAN_PRO_MONTHLY_USD="plan_replace"
+RAZORPAY_PLAN_PRO_ANNUAL_INR="plan_replace"
+RAZORPAY_PLAN_PRO_ANNUAL_USD="plan_replace"
