@@ -7,6 +7,7 @@ import { user } from '../src/schema.ts';
 import { membership } from '../src/workspace-schema.ts';
 import { createWorkspace, inWorkspace } from '../src/workspaces.ts';
 import { scheduleDeletion } from '../src/deletion.ts';
+import { applyBillingEvent } from '../src/billing.ts';
 import {
   acceptInvitation,
   changeMemberRole,
@@ -14,6 +15,7 @@ import {
   listInvitations,
   listTeam,
   noSeatLimit,
+  planSeatLimit,
   removeMember,
   revokeInvitation,
 } from '../src/team.ts';
@@ -195,6 +197,55 @@ it('counts members and live invitations against a seat limit', () =>
     // Replacing a pending link for the same address does not take a new seat.
     await invite(email(people.invitee), 4);
     await invite(email(people.outsider), null);
+  }));
+
+it('gives Free one seat and Pro three, counting members and live invitations', () =>
+  fixture(async (tx, people, workspaceId) => {
+    const invite = (address: string) =>
+      createInvitation(
+        tx,
+        people.owner,
+        workspaceId,
+        { email: address, role: 'viewer' },
+        hash(),
+        planSeatLimit,
+      );
+    await removeMember(tx, people.owner, workspaceId, people.editor);
+    await removeMember(tx, people.owner, workspaceId, people.viewer);
+    // Free: the owner already uses the only seat.
+    await expect(invite(email(people.invitee))).rejects.toThrow(
+      'SEAT_LIMIT_REACHED',
+    );
+    expect(
+      await applyBillingEvent(tx, {
+        id: 'evt_' + crypto.randomUUID().replaceAll('-', ''),
+        type: 'subscription.activated',
+        createdAt: new Date(Date.now() - 60000),
+        workspaceId,
+        subscriptionId:
+          'sub_QA' + crypto.randomUUID().replaceAll('-', '').slice(0, 12),
+        customerId: 'cust_QA0000000001',
+        interval: 'monthly',
+        currency: 'INR',
+        periodStart: new Date(Date.now() - 86400000),
+        periodEnd: new Date(Date.now() + 29 * 86400000),
+      }),
+    ).toBe('applied');
+    await invite(email(people.invitee));
+    await invite(email(people.outsider));
+    // Owner plus two pending invites fill Pro's three seats.
+    await expect(invite(email(people.unverified))).rejects.toThrow(
+      'SEAT_LIMIT_REACHED',
+    );
+    // Revoking an invite frees its seat.
+    const [pending] = (await listInvitations(tx, people.owner, workspaceId))
+      .invitations;
+    await revokeInvitation(tx, people.owner, workspaceId, pending.id);
+    await invite(email(people.unverified));
+    // The lookup reads only the scoped workspace's plan.
+    await expect(planSeatLimit(tx, crypto.randomUUID())).rejects.toThrow(
+      'INVALID_SEAT_LIMIT',
+    );
   }));
 
 it('binds acceptance to the verified invited address and spends the link once', () =>

@@ -6,11 +6,10 @@ import {
   createInvitation,
   listInvitations,
   listTeam,
-  noSeatLimit,
+  planSeatLimit,
   removeMember,
   revokeInvitation,
 } from '@snapform/database/team';
-import type { SeatLimit } from '@snapform/database/team';
 import {
   acceptInvitationSchema,
   createInvitationSchema,
@@ -22,11 +21,6 @@ import {
 } from '@snapform/contracts/team';
 import { createWorkspaceSchema } from '@snapform/contracts/workspace';
 import type { InviteMessage } from './email.ts';
-
-// Billing plugs in here: replace with a lookup of the workspace plan's seats
-// (Free 1, Pro 3). It runs inside the invitation transaction after the owner
-// check and workspace lock. Until entitlements exist, invites are unlimited.
-const seatLimit: SeatLimit = noSeatLimit;
 
 export const acceptPath = '/api/v1/invitations/accept';
 export type TeamRoute =
@@ -184,7 +178,8 @@ async function respond(
       route.workspaceId,
       input.data,
       await hashInvitationToken(token),
-      seatLimit,
+      // Members plus live invites may use the plan's seats (Free 1, Pro 3).
+      planSeatLimit,
     );
     const link = new URL('/invite', services.origin);
     link.hash = `token=${token}`;

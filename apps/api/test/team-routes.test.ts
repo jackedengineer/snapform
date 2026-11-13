@@ -77,11 +77,13 @@ it('bounds team bodies and blocks cross-origin writes before database work', asy
 });
 
 // The real handlers and database module run in workerd. The database stub
-// stands in only for Postgres: it answers scope_workspace with a role and the
-// migration 0042 functions with a configured result.
+// stands in only for Postgres: it answers scope_workspace with a role, the
+// migration 0041 billing read with a plan and the migration 0042 functions
+// with a configured result.
 const dialect = new PgDialect();
 type Outcome = { rows: Record<string, unknown>[] } | { raise: string };
 let role: 'owner' | 'editor' | 'viewer' | 'none' = 'owner',
+  plan: unknown = 'pro',
   outcome: Outcome = { rows: [] },
   queries: { sql: string; params: unknown[] }[] = [],
   mail: InviteMessage[] = [],
@@ -89,6 +91,7 @@ let role: 'owner' | 'editor' | 'viewer' | 'none' = 'owner',
   allowed = true;
 beforeEach(() => {
   role = 'owner';
+  plan = 'pro';
   outcome = { rows: [] };
   queries = [];
   mail = [];
@@ -105,6 +108,8 @@ const tx = {
       return { rows: [{ role, deletion_pending: false }] };
     }
     if (rendered.sql.includes('set_config')) return { rows: [] };
+    if (rendered.sql.includes('workspace_billing'))
+      return { rows: plan === undefined ? [] : [{ plan }] };
     if ('raise' in outcome) throw failure(outcome.raise);
     return outcome;
   },
@@ -258,12 +263,13 @@ it('creates an invite, stores only the token hash and returns the link once', as
   const stored = queries.find((query) =>
     query.sql.includes('create_workspace_invitation'),
   );
+  // A Pro workspace has three seats.
   expect(stored?.params).toEqual([
     workspace,
     'new@example.com',
     'viewer',
     await hashInvitationToken(sent),
-    null,
+    3,
   ]);
   expect(JSON.stringify(queries)).not.toContain(sent);
   expect(mail).toEqual([
@@ -276,6 +282,51 @@ it('creates an invite, stores only the token hash and returns the link once', as
       url: inviteUrl,
     },
   ]);
+});
+it('limits invites to the seats of the workspace plan and fails closed', async () => {
+  const body = { email: 'new@example.com', role: 'viewer' };
+  plan = 'free';
+  outcome = { raise: 'SEAT_LIMIT_REACHED' };
+  expect(await call('POST', `${base}/invitations`, body)).toEqual({
+    status: 409,
+    body: { error: { code: 'SEAT_LIMIT_REACHED' } },
+  });
+  const created = queries.find((query) =>
+    query.sql.includes('create_workspace_invitation'),
+  );
+  // Free has one seat, which the owner already uses.
+  expect(created?.params.at(-1)).toBe(1);
+  // The plan is read in the same transaction, after the scoped role check.
+  const order = queries.map((query) =>
+    query.sql.includes('scope_workspace')
+      ? 'scope'
+      : query.sql.includes('workspace_billing')
+        ? 'plan'
+        : query.sql.includes('create_workspace_invitation')
+          ? 'create'
+          : 'other',
+  );
+  expect(order.filter((step) => step !== 'other')).toEqual([
+    'scope',
+    'plan',
+    'create',
+  ]);
+  expect(mail).toEqual([]);
+  // A missing or unknown plan never falls back to unlimited seats.
+  for (const unknown of [undefined, 'enterprise', null]) {
+    plan = unknown;
+    queries = [];
+    expect(await call('POST', `${base}/invitations`, body)).toEqual({
+      status: 500,
+      body: { error: { code: 'INTERNAL_ERROR' } },
+    });
+    expect(
+      queries.some((query) =>
+        query.sql.includes('create_workspace_invitation'),
+      ),
+    ).toBe(false);
+  }
+  expect(mail).toEqual([]);
 });
 it('keeps an invite usable by link when its email cannot be sent', async () => {
   outcome = {

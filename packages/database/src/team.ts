@@ -13,6 +13,7 @@ import {
   invitationIdSchema,
   invitationSchema,
 } from '@snapform/contracts/team';
+import { seatLimit } from '@snapform/contracts/plans';
 import type { Database, Transaction } from './client.ts';
 import { inWorkspace } from './workspaces.ts';
 
@@ -90,6 +91,17 @@ export type SeatLimit = (
   workspaceId: string,
 ) => Promise<number | null>;
 export const noSeatLimit: SeatLimit = async () => null;
+// The workspace plan's seats (Free 1, Pro 3). workspace_billing answers only
+// for the scoped workspace and its members; anything else fails closed.
+export const planSeatLimit: SeatLimit = async (tx, id) => {
+  const [row] = await call<{ plan: unknown }>(
+    tx,
+    sql`select plan from public.workspace_billing(${workspaceId.parse(id)}::uuid)`,
+  );
+  if (row?.plan !== 'free' && row?.plan !== 'pro')
+    throw Error('INVALID_SEAT_LIMIT');
+  return seatLimit(row.plan);
+};
 export async function createInvitation(
   db: Connection,
   actor: string,
