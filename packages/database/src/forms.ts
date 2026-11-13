@@ -3,6 +3,8 @@ import {
   createFormSchema,
   saveDraftSchema,
   formCursorSchema,
+  formListResponseLimit,
+  formStatus,
 } from '@snapform/contracts/draft';
 import type {
   CreateForm,
@@ -13,6 +15,8 @@ import type { Database, Transaction } from './client.ts';
 import { inWorkspace } from './workspaces.ts';
 import { workspace } from './workspace-schema.ts';
 import { form, formDraft, draftOperation } from './form-schema.ts';
+import { formPublication } from './publication-schema.ts';
+import { responseSession } from './intake-schema.ts';
 type Connection = Database | Transaction;
 const identity = createFormSchema.shape.id;
 const projection = {
@@ -222,6 +226,14 @@ export async function listForms(
           title: sql<string>`${formDraft.definition}->>'title'`,
           revision: formDraft.revision,
           updatedAt: formDraft.updatedAt,
+          active: formPublication.active,
+          // Bounded per form through the submitted-response inbox index and the
+          // same workspace RLS as the inbox. Only the page's rows are counted.
+          responseCount: sql<number>`(select count(*)::int from (select 1 from ${responseSession}
+            where ${responseSession.workspaceId} = ${form.workspaceId}
+              and ${responseSession.formId} = ${form.id}
+              and ${responseSession.status} = 'submitted'
+            limit ${formListResponseLimit}) as submitted)`,
           // Preserve PostgreSQL microseconds; a JS Date would lose tied-page cursor precision.
           cursorTime: sql<string>`to_char(${form.createdAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`,
         })
@@ -231,6 +243,13 @@ export async function listForms(
           and(
             eq(form.workspaceId, formDraft.workspaceId),
             eq(form.id, formDraft.formId),
+          ),
+        )
+        .leftJoin(
+          formPublication,
+          and(
+            eq(form.workspaceId, formPublication.workspaceId),
+            eq(form.id, formPublication.formId),
           ),
         )
         .where(
@@ -252,6 +271,8 @@ export async function listForms(
           title: row.title,
           revision: row.revision,
           updatedAt: row.updatedAt,
+          status: formStatus(row.active),
+          responseCount: row.responseCount,
         })),
         nextCursor:
           rows.length > 20 && last

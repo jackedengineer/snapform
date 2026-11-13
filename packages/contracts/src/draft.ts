@@ -46,6 +46,14 @@ export const formSnapshotSchema = z.strictObject({
   role: roleSchema,
 });
 export const formEnvelopeSchema = z.strictObject({ form: formSnapshotSchema });
+// The list counts at most this many submitted responses per form, so a busy
+// form cannot slow every workspace page. The limit itself means "or more".
+export const formListResponseLimit = 1000;
+export const formStatusSchema = z.enum(['draft', 'live', 'stopped']);
+export type FormStatus = z.infer<typeof formStatusSchema>;
+export function formStatus(active: boolean | null): FormStatus {
+  return active === null ? 'draft' : active ? 'live' : 'stopped';
+}
 export const formsPageSchema = z.strictObject({
   workspace: workspaceSchema,
   forms: z
@@ -55,6 +63,8 @@ export const formsPageSchema = z.strictObject({
         title: formDefinitionSchema.shape.title,
         revision,
         updatedAt: z.iso.datetime(),
+        status: formStatusSchema,
+        responseCount: z.int().min(0).max(formListResponseLimit),
       }),
     )
     .max(20),

@@ -42,6 +42,21 @@ const statuses = new Map([
   ['DRAFT_CONFLICT', 409],
   ['OPERATION_CONFLICT', 409],
 ]);
+export function formsPageBody(page: Awaited<ReturnType<typeof listForms>>) {
+  return formsPageSchema.parse({
+    ...page,
+    forms: page.forms.map((item) => ({
+      ...item,
+      updatedAt: item.updatedAt.toISOString(),
+    })),
+    nextCursor: page.nextCursor
+      ? btoa(JSON.stringify(page.nextCursor))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '')
+      : null,
+  });
+}
 function snapshot(record: Awaited<ReturnType<typeof getForm>>) {
   return formEnvelopeSchema.parse({
     form: { ...record, updatedAt: record.updatedAt.toISOString() },
@@ -81,21 +96,8 @@ export async function handleFormsRequest(
         res.status(422).json({ error: { code: 'INVALID_CURSOR' } });
         return;
       }
-      const page = await listForms(db, actor, route.workspaceId, cursor);
       res.json(
-        formsPageSchema.parse({
-          ...page,
-          forms: page.forms.map((item) => ({
-            ...item,
-            updatedAt: item.updatedAt.toISOString(),
-          })),
-          nextCursor: page.nextCursor
-            ? btoa(JSON.stringify(page.nextCursor))
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_')
-                .replace(/=+$/, '')
-            : null,
-        }),
+        formsPageBody(await listForms(db, actor, route.workspaceId, cursor)),
       );
     } else if (route.kind === 'collection') {
       const input = createFormSchema.safeParse(req.body);
