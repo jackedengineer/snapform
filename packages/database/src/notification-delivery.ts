@@ -45,16 +45,51 @@ export async function recordOwnerEmail(
     throw Error('Invalid email attempt receipt');
   return rows[0].recorded;
 }
+// Owner-visible fields only: never the answers themselves.
+export type OwnerEmailSummary = {
+  formTitle: string;
+  submittedAt: string;
+  respondentName: string | null;
+  respondentEmail: string | null;
+};
+const optionalText = (value: unknown) =>
+  value === null || typeof value === 'string';
 export async function prepareOwnerEmail(
   db: Database | Transaction,
   claim: OwnerEmailClaim,
-): Promise<boolean> {
+): Promise<OwnerEmailSummary | null> {
   const { rows } = await db.execute<{ allowed: boolean }>(
     sql`select public.prepare_owner_email(${claim.id}::uuid,${claim.leaseToken}::uuid) as allowed`,
   );
   if (typeof rows[0]?.allowed !== 'boolean')
     throw Error('Invalid email authorization receipt');
-  return rows[0].allowed;
+  if (!rows[0].allowed) return null;
+  // Read after authorization so cancelled sends never load respondent data.
+  const summary = await db.execute<{
+    form_title: string | null;
+    submitted_at: Date | string | null;
+    respondent_name: string | null;
+    respondent_email: string | null;
+  }>(
+    sql`select * from public.owner_email_summary(${claim.id}::uuid,${claim.leaseToken}::uuid)`,
+  );
+  if (summary.rows.length === 0) return null;
+  const row = summary.rows[0];
+  if (
+    summary.rows.length !== 1 ||
+    !optionalText(row.form_title) ||
+    !optionalText(row.respondent_name) ||
+    !optionalText(row.respondent_email) ||
+    row.submitted_at === null ||
+    !Number.isFinite(new Date(row.submitted_at).getTime())
+  )
+    throw Error('Invalid email summary receipt');
+  return {
+    formTitle: row.form_title ?? '',
+    submittedAt: new Date(row.submitted_at).toISOString(),
+    respondentName: row.respondent_name,
+    respondentEmail: row.respondent_email,
+  };
 }
 export async function recordOwnerProviderStatus(
   db: Database | Transaction,

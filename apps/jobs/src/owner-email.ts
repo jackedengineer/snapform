@@ -1,5 +1,6 @@
 import { responseEventMessageSchema } from '@snapform/contracts/response-event';
 import type { EmailOutcome } from '@snapform/contracts/notifications';
+import type { OwnerEmailSummary } from '@snapform/database/notification-delivery';
 const identity = responseEventMessageSchema.shape.eventId;
 export type OwnerEmail = {
   id: string;
@@ -8,7 +9,85 @@ export type OwnerEmail = {
   sessionId: string;
   recipient: string;
   firstAttemptAt: string;
+  summary: OwnerEmailSummary;
 };
+// C0/C1 controls, line/paragraph separators and bidirectional overrides.
+const unsafe =
+  /[\p{Cc}\u2028\u2029\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu;
+// One header-safe line of at most 120 characters, cut on code points.
+function line(value: string | null) {
+  const text = (value ?? '')
+    .toWellFormed()
+    .replace(unsafe, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const characters = Array.from(text);
+  return characters.length > 120
+    ? `${characters.slice(0, 119).join('').trimEnd()}…`
+    : text;
+}
+// Inbox rule: the first answered name-like short text, else the email answer.
+// The database selects both candidates so Jobs never reads other answers.
+export function respondentLabel(name: string | null, email: string | null) {
+  return line(name) || line(email) || null;
+}
+// Same address shape the email question accepts; anything else is not a header.
+const mailbox =
+  /^(?!\.)(?!.*\.\.)[A-Za-z0-9_'+\-.]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9-]*\.)+[A-Za-z]{2,}$/;
+function replyTo(email: string | null) {
+  const address = email?.trim() ?? '';
+  return address.length <= 254 && mailbox.test(address) ? address : null;
+}
+const entities: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+const escape = (value: string) =>
+  value.replace(/[&<>"']/g, (character) => entities[character]);
+const utc = new Intl.DateTimeFormat('en', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+  timeZone: 'UTC',
+});
+// Workspaces have no stored locale or time zone yet, so the time is labelled UTC.
+function renderOwnerEmail(delivery: OwnerEmail) {
+  const { summary } = delivery,
+    title = line(summary.formTitle) || 'Untitled form',
+    respondent = respondentLabel(
+      summary.respondentName,
+      summary.respondentEmail,
+    ),
+    submitted = `${utc.format(new Date(summary.submittedAt))} UTC`,
+    inbox = `https://snapform.jacked.dev/workspaces/${delivery.workspaceId}/responses/${delivery.formId}`,
+    link = `${inbox}?response=${delivery.sessionId}`,
+    subject = `New response: ${title}${respondent ? ` from ${respondent}` : ''}`,
+    why =
+      'You get this email because email notifications are on for this form. To turn them off, open';
+  const rows = [
+    ['Form', escape(title)],
+    ['Respondent', escape(respondent ?? 'Not provided')],
+    [
+      'Submitted',
+      `<time datetime="${escape(summary.submittedAt)}">${escape(submitted)}</time>`,
+    ],
+  ]
+    .map(
+      ([label, value]) =>
+        `<tr><th scope="row" style="padding:8px 16px 8px 0;text-align:left;vertical-align:top;font-weight:600;color:#56585C;white-space:nowrap">${label}</th><td style="padding:8px 0;color:#191A1B;word-break:break-word">${value}</td></tr>`,
+    )
+    .join('');
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escape(subject)}</title></head><body style="margin:0;padding:0;background:#F7F6F2;color:#191A1B;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F6F2"><tr><td align="center" style="padding:32px 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #DDDDD6;border-radius:20px"><tr><td style="padding:32px"><p style="margin:0 0 24px;font-weight:700;color:#3154F4">Snapform</p><h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;color:#191A1B">New response</h1><table cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-collapse:collapse">${rows}</table><a href="${escape(link)}" style="display:inline-block;padding:12px 20px;border-radius:10px;background:#3154F4;color:#FFFFFF;font-weight:600;text-decoration:none">Open response</a><p style="margin:32px 0 0;font-size:14px;color:#56585C">${why} <a href="${escape(inbox)}" style="color:#3154F4">the form’s responses</a> in Snapform and switch off Email notifications.</p></td></tr></table></td></tr></table></body></html>`;
+  const text = `${subject}\n\nForm: ${title}\nRespondent: ${respondent ?? 'Not provided'}\nSubmitted: ${submitted}\n\nOpen response:\n${link}\n\n${why} the form’s responses in Snapform and switch off Email notifications:\n${inbox}\n\nSnapform`;
+  const address = replyTo(summary.respondentEmail);
+  return { subject, html, text, ...(address ? { reply_to: address } : {}) };
+}
 async function providerResult(response: Response): Promise<unknown> {
   if (!response.body) throw Error('Missing provider response');
   const reader = response.body.getReader(),
@@ -49,6 +128,7 @@ export async function sendOwnerEmail(
       delivery.formId,
       delivery.sessionId,
     ].every((value) => identity.safeParse(value).success) ||
+    !Number.isFinite(Date.parse(delivery.summary.submittedAt)) ||
     !Number.isFinite(started) ||
     started > now + 60000
   )
@@ -74,9 +154,8 @@ export async function sendOwnerEmail(
       body: JSON.stringify({
         from: settings.from,
         to: [delivery.recipient],
-        subject: 'A new response is ready in Snapform',
         tags: [{ name: 'snapform_delivery', value: delivery.id }],
-        text: `A new response is ready in Snapform.\n\nOpen your inbox:\nhttps://snapform.jacked.dev/workspaces/${delivery.workspaceId}/responses/${delivery.formId}?response=${delivery.sessionId}\n\nReference: ${delivery.sessionId}\n\nYou receive this because response notifications are enabled for this form. Manage them from the inbox.\n\nSnapform`,
+        ...renderOwnerEmail(delivery),
       }),
     });
     if (
