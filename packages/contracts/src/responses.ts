@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { formCursorSchema, formsQuerySchema } from './draft.ts';
 import { formDefinitionSchema } from './form.ts';
 import type { Block, FormDefinition } from './form.ts';
@@ -67,23 +67,27 @@ export function summarizeResponse(
 const summary = z.strictObject({
   id: z.uuid(),
   versionId: z.uuid(),
-  version: z.int().positive(),
+  version: z.int().check(z.positive()),
   submittedAt: z.iso.datetime(),
 });
-const summaryText = z.string().min(1).max(SUMMARY_TEXT_LENGTH).nullable();
+const summaryText = z.nullable(
+  z.string().check(z.minLength(1), z.maxLength(SUMMARY_TEXT_LENGTH)),
+);
 export const responsePageSchema = z.strictObject({
   title: formDefinitionSchema.shape.title,
   responses: z
-    .array(summary.extend({ respondent: summaryText, preview: summaryText }))
-    .max(20),
+    .array(z.extend(summary, { respondent: summaryText, preview: summaryText }))
+    .check(z.maxLength(20)),
   versions: z
-    .array(z.strictObject({ id: z.uuid(), number: z.int().positive() }))
-    .max(MAX_LISTED_VERSIONS),
+    .array(
+      z.strictObject({ id: z.uuid(), number: z.int().check(z.positive()) }),
+    )
+    .check(z.maxLength(MAX_LISTED_VERSIONS)),
   role: roleSchema,
-  nextCursor: z.string().max(512).nullable(),
+  nextCursor: z.nullable(z.string().check(z.maxLength(512))),
 });
 export const responseDetailSchema = z.strictObject({
-  response: summary.extend({
+  response: z.extend(summary, {
     definition: formDefinitionSchema,
     answers: sessionAnswersSchema,
   }),

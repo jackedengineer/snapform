@@ -1,26 +1,34 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 
-const budget = z.number().int().min(0).max(10_000_000);
+const budget = z.number().check(z.int(), z.minimum(0), z.maximum(10_000_000));
 
 export const briefSchema = z.strictObject({
   goal: z
     .string()
-    .trim()
-    .min(10, 'Describe your goal in at least 10 characters.')
-    .max(1000, 'Use 1,000 characters or fewer.'),
+    .check(
+      z.trim(),
+      z.minLength(10, 'Describe your goal in at least 10 characters.'),
+      z.maxLength(1000, 'Use 1,000 characters or fewer.'),
+    ),
   budget,
   currency: z.enum(['USD', 'INR', 'EUR']),
   targetDate: z.iso.date('Choose a valid calendar date.'),
 });
 
-export const briefFormSchema = briefSchema.extend({
-  budget: z
-    .string()
-    .trim()
-    .min(1, 'Enter a budget, including zero.')
-    .regex(/^\d+$/, 'Use whole currency units.')
-    .transform(Number)
-    .pipe(budget),
+export const briefFormSchema = z.extend(briefSchema, {
+  budget: z.pipe(
+    z.pipe(
+      z
+        .string()
+        .check(
+          z.trim(),
+          z.minLength(1, 'Enter a budget, including zero.'),
+          z.regex(/^\d+$/, 'Use whole currency units.'),
+        ),
+      z.transform(Number),
+    ),
+    budget,
+  ),
 });
 
 export const reviewResponseSchema = z.strictObject({ brief: briefSchema });

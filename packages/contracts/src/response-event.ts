@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 
 export const responseEventMessageSchema = z.strictObject({
   version: z.literal(1),

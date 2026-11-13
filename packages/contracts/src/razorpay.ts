@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { subscriptionIdSchema } from './billing.ts';
 import { billingEventSchema } from './billing-server.ts';
 import type { BillingEvent } from './billing-server.ts';
@@ -30,26 +30,26 @@ export async function verifyRazorpaySignature(
 }
 /** The part of a create or cancel response the API relies on. */
 export const createdSubscriptionSchema = z.object({ id: subscriptionIdSchema });
-const seconds = z.int().min(1).max(4102444800);
+const seconds = z.int().check(z.minimum(1), z.maximum(4102444800));
 // Razorpay adds fields over time, so only the used subset is strict about types.
 const eventSchema = z.object({
-  event: z.string().regex(/^[a-z_.]{1,64}$/),
+  event: z.string().check(z.regex(/^[a-z_.]{1,64}$/)),
   created_at: seconds,
   payload: z.object({
-    subscription: z
-      .object({
+    subscription: z.optional(
+      z.object({
         entity: z.object({
           id: subscriptionIdSchema,
-          plan_id: z.string().max(64),
-          customer_id: z.string().max(64).nullish(),
-          current_start: seconds.nullish(),
-          current_end: seconds.nullish(),
-          notes: z
-            .union([z.record(z.string(), z.unknown()), z.array(z.unknown())])
-            .optional(),
+          plan_id: z.string().check(z.maxLength(64)),
+          customer_id: z.nullish(z.string().check(z.maxLength(64))),
+          current_start: z.nullish(seconds),
+          current_end: z.nullish(seconds),
+          notes: z.optional(
+            z.union([z.record(z.string(), z.unknown()), z.array(z.unknown())]),
+          ),
         }),
-      })
-      .optional(),
+      }),
+    ),
   }),
 });
 const at = (value: number | null | undefined) =>

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { compileDefinition } from './compile.ts';
 import type { CompileIssue } from './compile.ts';
 import { decodeAnswer, requiredAnswerIssue } from './answers.ts';
@@ -20,7 +20,7 @@ export type FormEvaluation =
     };
 const answerMap = z
   .record(z.uuid(), z.unknown())
-  .refine((answers) => Object.keys(answers).length <= 50);
+  .check(z.refine((answers) => Object.keys(answers).length <= 50));
 
 // Called only with compiled conditions and decoded effective answers.
 export function matchesCondition(

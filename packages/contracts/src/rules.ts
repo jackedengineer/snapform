@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { isStorableText } from './text.ts';
 
 export type Condition =
@@ -13,14 +13,17 @@ export type Condition =
   | { op: 'and'; conditions: Condition[] }
   | { op: 'or'; conditions: Condition[] }
   | { op: 'not'; condition: Condition };
-const identity = z.uuid().transform((value) => value.toLowerCase());
+const identity = z.pipe(
+  z.uuid(),
+  z.transform((value: string) => value.toLowerCase()),
+);
 const predicate = z.discriminatedUnion('op', [
   z.strictObject({ op: z.enum(['answered', 'unanswered']), fieldId: identity }),
   z.strictObject({
     op: z.enum(['eq', 'neq', 'gt', 'gte', 'lt', 'lte']),
     fieldId: identity,
     value: z.union([
-      z.string().max(10000).refine(isStorableText),
+      z.string().check(z.maxLength(10000), z.refine(isStorableText)),
       z.number(),
       z.boolean(),
     ]),
@@ -32,13 +35,15 @@ const predicate = z.discriminatedUnion('op', [
   }),
 ]);
 // Build a finite schema rather than recursively parsing unbounded untrusted input.
-let boundedCondition: z.ZodType<Condition> = predicate;
+let boundedCondition: z.ZodMiniType<Condition> = predicate;
 for (let depth = 1; depth < 4; depth++) {
   boundedCondition = z.union([
     predicate,
     z.strictObject({
       op: z.enum(['and', 'or']),
-      conditions: z.array(boundedCondition).min(1).max(8),
+      conditions: z
+        .array(boundedCondition)
+        .check(z.minLength(1), z.maxLength(8)),
     }),
     z.strictObject({ op: z.literal('not'), condition: boundedCondition }),
   ]);
@@ -46,7 +51,7 @@ for (let depth = 1; depth < 4; depth++) {
 export const conditionSchema = boundedCondition;
 export const ruleSchema = z.strictObject({
   id: identity,
-  priority: z.int().min(0).max(29),
+  priority: z.int().check(z.minimum(0), z.maximum(29)),
   condition: conditionSchema,
   action: z.discriminatedUnion('type', [
     z.strictObject({ type: z.literal('show'), fieldId: identity }),

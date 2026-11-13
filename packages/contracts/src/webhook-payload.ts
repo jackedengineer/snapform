@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { responseDetailSchema } from './responses.ts';
 import type { ResponseDetail } from './responses.ts';
 import { evaluateForm } from './evaluate.ts';

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 export const purgeIntentSchema = z
   .strictObject({
     id: z.uuid(),
@@ -8,14 +8,18 @@ export const purgeIntentSchema = z
     reason: z.enum(['expired', 'owner']),
     createdAt: z.iso.datetime(),
   })
-  .refine(
-    (item) =>
-      item.kind !== 'workspace' ||
-      (item.reason === 'owner' && item.targetId === item.workspaceId),
-    'Invalid workspace purge target',
+  .check(
+    z.refine(
+      (item) =>
+        item.kind !== 'workspace' ||
+        (item.reason === 'owner' && item.targetId === item.workspaceId),
+      'Invalid workspace purge target',
+    ),
   );
 export type PurgeIntent = z.infer<typeof purgeIntentSchema>;
-export const purgeBatchSchema = z.array(purgeIntentSchema).max(20);
+export const purgeBatchSchema = z
+  .array(purgeIntentSchema)
+  .check(z.maxLength(20));
 const encoder = new TextEncoder();
 const encode = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 function decode(value: string): Uint8Array<ArrayBuffer> {

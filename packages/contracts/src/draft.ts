@@ -1,15 +1,18 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { formDefinitionSchema } from './form.ts';
 import { roleSchema, workspaceSchema } from './workspace.ts';
-const identity = z.uuid().transform((value) => value.toLowerCase());
-const revision = z.int().min(1).max(2147483647);
+const identity = z.pipe(
+  z.uuid(),
+  z.transform((value: string) => value.toLowerCase()),
+);
+const revision = z.int().check(z.minimum(1), z.maximum(2147483647));
 export const createFormSchema = z.strictObject({
   id: identity,
   definition: formDefinitionSchema,
 });
 export const saveDraftSchema = z.strictObject({
   operationId: identity,
-  expectedRevision: z.int().min(1).max(2147483646),
+  expectedRevision: z.int().check(z.minimum(1), z.maximum(2147483646)),
   definition: formDefinitionSchema,
 });
 export const draftReceiptSchema = z
@@ -19,9 +22,11 @@ export const draftReceiptSchema = z
     revision,
     currentRevision: revision,
   })
-  .refine(
-    (value) => value.currentRevision >= value.revision,
-    'An operation cannot be ahead of the saved draft.',
+  .check(
+    z.refine(
+      (value) => value.currentRevision >= value.revision,
+      'An operation cannot be ahead of the saved draft.',
+    ),
   );
 export type CreateForm = z.infer<typeof createFormSchema>;
 export type SaveDraft = z.infer<typeof saveDraftSchema>;
@@ -32,10 +37,9 @@ export const formCursorSchema = z.strictObject({
 export type FormCursor = z.infer<typeof formCursorSchema>;
 const cursorToken = z
   .string()
-  .max(512)
-  .regex(/^[A-Za-z0-9_-]+$/);
+  .check(z.maxLength(512), z.regex(/^[A-Za-z0-9_-]+$/));
 export const formsQuerySchema = z.strictObject({
-  cursor: cursorToken.optional(),
+  cursor: z.optional(cursorToken),
 });
 export const formSnapshotSchema = z.strictObject({
   id: identity,
@@ -64,11 +68,13 @@ export const formsPageSchema = z.strictObject({
         revision,
         updatedAt: z.iso.datetime(),
         status: formStatusSchema,
-        responseCount: z.int().min(0).max(formListResponseLimit),
+        responseCount: z
+          .int()
+          .check(z.minimum(0), z.maximum(formListResponseLimit)),
       }),
     )
-    .max(20),
-  nextCursor: cursorToken.nullable(),
+    .check(z.maxLength(20)),
+  nextCursor: z.nullable(cursorToken),
 });
 export type FormSnapshot = z.infer<typeof formSnapshotSchema>;
 export type FormsPage = z.infer<typeof formsPageSchema>;
@@ -76,18 +82,20 @@ export type FormsPage = z.infer<typeof formsPageSchema>;
 export const localDraftSchema = z
   .strictObject({
     version: z.literal(1),
-    userId: z.string().min(1).max(128),
+    userId: z.string().check(z.minLength(1), z.maxLength(128)),
     workspaceId: identity,
     formId: identity,
     editorId: identity,
-    updatedAt: z.int().nonnegative(),
+    updatedAt: z.int().check(z.nonnegative()),
     revision,
     definition: formDefinitionSchema,
-    pending: saveDraftSchema.nullable(),
-    backup: formDefinitionSchema.nullable(),
+    pending: z.nullable(saveDraftSchema),
+    backup: z.nullable(formDefinitionSchema),
   })
-  .refine(
-    (value) =>
-      !value.pending || value.pending.expectedRevision === value.revision,
+  .check(
+    z.refine(
+      (value) =>
+        !value.pending || value.pending.expectedRevision === value.revision,
+    ),
   );
 export type LocalDraft = z.infer<typeof localDraftSchema>;

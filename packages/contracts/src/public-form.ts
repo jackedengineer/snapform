@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { formDefinitionSchema } from './form.ts';
 import { publicationSchema } from './publication.ts';
 import { isStorableText } from './text.ts';
@@ -6,7 +6,9 @@ import { isStorableText } from './text.ts';
 // dropped rather than rejected, so later details such as a logo or accent
 // can be added without breaking forms that are already open.
 export const publicBusinessSchema = z.object({
-  name: z.string().trim().min(1).max(80).refine(isStorableText),
+  name: z
+    .string()
+    .check(z.trim(), z.minLength(1), z.maxLength(80), z.refine(isStorableText)),
 });
 export type PublicBusiness = z.infer<typeof publicBusinessSchema>;
 export const publicFormEnvelopeSchema = z.strictObject({
@@ -15,7 +17,7 @@ export const publicFormEnvelopeSchema = z.strictObject({
     versionId: publicationSchema.shape.versionId,
     definition: formDefinitionSchema,
     // Absent when the lookup predates business names.
-    business: publicBusinessSchema.optional(),
+    business: z.optional(publicBusinessSchema),
   }),
 });
 export type PublicForm = z.infer<typeof publicFormEnvelopeSchema>['form'];

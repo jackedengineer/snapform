@@ -1,8 +1,11 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { compileDefinition, type CompileResult } from './compile.ts';
 import type { FormDefinition } from './form.ts';
-const identity = z.uuid().transform((value) => value.toLowerCase());
-const positive = z.int().min(1).max(2147483647);
+const identity = z.pipe(
+  z.uuid(),
+  z.transform((value: string) => value.toLowerCase()),
+);
+const positive = z.int().check(z.minimum(1), z.maximum(2147483647));
 export const publishFormSchema = z.strictObject({
   versionId: identity,
   expectedRevision: positive,
@@ -19,13 +22,13 @@ export const publicationSchema = z.strictObject({
   updatedAt: z.iso.datetime(),
 });
 export const publicationEnvelopeSchema = z.strictObject({
-  publication: publicationSchema.nullable(),
+  publication: z.nullable(publicationSchema),
 });
 export const publicationReceiptSchema = z.strictObject({
   versionId: identity,
   number: positive,
   sourceRevision: positive,
-  publication: publicationSchema.nullable(),
+  publication: z.nullable(publicationSchema),
 });
 export type PublishForm = z.infer<typeof publishFormSchema>;
 export type UnpublishForm = z.infer<typeof unpublishFormSchema>;

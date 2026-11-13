@@ -3,6 +3,12 @@ import type { Field, FormDefinition } from './form.ts';
 import { sessionAnswersSchema } from './intake.ts';
 import type { Answer } from './answers.ts';
 import { formatResponseAnswer } from './response-display.ts';
+import { publishFormSchema } from './publication.ts';
+import { z } from './zod.ts';
+// An export names one published version, with no other query parameters.
+export const responseExportQuerySchema = z.pick(publishFormSchema, {
+  versionId: true,
+});
 export const MAX_EXPORT_ROWS = 1000;
 export const MAX_EXPORT_ANSWER_BYTES = 1048576;
 export const MAX_CSV_BYTES = 2097152;

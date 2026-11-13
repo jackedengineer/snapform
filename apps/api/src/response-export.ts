@@ -1,14 +1,13 @@
 import { Buffer } from 'node:buffer';
-import { publishFormSchema } from '@snapform/contracts/publication';
 import type { Request, Response } from 'express';
 import type { Database } from '@snapform/database';
 import { getResponseExport } from '@snapform/database/response-export';
 import {
   createResponseCsv,
   responseExportFilename,
+  responseExportQuerySchema as querySchema,
 } from '@snapform/contracts/response-csv';
 import { requestScope } from './request-context.ts';
-const querySchema = publishFormSchema.pick({ versionId: true });
 const identity = querySchema.shape.versionId;
 type ExportRoute = { workspaceId: string; formId: string };
 export function matchResponseExportRoute(path: string): ExportRoute | null {

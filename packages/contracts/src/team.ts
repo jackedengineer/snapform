@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { email } from './auth.ts';
 import { roleSchema } from './workspace.ts';
 import type { Role } from './workspace.ts';
@@ -10,13 +10,15 @@ export { roleChangeDecision, removalDecision } from './team-rules.ts';
 // existing member deliberately, never by a link that can be forwarded.
 export const inviteRoleSchema = z.enum(['editor', 'viewer']);
 export const createInvitationSchema = z.strictObject({
-  email: z.string().trim().pipe(email),
+  email: z.pipe(z.string().check(z.trim()), email),
   role: inviteRoleSchema,
 });
 export type CreateInvitation = z.infer<typeof createInvitationSchema>;
 
-export const invitationTokenSchema = z.string().regex(invitationTokenPattern);
-export const invitationHashSchema = z.string().regex(/^[0-9a-f]{64}$/);
+export const invitationTokenSchema = z
+  .string()
+  .check(z.regex(invitationTokenPattern));
+export const invitationHashSchema = z.string().check(z.regex(/^[0-9a-f]{64}$/));
 export const acceptInvitationSchema = z.strictObject({
   token: invitationTokenSchema,
 });
@@ -36,32 +38,34 @@ export async function hashInvitationToken(token: string) {
     byte.toString(16).padStart(2, '0'),
   ).join('');
 }
-export const memberIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
+export const memberIdSchema = z
+  .string()
+  .check(z.regex(/^[A-Za-z0-9_-]{1,64}$/));
 export const roleChangeSchema = z.strictObject({ role: roleSchema });
 const memberSchema = z.strictObject({
   userId: memberIdSchema,
-  name: z.string().max(200),
-  email: z.string().max(254),
+  name: z.string().check(z.maxLength(200)),
+  email: z.string().check(z.maxLength(254)),
   role: roleSchema,
   joinedAt: z.iso.datetime(),
 });
 export type Member = z.infer<typeof memberSchema>;
 export const teamSchema = z.strictObject({
   role: roleSchema,
-  members: z.array(memberSchema).max(200),
+  members: z.array(memberSchema).check(z.maxLength(200)),
 });
 export type Team = { role: Role; members: Member[] };
 export const invitationIdSchema = z.uuid();
 export const invitationSchema = z.strictObject({
   id: invitationIdSchema,
-  email: z.string().max(254),
+  email: z.string().check(z.maxLength(254)),
   role: inviteRoleSchema,
   createdAt: z.iso.datetime(),
   expiresAt: z.iso.datetime(),
 });
 export type Invitation = z.infer<typeof invitationSchema>;
 export const invitationListSchema = z.strictObject({
-  invitations: z.array(invitationSchema).max(200),
+  invitations: z.array(invitationSchema).check(z.maxLength(200)),
 });
 export const invitationCreatedSchema = z.strictObject({
   invitation: invitationSchema,
@@ -71,7 +75,7 @@ export const invitationCreatedSchema = z.strictObject({
 export const invitationAcceptedSchema = z.strictObject({
   workspace: z.strictObject({
     id: z.uuid(),
-    name: z.string().max(80),
+    name: z.string().check(z.maxLength(80)),
     role: roleSchema,
   }),
 });

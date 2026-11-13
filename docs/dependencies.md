@@ -14,6 +14,8 @@ Only packages needed by an implemented slice are installed. Exact versions and t
 | express                | 5.3.0           | User-selected API middleware/router, only in the Worker bundle; not sent to browsers                                      |
 | zod                    | 4.6.7           | One shared runtime boundary for browser/API inputs and explicit review output; avoids inconsistent handwritten validation |
 
+Contracts import zod's functional `zod/mini` entry through `packages/contracts/src/zod.ts`, which installs the same English messages the method build loads. The method build attaches every schema method, JSON Schema output and cycle memoizer to each schema; the browser ships those even when unused. Same package and version, so no license or lockfile change. On the launch build it cut the shared contract chunk from 34.72 to 20.44 KiB gzip, all emitted JS from 238.78 to 224.58 KiB, and the editor route from 192.41 to 178.12 KiB.
+
 No database/auth/payment/AI/storage SDK, CSS framework, component kit, animation, date, utility, HTTP-client or global-store package is installed in anticipation of future work. Better Auth, Drizzle and provider integrations are selected in the full specification and will be reviewed when their slice is built.
 
 ## Measured cost and budgets
