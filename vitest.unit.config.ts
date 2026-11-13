@@ -19,6 +19,7 @@ export default defineConfig({
         'packages/contracts/src/brief.ts',
         'packages/contracts/src/auth.ts',
         'packages/contracts/src/workspace.ts',
+        'packages/contracts/src/team.ts',
         'packages/contracts/src/text.ts',
         'packages/contracts/src/form.ts',
         'packages/contracts/src/currency.ts',

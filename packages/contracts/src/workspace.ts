@@ -8,6 +8,7 @@ const permissions = {
   'responses.export': ['owner', 'editor'],
   'integrations.manage': ['owner', 'editor'],
   'integrations.read': ['owner', 'editor'],
+  'members.read': ['owner', 'editor', 'viewer'],
   'members.manage': ['owner'],
   'billing.manage': ['owner'],
   'workspace.delete': ['owner'],

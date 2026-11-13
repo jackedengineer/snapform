@@ -29,6 +29,13 @@ describe('workspace policy', () => {
       expect(can('owner', action)).toBe(true);
     }
   });
+  it('lets every member read the team but only owners manage it', () => {
+    for (const role of ['owner', 'editor', 'viewer'])
+      expect(can(role, 'members.read')).toBe(true);
+    expect(can('owner', 'members.manage')).toBe(true);
+    expect(can('editor', 'members.manage')).toBe(false);
+    expect(can('viewer', 'members.manage')).toBe(false);
+  });
   it('fails closed on unknown roles/actions and prototype names', () => {
     for (const role of ['admin', '__proto__', null, undefined])
       expect(can(role, 'responses.read')).toBe(false);

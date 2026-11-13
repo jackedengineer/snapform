@@ -6,6 +6,7 @@
     ".": "./src/brief.ts",
     "./auth": "./src/auth.ts",
     "./workspace": "./src/workspace.ts",
+    "./team": "./src/team.ts",
     "./form": "./src/form.ts",
     "./currency": "./src/currency.ts",
     "./answers": "./src/answers.ts",
