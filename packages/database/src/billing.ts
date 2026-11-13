@@ -34,7 +34,7 @@ export async function getBilling(
       await tx.execute<Record<string, unknown>>(sql`select
         current_setting('snapform.role') as role,plan,status,billing_interval as "interval",currency,
         ${instant('current_period_end')} as "currentPeriodEnd",cancel_at_period_end as "cancelAtPeriodEnd",
-        checkout_subscription as "checkoutSubscription",responses_used as "responsesUsed",
+        subscription_id as "subscriptionId",responses_used as "responsesUsed",
         responses_reserved as "responsesReserved",response_limit as "responseLimit",live_forms as "liveForms",
         live_form_limit as "liveFormLimit",seats_used as "seatsUsed",seat_limit as "seatLimit",
         ${instant('resets_at')} as "resetsAt"

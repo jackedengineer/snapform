@@ -2940,7 +2940,7 @@
       "checkConstraints": {
         "billing_event_id": {
           "name": "billing_event_id",
-          "value": "\"billing_event\".\"id\" ~ '^[A-Za-z0-9_]{1,64}$'"
+          "value": "\"billing_event\".\"id\" ~ '^[A-Za-z0-9_-]{1,64}$'"
         },
         "billing_event_type": {
           "name": "billing_event_type",

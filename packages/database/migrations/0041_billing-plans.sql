@@ -6,7 +6,7 @@ CREATE TABLE "billing_event" (
 	"subscription_id" text,
 	"outcome" text NOT NULL,
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "billing_event_id" CHECK ("billing_event"."id" ~ '^[A-Za-z0-9_]{1,64}$'),
+	CONSTRAINT "billing_event_id" CHECK ("billing_event"."id" ~ '^[A-Za-z0-9_-]{1,64}$'),
 	CONSTRAINT "billing_event_type" CHECK ("billing_event"."type" ~ '^[a-z_.]{1,64}$'),
 	CONSTRAINT "billing_event_outcome" CHECK ("billing_event"."outcome" in ('applied','ignored'))
 );
@@ -225,16 +225,16 @@ END $$;
 CREATE TRIGGER form_publication_live_limit BEFORE INSERT OR UPDATE OF active ON public.form_publication
 FOR EACH ROW WHEN (NEW.active) EXECUTE FUNCTION public.enforce_live_form_limit();
 --> statement-breakpoint
--- Any member may read plan, limits and usage. Provider identifiers are not returned,
--- except an unpaid checkout's subscription ID to its owner so checkout can reopen.
+-- Any member may read plan, limits and usage. Only an owner also gets the subscription
+-- ID, which the API uses to reopen checkout or cancel and never sends to browsers.
 CREATE FUNCTION public.workspace_billing(requested_workspace uuid)
 RETURNS TABLE(plan text,status text,billing_interval text,currency text,current_period_end timestamptz,
- cancel_at_period_end boolean,checkout_subscription text,responses_used integer,responses_reserved integer,
+ cancel_at_period_end boolean,subscription_id text,responses_used integer,responses_reserved integer,
  response_limit integer,live_forms integer,live_form_limit integer,seats_used integer,seat_limit integer,resets_at timestamptz)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
  SELECT l.plan,coalesce(p.status,'none'),p.billing_interval,p.currency,p.current_period_end,
   coalesce(p.cancel_at_period_end,false),
-  CASE WHEN p.status='created' AND EXISTS(SELECT 1 FROM public.membership m WHERE m.workspace_id=requested_workspace
+  CASE WHEN EXISTS(SELECT 1 FROM public.membership m WHERE m.workspace_id=requested_workspace
    AND m.user_id=current_setting('snapform.user_id',true) AND m.role='owner') THEN p.razorpay_subscription_id END,
   coalesce((SELECT u.responses_used FROM public.workspace_response_usage u
    WHERE u.workspace_id=requested_workspace AND u.period_start=public.usage_period_start()),0),

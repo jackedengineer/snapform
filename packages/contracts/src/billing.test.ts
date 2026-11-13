@@ -14,7 +14,7 @@ const record = {
   currency: null,
   currentPeriodEnd: null,
   cancelAtPeriodEnd: false,
-  checkoutSubscription: null,
+  subscriptionId: null,
   responsesUsed: 37,
   responsesReserved: 2,
   responseLimit: 100,
@@ -35,7 +35,7 @@ it('reads the database projection strictly', () => {
       interval: 'annual',
       currency: 'INR',
       currentPeriodEnd: '2027-11-13T00:00:00.000Z',
-      checkoutSubscription: 'sub_00000000000001',
+      subscriptionId: 'sub_00000000000001',
       liveFormLimit: null,
     }).liveFormLimit,
   ).toBeNull();
@@ -43,7 +43,7 @@ it('reads the database projection strictly', () => {
     { ...record, plan: 'enterprise' },
     { ...record, status: 'paused' },
     { ...record, responsesUsed: -1 },
-    { ...record, checkoutSubscription: 'plan_00000000000001' },
+    { ...record, subscriptionId: 'plan_00000000000001' },
     { ...record, razorpayCustomerId: 'cust_1' },
     { ...record, resetsAt: 'next month' },
   ])
@@ -52,10 +52,10 @@ it('reads the database projection strictly', () => {
 
 it('projects a summary without provider identifiers and adds plan features', () => {
   const summary = billingSummary(
-    { ...record, checkoutSubscription: 'sub_00000000000001' },
+    { ...record, subscriptionId: 'sub_00000000000001' },
     true,
   );
-  expect(summary).not.toHaveProperty('checkoutSubscription');
+  expect(summary).not.toHaveProperty('subscriptionId');
   expect(summary).toMatchObject({
     configured: true,
     features: { badgeRequired: true, branding: false },

@@ -103,7 +103,7 @@ export const billingEvent = pgTable(
       .defaultNow(),
   },
   (table) => [
-    check('billing_event_id', sql`${table.id} ~ '^[A-Za-z0-9_]{1,64}$'`),
+    check('billing_event_id', sql`${table.id} ~ '^[A-Za-z0-9_-]{1,64}$'`),
     check('billing_event_type', sql`${table.type} ~ '^[a-z_.]{1,64}$'`),
     check(
       'billing_event_outcome',

@@ -47,6 +47,7 @@ export default defineConfig({
         'packages/contracts/src/plans.ts',
         'packages/contracts/src/billing.ts',
         'packages/contracts/src/billing-server.ts',
+        'packages/contracts/src/razorpay.ts',
       ],
       reporter: ['text', 'json-summary'],
       thresholds: { lines: 90, functions: 90, statements: 90, branches: 85 },

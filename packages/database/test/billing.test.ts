@@ -81,7 +81,7 @@ it(
         liveFormLimit: 3,
         seatsUsed: 1,
         seatLimit: 1,
-        checkoutSubscription: null,
+        subscriptionId: null,
       });
       const { resetsAt } = await getBilling(tx, seed.actor, seed.workspaceId);
       expect(new Date(resetsAt).getUTCDate()).toBe(1);
@@ -256,7 +256,7 @@ it(
         plan: 'free',
         status: 'created',
         interval: 'annual',
-        checkoutSubscription: subscriptionId,
+        subscriptionId: subscriptionId,
       });
       const editor = crypto.randomUUID();
       await tx.insert(user).values({
@@ -278,7 +278,7 @@ it(
           }),
       );
       expect(
-        (await getBilling(tx, editor, seed.workspaceId)).checkoutSubscription,
+        (await getBilling(tx, editor, seed.workspaceId)).subscriptionId,
       ).toBeNull();
       await expect(
         recordSubscription(tx, editor, seed.workspaceId, 'sub_QAeditor00001', {

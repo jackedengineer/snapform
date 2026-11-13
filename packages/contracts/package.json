@@ -36,7 +36,8 @@
     "./deletion": "./src/deletion.ts",
     "./plans": "./src/plans.ts",
     "./billing": "./src/billing.ts",
-    "./billing-server": "./src/billing-server.ts"
+    "./billing-server": "./src/billing-server.ts",
+    "./razorpay": "./src/razorpay.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
