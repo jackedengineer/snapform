@@ -23,7 +23,7 @@ Established 28 October 2026 from the user's production, testing, native-first an
 | Core coverage | At least 90% lines/functions/statements and 85% branches in implemented pure contracts | `pnpm test:unit --coverage` |
 | Build | Web production build and API Worker dry-run bundle succeed | `pnpm build` |
 | Route JS | Gzip entry + route/layout dependencies: home ≤125 KiB, collector ≤170 KiB, editor ≤190 KiB, inbox ≤175 KiB, other routes ≤200 KiB | `pnpm check:bundle` |
-| Total web JS | At most 230 KiB gzip across all emitted client JS, including lazy routes; record largest chunks | `pnpm check:bundle` |
+| Total web JS | At most 250 KiB gzip across all emitted client JS, including lazy routes; record largest chunks ([ADR-023](docs/decisions/ADR-023-launch-total-js-budget.md)) | `pnpm check:bundle` |
 | Initial web CSS | At most 20 KiB gzip across emitted client CSS | `pnpm check:bundle` |
 | Primary font | Latin variable font at most 40 KiB; optional Extended subset recorded separately | `pnpm check:bundle` |
 | Dependency risk | No unresolved high/critical production dependency audit result | `pnpm audit --prod --audit-level high` |
