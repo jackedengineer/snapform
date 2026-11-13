@@ -43,15 +43,19 @@ export const prices: Readonly<
   monthly: { INR: 149900, USD: 1900 },
   annual: { INR: 1499000, USD: 19000 },
 };
-export function formatPrice(
-  interval: BillingInterval,
-  currency: BillingCurrency,
-) {
+/** Whole-unit display of a minor-unit amount, e.g. 149900 INR as ₹1,499. */
+export function formatMoney(currency: BillingCurrency, minorUnits: number) {
   return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
     style: 'currency',
     currency,
     maximumFractionDigits: 0,
-  }).format(prices[interval][currency] / 100);
+  }).format(minorUnits / 100);
+}
+export function formatPrice(
+  interval: BillingInterval,
+  currency: BillingCurrency,
+) {
+  return formatMoney(currency, prices[interval][currency]);
 }
 /**
  * Response usage resets at 00:00 UTC on the first day of each calendar month,

@@ -95,26 +95,25 @@ export async function request<T>(
         'That workspace or form is unavailable.',
       );
     if (response.status === 409) {
-      let deletionPending = false;
+      let code: unknown = null;
       try {
         const body: unknown = await response.json();
         const error =
           body && typeof body === 'object' && 'error' in body
             ? body.error
             : null;
-        deletionPending =
-          !!error &&
-          typeof error === 'object' &&
-          'code' in error &&
-          error.code === 'WORKSPACE_DELETION_PENDING';
+        if (error && typeof error === 'object' && 'code' in error)
+          code = error.code;
       } catch {
         // A malformed error body still remains a conflict, never a success.
       }
       throw new FormRequestError(
         'conflict',
-        deletionPending
+        code === 'WORKSPACE_DELETION_PENDING'
           ? 'This workspace is scheduled for deletion. Cancel it from workspace data controls before making changes.'
-          : 'This operation conflicts with saved changes. Review the saved version before trying again.',
+          : code === 'LIVE_FORM_LIMIT'
+            ? 'Free workspaces can have 3 live forms. Stop collecting on one, or upgrade to Pro in Plan and billing.'
+            : 'This operation conflicts with saved changes. Review the saved version before trying again.',
       );
     }
     if (response.status === 429)

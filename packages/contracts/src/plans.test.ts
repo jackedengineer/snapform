@@ -4,6 +4,7 @@ import {
   canPublish,
   effectivePlan,
   features,
+  formatMoney,
   formatPrice,
   plans,
   prices,
@@ -49,6 +50,8 @@ describe('plan limits', () => {
     expect(formatPrice('annual', 'INR')).toBe('₹14,990');
     expect(formatPrice('monthly', 'USD')).toBe('$19');
     expect(formatPrice('annual', 'USD')).toBe('$190');
+    expect(formatMoney('INR', 0)).toBe('₹0');
+    expect(formatMoney('USD', 0)).toBe('$0');
   });
 });
 

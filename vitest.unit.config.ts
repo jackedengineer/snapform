@@ -10,6 +10,7 @@ export default defineConfig({
       'apps/web/src/features/forms/*.test.ts',
       'apps/web/src/features/deletion/*.test.ts',
       'apps/web/src/features/intake/*.test.ts',
+      'apps/web/src/features/billing/*.test.ts',
     ],
     allowOnly: false,
     coverage: {
@@ -44,6 +45,8 @@ export default defineConfig({
         'packages/contracts/src/deletion.ts',
         'packages/contracts/src/purge.ts',
         'packages/contracts/src/plans.ts',
+        'packages/contracts/src/billing.ts',
+        'packages/contracts/src/billing-server.ts',
       ],
       reporter: ['text', 'json-summary'],
       thresholds: { lines: 90, functions: 90, statements: 90, branches: 85 },
