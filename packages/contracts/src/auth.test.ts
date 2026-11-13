@@ -26,6 +26,22 @@ describe('auth input contracts', () => {
   ])('rejects forged or out-of-bounds signup', (value) => {
     expect(signupSchema.safeParse(value).success).toBe(false);
   });
+  it('asks for a valid email in the same voice as the other field messages', () => {
+    for (const email of [
+      '',
+      'invalid',
+      'a@b',
+      'x'.repeat(250) + '@example.invalid',
+    ]) {
+      const result = signupSchema.safeParse({ ...signup, email });
+      expect(result.success).toBe(false);
+      if (!result.success)
+        expect(
+          result.error.issues.find((issue) => issue.path[0] === 'email')
+            ?.message,
+        ).toBe('Enter a valid email address.');
+    }
+  });
   it('requires fixed recovery destinations and an explicit reset capability', () => {
     expect(
       authBodies['request-password-reset'].safeParse({

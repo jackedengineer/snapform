@@ -1,7 +1,8 @@
 import { z } from './zod.ts';
 import { isStorableText } from './text.ts';
+const emailMessage = 'Enter a valid email address.';
 export const email = z.pipe(
-  z.email().check(z.maxLength(254)),
+  z.email(emailMessage).check(z.maxLength(254, emailMessage)),
   z.transform((value: string) => value.toLowerCase()),
 );
 export const password = z
