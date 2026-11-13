@@ -2,9 +2,11 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, it, vi } from 'vitest';
-import { EmailOffer } from './EmailNotifications';
+import { EmailOffer } from './PublicationControls';
 
-vi.mock('@tanstack/react-router', () => ({ Link: () => null }));
+vi.mock('../auth/AccountLayout', () => ({
+  useAccountUser: () => ({ id: 'qa-user' }),
+}));
 
 function render(enabled: boolean, owner: boolean) {
   const workspaceId = crypto.randomUUID(),
