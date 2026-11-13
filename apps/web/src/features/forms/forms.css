@@ -765,13 +765,13 @@
 .publication-panel .definition-checks {
   margin: 16px 0;
 }
-.publication-panel label {
+.publication-panel label:not(.check-control) {
   display: block;
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 8px;
 }
-.publication-panel input {
+.publication-panel input:not([type='checkbox']) {
   width: 100%;
   min-height: 48px;
   border: 1px solid var(--border-control);
