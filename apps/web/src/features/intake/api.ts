@@ -11,6 +11,8 @@ import type { IntakeMutation } from '@snapform/contracts/intake-progress';
 export type IntakeIdentity = { id: string; capability: string };
 type Failure =
   | 'unavailable'
+  | 'missing'
+  | 'closed'
   | 'expired'
   | 'challenge'
   | 'conflict'
@@ -30,10 +32,16 @@ const unavailable = () =>
     'unavailable',
     'We couldn’t confirm that request. Your answers have not been cleared.',
   );
+const closed = () =>
+  new IntakeRequestError(
+    'closed',
+    'This form isn’t accepting responses right now.',
+  );
 async function request<T>(
   path: string,
   init: RequestInit,
   decode: (value: unknown) => T,
+  absent: 'missing' | 'closed' | 'expired' = 'expired',
 ): Promise<T> {
   try {
     const response = await fetch(path, {
@@ -44,6 +52,9 @@ async function request<T>(
       signal: AbortSignal.timeout(20000),
     });
     if (!response.ok) {
+      if (response.status === 404 && absent === 'missing')
+        throw new IntakeRequestError('missing', 'This form isn’t available.');
+      if (response.status === 404 && absent === 'closed') throw closed();
       if (response.status === 401 || response.status === 404)
         throw new IntakeRequestError(
           'expired',
@@ -72,9 +83,10 @@ async function request<T>(
         throw new IntakeRequestError(
           code === 'INTAKE_QUOTA_UNAVAILABLE' ? 'quota' : 'conflict',
           code === 'INTAKE_QUOTA_UNAVAILABLE'
-            ? 'This form cannot accept more responses right now. Contact the business for help.'
+            ? 'This form isn’t accepting responses right now. If you need to reach the business, contact whoever sent you the link.'
             : 'Your saved response changed. Reload the saved version before continuing.',
         );
+      if (code === 'FILE_COLLECTION_UNAVAILABLE') throw closed();
       if (response.status === 422)
         throw new IntakeRequestError(
           'invalid',
@@ -100,6 +112,7 @@ export const readPublicForm = (publicId: string) =>
     root(publicId),
     {},
     (value) => publicFormEnvelopeSchema.parse(value).form,
+    'missing',
   );
 export const readIntakeConfiguration = () =>
   request('/api/v1/public/intake-config', {}, (value) =>
@@ -123,6 +136,7 @@ export function startIntakeRequest(
         throw unavailable();
       return session;
     },
+    'closed',
   );
 }
 export function readIntakeRequest(publicId: string, identity: IntakeIdentity) {

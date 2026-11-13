@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import {
   readPublicForm,
+  readIntakeRequest,
   startIntakeRequest,
   writeIntakeRequest,
   IntakeRequestError,
@@ -90,5 +91,52 @@ it('returns useful bounded failure categories without leaking raw diagnostics', 
   await expect(readPublicForm(publicId)).rejects.toMatchObject({
     message:
       'We couldn’t confirm that request. Your answers have not been cleared.',
+  });
+});
+it('separates a missing form, a form not accepting responses and an expired session', async () => {
+  const missing = () =>
+    Response.json(
+      { error: { code: 'INTAKE_UNAVAILABLE' } },
+      {
+        status: 404,
+      },
+    );
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockImplementation(async () => missing()),
+  );
+  await expect(readPublicForm(publicId)).rejects.toMatchObject({
+    code: 'missing',
+  });
+  await expect(
+    startIntakeRequest(publicId, identity, 'synthetic-challenge'),
+  ).rejects.toMatchObject({ code: 'closed' });
+  await expect(readIntakeRequest(publicId, identity)).rejects.toMatchObject({
+    code: 'expired',
+  });
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json(
+          { error: { code: 'FILE_COLLECTION_UNAVAILABLE' } },
+          { status: 503 },
+        ),
+      ),
+  );
+  await expect(readPublicForm(publicId)).rejects.toMatchObject({
+    code: 'closed',
+  });
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ error: { code: 'FORM_UNAVAILABLE' } }, { status: 503 }),
+      ),
+  );
+  await expect(readPublicForm(publicId)).rejects.toMatchObject({
+    code: 'unavailable',
   });
 });

@@ -23,6 +23,7 @@ export function useIntake(publicId: string) {
   const [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
     [storageError, setStorageError] = useState(false),
+    [unavailable, setUnavailable] = useState<'missing' | 'closed' | null>(null),
     [busy, setBusy] = useState(false),
     [attempt, setAttempt] = useState(0),
     [reload, setReload] = useState(0);
@@ -42,6 +43,7 @@ export function useIntake(publicId: string) {
     });
     setLoading(true);
     setError('');
+    setUnavailable(null);
     setProgress(null);
     setForm(null);
     function attach(
@@ -81,7 +83,7 @@ export function useIntake(publicId: string) {
         } catch {
           if (active)
             setError(
-              'The browser copy could not be removed. Keep this tab open and try again.',
+              'Saved answers couldn’t be cleared from this browser. Try again.',
             );
         } finally {
           if (active) setBusy(false);
@@ -186,7 +188,13 @@ export function useIntake(publicId: string) {
               definition: session.definition,
             });
           } catch (failure) {
-            if (active) {
+            if (
+              active &&
+              failure instanceof IntakeRequestError &&
+              ['closed', 'quota'].includes(failure.code)
+            )
+              setUnavailable('closed');
+            else if (active) {
               setError(
                 failure instanceof Error
                   ? failure.message
@@ -199,7 +207,14 @@ export function useIntake(publicId: string) {
           }
         };
       } catch (failure) {
-        if (active) {
+        if (
+          active &&
+          !record.session &&
+          failure instanceof IntakeRequestError &&
+          (failure.code === 'missing' || failure.code === 'closed')
+        )
+          setUnavailable(failure.code);
+        else if (active) {
           const message =
             failure instanceof IntakeRequestError
               ? failure.message
@@ -209,7 +224,7 @@ export function useIntake(publicId: string) {
             const retained = attach(record, record.session.answers);
             retained.state.status = 'blocked';
             retained.state.message =
-              'Your browser copy is shown below. Reload to retry, or forget this copy to start again.';
+              'Your answers in this browser are shown below. Reload to try again, or clear saved answers to start over.';
             setProgress({ ...retained.state });
             setForm({
               publicId,
@@ -274,6 +289,7 @@ export function useIntake(publicId: string) {
     loading,
     error,
     storageError,
+    unavailable,
     busy,
     attempt,
     start: (token: string) => actions.current.start?.(token),
