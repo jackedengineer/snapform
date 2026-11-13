@@ -2895,6 +2895,428 @@
         }
       },
       "isRLSEnabled": true
+    },
+    "public.billing_event": {
+      "name": "billing_event",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subscription_id": {
+          "name": "subscription_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "billing_event_id": {
+          "name": "billing_event_id",
+          "value": "\"billing_event\".\"id\" ~ '^[A-Za-z0-9_-]{1,64}$'"
+        },
+        "billing_event_type": {
+          "name": "billing_event_type",
+          "value": "\"billing_event\".\"type\" ~ '^[a-z_.]{1,64}$'"
+        },
+        "billing_event_outcome": {
+          "name": "billing_event_outcome",
+          "value": "\"billing_event\".\"outcome\" in ('applied','ignored')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.workspace_plan": {
+      "name": "workspace_plan",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "plan": {
+          "name": "plan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'free'"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "billing_interval": {
+          "name": "billing_interval",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_period_start": {
+          "name": "current_period_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_period_end": {
+          "name": "current_period_end",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancel_at_period_end": {
+          "name": "cancel_at_period_end",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "razorpay_subscription_id": {
+          "name": "razorpay_subscription_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "razorpay_customer_id": {
+          "name": "razorpay_customer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_event_at": {
+          "name": "last_event_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "workspace_plan_workspace_id_workspace_id_fk": {
+          "name": "workspace_plan_workspace_id_workspace_id_fk",
+          "tableFrom": "workspace_plan",
+          "tableTo": "workspace",
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "workspace_plan_razorpay_subscription_id_unique": {
+          "name": "workspace_plan_razorpay_subscription_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["razorpay_subscription_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "workspace_plan_plan": {
+          "name": "workspace_plan_plan",
+          "value": "\"workspace_plan\".\"plan\" in ('free','pro')"
+        },
+        "workspace_plan_status": {
+          "name": "workspace_plan_status",
+          "value": "\"workspace_plan\".\"status\" in ('none','created','active','halted','cancelled','completed')"
+        },
+        "workspace_plan_interval": {
+          "name": "workspace_plan_interval",
+          "value": "\"workspace_plan\".\"billing_interval\" is null or \"workspace_plan\".\"billing_interval\" in ('monthly','annual')"
+        },
+        "workspace_plan_currency": {
+          "name": "workspace_plan_currency",
+          "value": "\"workspace_plan\".\"currency\" is null or \"workspace_plan\".\"currency\" in ('INR','USD')"
+        },
+        "workspace_plan_period": {
+          "name": "workspace_plan_period",
+          "value": "\"workspace_plan\".\"current_period_end\" is null or \"workspace_plan\".\"current_period_start\" is null or \"workspace_plan\".\"current_period_end\">\"workspace_plan\".\"current_period_start\""
+        },
+        "workspace_plan_provider_ids": {
+          "name": "workspace_plan_provider_ids",
+          "value": "(\"workspace_plan\".\"razorpay_subscription_id\" is null or \"workspace_plan\".\"razorpay_subscription_id\" ~ '^sub_[A-Za-z0-9]{1,40}$') and (\"workspace_plan\".\"razorpay_customer_id\" is null or \"workspace_plan\".\"razorpay_customer_id\" ~ '^cust_[A-Za-z0-9]{1,40}$')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.workspace_response_usage": {
+      "name": "workspace_response_usage",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_start": {
+          "name": "period_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "responses_used": {
+          "name": "responses_used",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "workspace_response_usage_workspace_id_workspace_id_fk": {
+          "name": "workspace_response_usage_workspace_id_workspace_id_fk",
+          "tableFrom": "workspace_response_usage",
+          "tableTo": "workspace",
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workspace_response_usage_workspace_id_period_start_pk": {
+          "name": "workspace_response_usage_workspace_id_period_start_pk",
+          "columns": ["workspace_id", "period_start"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workspace_response_usage_bounds": {
+          "name": "workspace_response_usage_bounds",
+          "value": "\"workspace_response_usage\".\"responses_used\" >= 0"
+        },
+        "workspace_response_usage_month": {
+          "name": "workspace_response_usage_month",
+          "value": "extract(day from \"workspace_response_usage\".\"period_start\") = 1"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.workspace_invitation": {
+      "name": "workspace_invitation",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "workspace_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invited_by": {
+          "name": "invited_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "statement_timestamp()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "workspace_invitation_pending": {
+          "name": "workspace_invitation_pending",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"workspace_invitation\".\"accepted_at\" is null and \"workspace_invitation\".\"revoked_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workspace_invitation_recent": {
+          "name": "workspace_invitation_recent",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workspace_invitation_workspace_id_workspace_id_fk": {
+          "name": "workspace_invitation_workspace_id_workspace_id_fk",
+          "tableFrom": "workspace_invitation",
+          "tableTo": "workspace",
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "workspace_invitation_invited_by_user_id_fk": {
+          "name": "workspace_invitation_invited_by_user_id_fk",
+          "tableFrom": "workspace_invitation",
+          "tableTo": "user",
+          "columnsFrom": ["invited_by"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "workspace_invitation_token_hash_unique": {
+          "name": "workspace_invitation_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": ["token_hash"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "workspace_invitation_email": {
+          "name": "workspace_invitation_email",
+          "value": "\"workspace_invitation\".\"email\"=lower(\"workspace_invitation\".\"email\") and length(\"workspace_invitation\".\"email\") between 3 and 254 and \"workspace_invitation\".\"email\" ~ '^[^[:space:]@]+@[^[:space:]@]+$'"
+        },
+        "workspace_invitation_role": {
+          "name": "workspace_invitation_role",
+          "value": "\"workspace_invitation\".\"role\" in ('editor','viewer')"
+        },
+        "workspace_invitation_hash": {
+          "name": "workspace_invitation_hash",
+          "value": "\"workspace_invitation\".\"token_hash\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workspace_invitation_expiry": {
+          "name": "workspace_invitation_expiry",
+          "value": "\"workspace_invitation\".\"expires_at\"=\"workspace_invitation\".\"created_at\"+interval '7 days'"
+        },
+        "workspace_invitation_outcome": {
+          "name": "workspace_invitation_outcome",
+          "value": "\"workspace_invitation\".\"accepted_at\" is null or \"workspace_invitation\".\"revoked_at\" is null"
+        }
+      },
+      "isRLSEnabled": true
     }
   },
   "enums": {
