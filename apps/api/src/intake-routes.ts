@@ -41,6 +41,44 @@ export function matchIntakeRoute(path: string): Route | null {
 export const intakeRoutes = Router();
 const body = json({ limit: 16384, strict: true, inflate: false });
 const progressBody = json({ limit: 2097152, strict: true, inflate: false });
+const allowedMethods = (route: Route) =>
+  route.kind === 'session' ? ['GET', 'PATCH'] : ['POST'];
+const rateLimited = (res: Response) => {
+  res.setHeader('Retry-After', '60');
+  res.status(429).json({ error: { code: 'RATE_LIMITED' } });
+};
+// Limit keys use only the address, route and bearer digest, so they run
+// before bodies of up to 2 MiB are read.
+intakeRoutes.use(async (req, res, next) => {
+  const route = matchIntakeRoute(req.path);
+  if (!route || !allowedMethods(route).includes(req.method)) return next();
+  const scope = requestScope.getStore();
+  if (!scope) throw new Error('Request context is required.');
+  const settings = scope.environment;
+  const mutationRequest = route.kind === 'submit' || req.method === 'PATCH';
+  const limiter =
+    route.kind === 'start'
+      ? settings.INTAKE_START_RATE_LIMIT
+      : mutationRequest
+        ? settings.INTAKE_WRITE_RATE_LIMIT
+        : settings.PUBLIC_READ_RATE_LIMIT;
+  const address = req.get('cf-connecting-ip') || 'local';
+  if (
+    !(await limiter.limit({ key: (mutationRequest ? 'ip:' : '') + address }))
+      .success
+  )
+    return rateLimited(res);
+  const hash = mutationRequest
+    ? await intakeAuthorizationHash(req.get('authorization'))
+    : null;
+  if (
+    hash &&
+    !(await limiter.limit({ key: 'session:' + route.publicId + ':' + hash }))
+      .success
+  )
+    return rateLimited(res);
+  next();
+});
 intakeRoutes.use((req, res, next) => {
   const route = matchIntakeRoute(req.path);
   if (
@@ -61,10 +99,7 @@ intakeRoutes.use((req, res, next) => {
 intakeRoutes.use(async (req, res, next) => {
   const route = matchIntakeRoute(req.path);
   if (!route) return next();
-  const methods =
-    route.kind === 'start' || route.kind === 'submit'
-      ? ['POST']
-      : ['GET', 'PATCH'];
+  const methods = allowedMethods(route);
   if (!methods.includes(req.method)) {
     res.setHeader('Allow', methods.join(', '));
     res.status(405).json({ error: { code: 'METHOD_NOT_ALLOWED' } });
@@ -109,37 +144,9 @@ async function handleIntake(
 ) {
   const settings = scope.environment;
   const mutationRequest = route.kind === 'submit' || req.method === 'PATCH';
-  const limiter =
-    route.kind === 'start'
-      ? settings.INTAKE_START_RATE_LIMIT
-      : mutationRequest
-        ? settings.INTAKE_WRITE_RATE_LIMIT
-        : settings.PUBLIC_READ_RATE_LIMIT;
-  if (
-    !(
-      await limiter.limit({
-        key:
-          (mutationRequest ? 'ip:' : '') +
-          (req.get('cf-connecting-ip') || 'local'),
-      })
-    ).success
-  ) {
-    res.setHeader('Retry-After', '60');
-    res.status(429).json({ error: { code: 'RATE_LIMITED' } });
-    return;
-  }
   const hash = await intakeAuthorizationHash(req.get('authorization'));
   if (!hash) {
     res.status(401).json({ error: { code: 'INTAKE_UNAVAILABLE' } });
-    return;
-  }
-  if (
-    mutationRequest &&
-    !(await limiter.limit({ key: 'session:' + route.publicId + ':' + hash }))
-      .success
-  ) {
-    res.setHeader('Retry-After', '60');
-    res.status(429).json({ error: { code: 'RATE_LIMITED' } });
     return;
   }
   const mutation = mutationRequest

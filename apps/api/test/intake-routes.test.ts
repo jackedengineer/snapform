@@ -1,6 +1,7 @@
 import { SELF, env } from 'cloudflare:test';
 import { expect, it } from 'vitest';
 import { matchIntakeRoute } from '../src/intake-routes.ts';
+import { intakeAuthorizationHash } from '../src/intake-capability.ts';
 const publicId = crypto.randomUUID(),
   id = crypto.randomUUID(),
   root = `/api/v1/public/forms/${publicId}/sessions`,
@@ -140,4 +141,38 @@ it('limits progress mutations before reading Neon', async () => {
   });
   expect(response.status).toBe(429);
   expect(response.headers.get('Retry-After')).toBe('60');
+});
+it('applies address and session limits before reading intake bodies', async () => {
+  // Malformed JSON would be a 400 if the body were parsed first.
+  const unread = '{"operationId":';
+  const own = { ...headers, Authorization: 'Bearer ' + 'c'.repeat(43) };
+  const address = '198.51.100.45';
+  for (let i = 0; i < 20; i++)
+    await env.INTAKE_START_RATE_LIMIT.limit({ key: address });
+  for (let i = 0; i < 60; i++)
+    await env.INTAKE_WRITE_RATE_LIMIT.limit({ key: 'ip:' + address });
+  for (const [path, method] of [
+    [root, 'POST'],
+    [root + '/' + id, 'PATCH'],
+    [root + '/' + id + '/submission', 'POST'],
+  ]) {
+    const response = await SELF.fetch(base + path, {
+      method,
+      headers: { ...own, 'cf-connecting-ip': address },
+      body: unread,
+    });
+    expect({ path, status: response.status }).toEqual({ path, status: 429 });
+    expect(response.headers.get('Retry-After')).toBe('60');
+  }
+  const hash = await intakeAuthorizationHash(own.Authorization);
+  for (let i = 0; i < 60; i++)
+    await env.INTAKE_WRITE_RATE_LIMIT.limit({
+      key: 'session:' + publicId + ':' + hash,
+    });
+  const session = await SELF.fetch(base + root + '/' + id, {
+    method: 'PATCH',
+    headers: { ...own, 'cf-connecting-ip': '198.51.100.46' },
+    body: unread,
+  });
+  expect(session.status).toBe(429);
 });
