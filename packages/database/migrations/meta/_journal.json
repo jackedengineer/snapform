@@ -281,6 +281,13 @@
       "when": 1793544872032,
       "tag": "0039_deletion-metadata-expiry",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794573390979,
+      "tag": "0043_owner-email-summary",
+      "breakpoints": true
     }
   ]
 }
