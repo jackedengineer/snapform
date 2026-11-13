@@ -14,7 +14,7 @@ import {
   markCancellation,
   recordSubscription,
 } from '../src/billing.ts';
-import type { BillingEvent } from '../../contracts/src/billing.ts';
+import type { BillingEvent } from '../../contracts/src/billing-server.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
 import { seedForm } from './fixtures/forms.ts';
 
@@ -271,13 +271,11 @@ it(
         seed.workspaceId,
         'members.manage',
         (scoped) =>
-          scoped
-            .insert(membership)
-            .values({
-              workspaceId: seed.workspaceId,
-              userId: editor,
-              role: 'editor',
-            }),
+          scoped.insert(membership).values({
+            workspaceId: seed.workspaceId,
+            userId: editor,
+            role: 'editor',
+          }),
       );
       expect(
         (await getBilling(tx, editor, seed.workspaceId)).checkoutSubscription,

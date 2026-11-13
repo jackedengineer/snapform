@@ -1,11 +1,10 @@
 import { expect, it } from 'vitest';
 import {
-  billingRecordSchema,
-  billingSummary,
   billingSummarySchema,
   checkoutInputSchema,
   checkoutSchema,
 } from './billing.ts';
+import { billingRecordSchema, billingSummary } from './billing-server.ts';
 
 const record = {
   role: 'owner',

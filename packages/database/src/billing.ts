@@ -1,11 +1,14 @@
 import { sql } from 'drizzle-orm';
 import {
-  billingEventSchema,
-  billingRecordSchema,
   checkoutInputSchema,
   subscriptionIdSchema,
 } from '@snapform/contracts/billing';
-import type { BillingEvent, CheckoutInput } from '@snapform/contracts/billing';
+import type { CheckoutInput } from '@snapform/contracts/billing';
+import {
+  billingEventSchema,
+  billingRecordSchema,
+} from '@snapform/contracts/billing-server';
+import type { BillingEvent } from '@snapform/contracts/billing-server';
 import type { Database, Transaction } from './client.ts';
 import { inWorkspace } from './workspaces.ts';
 type Connection = Database | Transaction;

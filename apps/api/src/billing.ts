@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import type { Database } from '@snapform/database';
 import { getBilling } from '@snapform/database/billing';
-import { billingSummary } from '@snapform/contracts/billing';
+import { billingSummary } from '@snapform/contracts/billing-server';
 import { createWorkspaceSchema } from '@snapform/contracts/workspace';
 import { requestScope } from './request-context.ts';
 import { razorpayConfig } from './razorpay.ts';
