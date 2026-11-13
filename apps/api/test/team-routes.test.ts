@@ -9,6 +9,7 @@ import type { Database } from '@snapform/database';
 import { hashInvitationToken } from '@snapform/contracts/team';
 import { handleTeamRequest, matchTeamRoute } from '../src/team.ts';
 import type { InviteMessage } from '../src/email.ts';
+import { sessionCookie } from './session-cookie.ts';
 
 const workspace = crypto.randomUUID(),
   invitation = crypto.randomUUID(),
@@ -43,12 +44,19 @@ it('requires a session on every team route', async () => {
 });
 it('bounds team bodies and blocks cross-origin writes before database work', async () => {
   for (const url of [`${base}/invitations`, accept]) {
-    expect((await SELF.fetch(url, { method: 'POST', body: 'x' })).status).toBe(
-      415,
-    );
+    // Private bodies are read only after a well-formed session cookie.
+    expect(
+      (
+        await SELF.fetch(url, {
+          method: 'POST',
+          headers: { Cookie: sessionCookie },
+          body: 'x',
+        })
+      ).status,
+    ).toBe(415);
     const oversized = await SELF.fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Cookie: sessionCookie },
       body: JSON.stringify({ token: 'x'.repeat(20000) }),
     });
     expect(oversized.status).toBe(413);
