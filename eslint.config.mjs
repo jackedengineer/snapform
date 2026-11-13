@@ -23,4 +23,9 @@ export default tseslint.config(
       '@typescript-eslint/ban-ts-comment': 'error',
     },
   },
+  {
+    // Static scripts served as-is to customers' pages run only in browsers.
+    files: ['apps/web/public/**/*.js'],
+    languageOptions: { globals: globals.browser },
+  },
 );

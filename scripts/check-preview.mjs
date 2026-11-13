@@ -72,6 +72,10 @@ assert.match(
   /frame-ancestors \*;/,
   'public forms must be embeddable on any site',
 );
+const embedScript = await fetch(base + '/embed.js');
+assert.equal(embedScript.status, 200);
+assert.match(embedScript.headers.get('content-type') || '', /javascript/);
+assert.ok((await embedScript.text()).length < 2048);
 assert.match(await collector.text(), /Opening your form/);
 const second = await fetch(base);
 assert.notEqual(
