@@ -84,6 +84,44 @@
   flex: 1;
   min-width: 0;
 }
+.form-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.form-list li > .form-open {
+  flex: 1;
+  min-width: 0;
+}
+.form-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.workspace-home .form-list li > a.responses-link {
+  flex-shrink: 0;
+  height: auto;
+  min-height: 44px;
+  padding: 0 8px;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.workspace-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.role-badge {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
 .form-icon {
   display: grid;
   place-items: center;
