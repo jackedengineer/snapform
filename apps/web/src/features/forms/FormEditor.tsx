@@ -94,6 +94,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [focusLink, setFocusLink] = useState(false);
   const [moveNote, setMoveNote] = useState('');
+  const [emailOffer, setEmailOffer] = useState(false);
   useEffect(() => setMoveNote(''), [selected]);
   const linkFocused = useCallback(() => setFocusLink(false), []);
   const [loading, setLoading] = useState(false),
@@ -357,6 +358,7 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                 if (!first) return;
                 setPanel('share');
                 setFocusLink(true);
+                setEmailOffer(true);
               }}
             />
           )}
@@ -426,6 +428,8 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
             focusLink={focusLink && panel === 'share'}
             onLinkFocused={linkFocused}
             onIssue={showIssue}
+            emailOffer={emailOffer ? { owner: role === 'owner' } : null}
+            onEmailOfferDone={() => setEmailOffer(false)}
           />
         </div>
         <div hidden={panel !== 'settings'}>

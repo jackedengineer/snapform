@@ -27,6 +27,65 @@ const reasons: Record<string, string> = {
   'attempts-exhausted': 'Retries stopped. Contact support.',
   disabled: 'A request already in progress may still arrive.',
 };
+// Shown once after a first publish. Nothing changes until the author saves.
+export function EmailOffer({
+  workspaceId,
+  formId,
+  userId,
+  owner,
+  onDone,
+}: {
+  workspaceId: string;
+  formId: string;
+  userId: string;
+  owner: boolean;
+  onDone: () => void;
+}) {
+  const [wanted, setWanted] = useState(true);
+  const overview = useQuery({
+    queryKey: ['email-notifications', userId, workspaceId, formId],
+    queryFn: ({ signal }) => fetchEmailOverview(workspaceId, formId, signal),
+  });
+  const change = useMutation({
+    mutationFn: saveEmailSettings.bind(null, workspaceId, formId),
+    retry: false,
+    onSuccess: () => void overview.refetch(),
+  });
+  if (!overview.isSuccess) return null;
+  const { settings } = overview.data;
+  if (settings.enabled)
+    return <p className="email-offer">Email notifications are on.</p>;
+  return (
+    <div className="email-offer">
+      <label className="check-control">
+        <input
+          type="checkbox"
+          checked={wanted}
+          onChange={(event) => setWanted(event.target.checked)}
+        />
+        {owner
+          ? 'Email me when someone responds'
+          : 'Email the workspace owner when someone responds'}
+      </label>
+      <button
+        type="button"
+        className="text-button"
+        disabled={change.isPending}
+        onClick={() =>
+          wanted
+            ? change.mutate({
+                enabled: true,
+                expectedRevision: settings.revision,
+              })
+            : onDone()
+        }
+      >
+        {change.isPending ? 'Saving…' : 'Save'}
+      </button>
+      {change.isError && <p role="alert">{change.error.message}</p>}
+    </div>
+  );
+}
 const dates = new Intl.DateTimeFormat('en', {
   dateStyle: 'medium',
   timeStyle: 'short',

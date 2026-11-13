@@ -5,6 +5,7 @@ import type {
   UnpublishForm,
 } from '@snapform/contracts/publication';
 import { useAccountUser } from '../auth/AccountLayout';
+import { EmailOffer } from './EmailNotifications';
 import {
   fetchPublication,
   publishFormRequest,
@@ -136,6 +137,9 @@ export function usePublication(options: Options) {
     message,
     phase,
     editable: options.editable,
+    userId: user.id,
+    workspaceId: options.workspaceId,
+    formId: options.formId,
     run,
   };
 }
@@ -221,12 +225,17 @@ export function PublicationControls({
   focusLink,
   onLinkFocused,
   onIssue,
+  emailOffer,
+  onEmailOfferDone,
 }: {
   publication: Publication;
   issues: PublishingIssue[];
   focusLink: boolean;
   onLinkFocused: () => void;
   onIssue: (issue: PublishingIssue) => void;
+  /** Set after a first publish; owner chooses the "Email me" wording. */
+  emailOffer: { owner: boolean } | null;
+  onEmailOfferDone: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null),
     link = useRef<HTMLInputElement>(null),
@@ -320,6 +329,15 @@ export function PublicationControls({
                 </a>
               </div>
               {copied && <p role="status">{copied}</p>}
+              {emailOffer && (
+                <EmailOffer
+                  workspaceId={publication.workspaceId}
+                  formId={publication.formId}
+                  userId={publication.userId}
+                  owner={emailOffer.owner}
+                  onDone={onEmailOfferDone}
+                />
+              )}
             </>
           )}
           {(current?.active || stopping === 'failed') && (

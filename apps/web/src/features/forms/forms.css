@@ -780,6 +780,18 @@
   font-size: 14px;
   background: var(--surface-panel);
 }
+.email-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 16px;
+  margin: 8px 0 16px;
+  font-size: 13px;
+}
+.email-offer p {
+  flex-basis: 100%;
+  margin: 0;
+}
 .publication-actions {
   display: flex;
   align-items: center;
