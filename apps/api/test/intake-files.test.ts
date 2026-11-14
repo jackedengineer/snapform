@@ -300,6 +300,14 @@ it('maps a refused session, Free plan, wrong question and full question before s
     expect(response.status).toBe(status);
     expect(await response.json()).toEqual({ error: { code: outcome } });
   }
+  // An unknown outcome, even one named like an object property, fails closed.
+  for (const outcome of ['SOMETHING_NEW', 'toString']) {
+    outcomes.authorize_intake_file = [
+      { outcome, file_workspace: null, file_form: null },
+    ];
+    const response = await call(upload(pdf, 'application/pdf'));
+    expect(response.status).toBe(503);
+  }
   expect(recorded()).toEqual([]);
   expect(await stored()).toEqual([]);
 });

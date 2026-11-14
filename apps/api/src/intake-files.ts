@@ -86,8 +86,12 @@ const outcomes: Record<string, [number, string]> = {
   FILE_LIMIT_REACHED: [409, 'FILE_LIMIT_REACHED'],
   INVALID_FILE: [422, 'INVALID_FILE'],
 };
-const refuse = (outcome: string) =>
-  new Refusal(...(outcomes[outcome] ?? [503, 'INTAKE_UNAVAILABLE']));
+const refuse = (outcome: string) => {
+  const [status, code] = Object.hasOwn(outcomes, outcome)
+    ? outcomes[outcome]
+    : [503, 'INTAKE_UNAVAILABLE'];
+  return new Refusal(status, code);
+};
 
 export async function handleIntakeFile(
   request: Request,
@@ -207,7 +211,7 @@ async function respond(
         removeUpload(db, publicId, sessionId, hash, fileId),
       );
     } catch (error) {
-      if (error instanceof Error && error.message in outcomes)
+      if (error instanceof Error && Object.hasOwn(outcomes, error.message))
         throw refuse(error.message);
       throw error;
     }
