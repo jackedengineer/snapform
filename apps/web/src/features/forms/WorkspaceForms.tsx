@@ -137,26 +137,28 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
               <p className="intro-copy">
                 Start with a question. Turn the answers into your next step.
               </p>
+            </div>
+            <div className="workspace-heading-actions">
               <Link
-                className="text-button"
+                className="button secondary compact-button"
                 to="/workspaces/$workspaceId/team"
                 params={{ workspaceId }}
               >
                 Team
               </Link>
+              {can(query.data.workspace.role, 'forms.write') && (
+                <button
+                  className="button primary compact-button"
+                  disabled={
+                    mutation.isPending || mutation.isError || blocksWrites
+                  }
+                  onClick={() => void create()}
+                >
+                  {mutation.isPending ? 'Creating…' : 'Blank form'}
+                  <span aria-hidden="true">+</span>
+                </button>
+              )}
             </div>
-            {can(query.data.workspace.role, 'forms.write') && (
-              <button
-                className="button primary compact-button"
-                disabled={
-                  mutation.isPending || mutation.isError || blocksWrites
-                }
-                onClick={() => void create()}
-              >
-                {mutation.isPending ? 'Creating…' : 'Blank form'}
-                <span aria-hidden="true">+</span>
-              </button>
-            )}
           </div>
           <UsageMeter workspaceId={workspaceId} />
           {query.data.workspace.role === 'owner' &&

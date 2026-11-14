@@ -681,6 +681,12 @@ dd small {
 .workspace-heading h2 {
   margin-bottom: 0;
 }
+.workspace-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
 .workspace-heading .eyebrow {
   margin-top: 0;
   color: var(--text-secondary);
