@@ -8,6 +8,7 @@ import {
   formatPrice,
   plans,
   prices,
+  publicPlanFlags,
   seatLimit,
   usageWindow,
 } from './plans.ts';
@@ -40,6 +41,12 @@ describe('plan limits', () => {
       embed: true,
       badgeRequired: false,
     });
+  });
+  it('tells public forms whether to badge and embed, and nothing for unknown plans', () => {
+    expect(publicPlanFlags('free')).toEqual({ badge: true, embed: false });
+    expect(publicPlanFlags('pro')).toEqual({ badge: false, embed: true });
+    for (const plan of [null, undefined, '', 'enterprise', 'PRO', 1])
+      expect(publicPlanFlags(plan)).toBeUndefined();
   });
   it('prices annual billing at ten monthly payments', () => {
     expect(prices.monthly).toEqual({ INR: 149900, USD: 1900 });

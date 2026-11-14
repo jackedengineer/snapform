@@ -7,6 +7,7 @@ import {
   publicFormEnvelopeSchema,
 } from '@snapform/contracts/public-form';
 import { compileDefinition } from '@snapform/contracts/compile';
+import { publicPlanFlags } from '@snapform/contracts/plans';
 import type { FormDefinition } from '@snapform/contracts/form';
 import { requestScope } from './request-context.ts';
 const identity = publicFormEnvelopeSchema.shape.form.shape.publicId;
@@ -94,13 +95,16 @@ export function publicFormBody(
   record: NonNullable<Awaited<ReturnType<typeof resolvePublicForm>>>,
   definition: FormDefinition,
 ) {
-  const business = publicBusiness(record.businessName);
+  const business = publicBusiness(record.businessName),
+    plan = publicPlanFlags(record.plan);
   return publicFormEnvelopeSchema.parse({
     form: {
       publicId: record.publicId,
       versionId: record.versionId,
       definition,
       ...(business && { business }),
+      // Respondents get only the flags, never the plan name.
+      ...(plan && { plan }),
     },
   });
 }

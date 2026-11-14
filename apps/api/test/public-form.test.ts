@@ -18,6 +18,7 @@ it('names the business in the public envelope and nothing else about it', () => 
     versionId: crypto.randomUUID(),
     definition,
     businessName: '  Studio North  ',
+    plan: null,
   };
   const body = publicFormBody(record, definition);
   expect(body).toEqual({
@@ -41,6 +42,32 @@ it('names the business in the public envelope and nothing else about it', () => 
       'definition',
     ]);
   }
+});
+it('turns the workspace plan into badge and embed flags and never names the plan', () => {
+  const { definition } = formFixture();
+  const record = {
+    publicId: id,
+    versionId: crypto.randomUUID(),
+    definition,
+    businessName: null,
+  };
+  for (const [plan, flags] of [
+    ['free', { badge: true, embed: false }],
+    ['pro', { badge: false, embed: true }],
+  ] as const) {
+    const body = publicFormBody({ ...record, plan }, definition);
+    expect(body.form.plan).toEqual(flags);
+    expect(JSON.stringify(body)).not.toMatch(/"(free|pro)"/);
+    expect(
+      publicFormEnvelopeSchema.parse(JSON.parse(JSON.stringify(body))),
+    ).toEqual(body);
+  }
+  // Before migration 0045, or with an unexpected value, the flags are left
+  // out and the collector keeps its earlier behaviour.
+  for (const plan of [null, 'enterprise', ''])
+    expect(
+      publicFormBody({ ...record, plan }, definition).form,
+    ).not.toHaveProperty('plan');
 });
 it('returns an uncached missing form without requiring account authentication', async () => {
   const response = await SELF.fetch(url);

@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it } from 'vitest';
 import {
   documentTitle,
+  EmbedUnavailable,
   Receipt,
   RespondentFrame,
   Review,
@@ -30,6 +31,25 @@ it('keeps respondents on the form with quiet links that open new tabs', () => {
   expect(markup).toContain('Powered by Snapform');
   expect(markup).toContain('Report abuse');
   expect(markup).toContain('(opens in a new tab)');
+});
+it('drops only the Snapform badge when the plan removes it', () => {
+  const markup = html(
+    createElement(RespondentFrame, { title: 'Project enquiry', badge: false }),
+  );
+  expect(markup).not.toContain('Powered by Snapform');
+  expect(markup).toContain('Privacy');
+  expect(markup).toContain('Report abuse');
+});
+it('offers an embedded Free form in a new tab instead of collecting inside it', () => {
+  const id = crypto.randomUUID();
+  const markup = html(createElement(EmbedUnavailable, { publicId: id }));
+  expect(headings(markup, 1)).toBe(1);
+  expect(markup).toContain('id="intake-heading"');
+  expect(markup).toContain('Embedding is available on Snapform Pro');
+  const links = markup.match(/<a [^>]+>/g) || [];
+  expect(links).toEqual([`<a href="/f/${id}" target="_blank" rel="noopener">`]);
+  expect(markup).toContain('(opens in a new tab)');
+  expect(markup).not.toContain('↗');
 });
 it('marks only an embedded frame for the host page surface', () => {
   expect(html(createElement(RespondentFrame, { embed: true }))).toContain(

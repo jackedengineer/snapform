@@ -56,6 +56,36 @@ it('keeps room for later business details without breaking open forms', () => {
   });
   expect(parsed.form.business).toEqual({ name: 'Studio North' });
 });
+it('carries the plan flags respondents need, and stays valid without them', () => {
+  for (const plan of [
+    { badge: true, embed: false },
+    { badge: false, embed: true },
+  ]) {
+    const flagged = { ...form(), plan };
+    expect(publicFormEnvelopeSchema.parse({ form: flagged }).form).toEqual(
+      flagged,
+    );
+  }
+  expect(
+    publicFormEnvelopeSchema.parse({ form: form() }).form.plan,
+  ).toBeUndefined();
+  // Later flags (such as uploads) are dropped, not rejected.
+  expect(
+    publicFormEnvelopeSchema.parse({
+      form: { ...form(), plan: { badge: true, embed: false, uploads: false } },
+    }).form.plan,
+  ).toEqual({ badge: true, embed: false });
+  for (const plan of [
+    { badge: true },
+    { badge: 'false', embed: true },
+    { badge: false, embed: null },
+    null,
+    'pro',
+  ])
+    expect(
+      publicFormEnvelopeSchema.safeParse({ form: { ...form(), plan } }).success,
+    ).toBe(false);
+});
 it('derives a trimmed, bounded business name from the workspace name', () => {
   expect(publicBusiness('  Studio North  ')).toEqual({ name: 'Studio North' });
   expect(publicBusiness('Ünïcødé Studio 🌿')).toEqual({

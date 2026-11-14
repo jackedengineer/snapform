@@ -13,6 +13,7 @@ import { reviewSections } from './summary';
 import type { ReviewRow } from './summary';
 import {
   documentTitle,
+  EmbedUnavailable,
   focusTarget,
   Receipt,
   RespondentFrame,
@@ -223,10 +224,18 @@ export function Collector({
     ));
   }
   const embed = search.embed === 1;
+  // Without plan flags (an older server or a failed read) nothing changes.
+  const badge = intake.plan?.badge !== false;
   if (intake.unavailable)
     return (
-      <RespondentFrame business={business} embed={embed}>
+      <RespondentFrame business={business} embed={embed} badge={badge}>
         <Unavailable closed={intake.unavailable === 'closed'} />
+      </RespondentFrame>
+    );
+  if (embed && intake.plan?.embed === false)
+    return (
+      <RespondentFrame business={business} embed badge={badge}>
+        <EmbedUnavailable publicId={publicId} />
       </RespondentFrame>
     );
   const messages = [
@@ -245,6 +254,7 @@ export function Collector({
       title={session ? definition?.title : undefined}
       card={card && !review}
       embed={embed}
+      badge={badge}
     >
       <p role="status" className="intake-cleared">
         {cleared}

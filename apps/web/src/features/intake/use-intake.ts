@@ -20,7 +20,8 @@ import {
 export function useIntake(publicId: string) {
   const query = useQueryClient();
   const [form, setForm] = useState<PublicForm | null>(null),
-    [business, setBusiness] = useState<PublicForm['business']>(),
+    // What the public form says about its owner: name and plan flags.
+    [label, setLabel] = useState<Pick<PublicForm, 'business' | 'plan'>>({}),
     [siteKey, setSiteKey] = useState(''),
     [progress, setProgress] = useState<ProgressState | null>(null);
   const [loading, setLoading] = useState(true),
@@ -52,7 +53,7 @@ export function useIntake(publicId: string) {
     setUnavailable(null);
     setProgress(null);
     setForm(null);
-    setBusiness(undefined);
+    setLabel({});
     function attach(
       record: IntakeRecovery,
       acknowledged: NonNullable<IntakeRecovery['session']>['answers'],
@@ -117,16 +118,17 @@ export function useIntake(publicId: string) {
         if (stored)
           try {
             // The session alone decides whether to resume. The business name
-            // only labels the form; without it the generic wording stays.
+            // and plan flags only label the form; without them the generic
+            // wording and earlier footer and embed behaviour stay.
             const [session, named] = await Promise.all([
               readIntakeRequest(publicId, record.identity),
               readPublicForm(publicId).then(
-                (published) => published.business,
-                () => undefined,
+                ({ business, plan }) => ({ business, plan }),
+                () => ({}),
               ),
             ]);
             if (!active) return;
-            setBusiness(named);
+            setLabel(named);
             const recovery = reconcileRecovery(
               record,
               session,
@@ -174,7 +176,7 @@ export function useIntake(publicId: string) {
           ]);
           if (!active) return;
           setForm(published);
-          setBusiness(published.business);
+          setLabel({ business: published.business, plan: published.plan });
           setSiteKey(configuration.siteKey);
         }
         actions.current.start = async (token) => {
@@ -308,7 +310,8 @@ export function useIntake(publicId: string) {
   }, []);
   return {
     form,
-    business,
+    business: label.business,
+    plan: label.plan,
     siteKey,
     progress,
     controller: controller.current,

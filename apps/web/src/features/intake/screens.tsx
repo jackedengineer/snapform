@@ -20,12 +20,15 @@ export function RespondentFrame({
   title,
   card = false,
   embed = false,
+  badge = true,
   children,
 }: {
   business?: string;
   title?: string;
   card?: boolean;
   embed?: boolean;
+  /** False only when the workspace plan removes "Powered by Snapform". */
+  badge?: boolean;
   children?: ReactNode;
 }) {
   const shell = useRef<HTMLDivElement>(null);
@@ -65,11 +68,31 @@ export function RespondentFrame({
             Report abuse{newTab}
           </a>
         </nav>
-        <a href="/" target="_blank" rel="noopener">
-          Powered by Snapform{newTab}
-        </a>
+        {badge && (
+          <a href="/" target="_blank" rel="noopener">
+            Powered by Snapform{newTab}
+          </a>
+        )}
       </footer>
     </div>
+  );
+}
+// A Free workspace's form opened with ?embed=1. The host page keeps its frame
+// (the CSP is unchanged); respondents answer on Snapform in a new tab instead.
+export function EmbedUnavailable({ publicId }: { publicId: string }) {
+  return (
+    <section className="intake-unavailable">
+      <h1 id={focusTarget} tabIndex={-1}>
+        Embedding is available on Snapform Pro
+      </h1>
+      <p className="intake-description">
+        <a href={`/f/${publicId}`} target="_blank" rel="noopener">
+          Open the form
+          <span className="visually-hidden"> (opens in a new tab)</span>
+        </a>{' '}
+        to answer it.
+      </p>
+    </section>
   );
 }
 export function Unavailable({ closed }: { closed: boolean }) {

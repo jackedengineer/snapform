@@ -107,6 +107,15 @@ export function canAcceptResponse(
 export function seatLimit(plan: PlanId) {
   return plans[plan].seats;
 }
+/**
+ * What a public form shows respondents: the badge on Free, embedding on Pro.
+ * An unknown plan (such as a lookup before migration 0045) gives nothing, so
+ * the API leaves the flags out instead of guessing.
+ */
+export function publicPlanFlags(plan: unknown) {
+  if (plan !== 'free' && plan !== 'pro') return undefined;
+  return { badge: plans[plan].badgeRequired, embed: plans[plan].embed };
+}
 export function features(plan: PlanId): Features {
   const { branding, uploads, embed, badgeRequired } = plans[plan];
   return { branding, uploads, embed, badgeRequired };
