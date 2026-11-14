@@ -39,6 +39,8 @@ export async function getResponseExport(
       eq(responseSession.formId, formId),
       eq(responseSession.versionId, versionId),
       eq(responseSession.status, 'submitted'),
+      // Migration 0045: never export a response awaiting deletion.
+      sql`not public.response_deletion_pending(${responseSession.workspaceId},${responseSession.id})`,
     );
     // Read bounded metadata first so large answer sets never enter Worker memory.
     const metadata = await tx

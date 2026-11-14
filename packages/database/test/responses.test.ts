@@ -6,6 +6,7 @@ import { user } from '../src/schema.ts';
 import { membership } from '../src/workspace-schema.ts';
 import { listResponses, getResponse } from '../src/responses.ts';
 import { getResponseExport } from '../src/response-export.ts';
+import { scheduleDeletion } from '../src/deletion.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
 import { compileDefinition } from '../../contracts/src/compile.ts';
 import { prepareIntakeProgress } from '../../contracts/src/intake-progress.ts';
@@ -86,6 +87,7 @@ it(
         expect(page.nextCursor).toBeNull();
         expect(page.responses[0]).toMatchObject({ version: 1 });
         expect(Object.keys(page.responses[0]).sort()).toEqual([
+          'deletionPending',
           'id',
           'preview',
           'respondent',
@@ -94,6 +96,7 @@ it(
           'versionId',
         ]);
         expect(page.responses[0]).toMatchObject({
+          deletionPending: false,
           respondent: 'qa@example.invalid',
           preview: null,
         });
@@ -199,6 +202,116 @@ it(
     }),
   30000,
 );
+
+it(
+  'never exports a response that is scheduled for deletion',
+  () =>
+    withResponses(async ({ tx, actor, workspaceId, formId, ids }) => {
+      const [removed, kept] = ids;
+      const { versionId } = await getResponse(
+        tx,
+        actor,
+        workspaceId,
+        formId,
+        kept,
+      );
+      const editor = crypto.randomUUID();
+      await tx.insert(user).values({
+        id: editor,
+        name: 'Response editor QA',
+        email: `${editor}@example.invalid`,
+        emailVerified: true,
+      });
+      await tx
+        .insert(membership)
+        .values({ workspaceId, userId: editor, role: 'editor' });
+      await scheduleDeletion(
+        tx,
+        actor,
+        workspaceId,
+        { kind: 'response', targetId: removed },
+        {
+          requestId: crypto.randomUUID(),
+          confirmation: 'DELETE',
+          acknowledgeDeletion: true,
+        },
+      );
+      for (const member of [actor, editor]) {
+        const exported = await getResponseExport(
+          tx,
+          member,
+          workspaceId,
+          formId,
+          versionId,
+        );
+        expect(exported.rows.map((row) => row.id)).toEqual([kept]);
+      }
+      // The inbox keeps the response so the owner can cancel, and marks it.
+      const page = await listResponses(tx, editor, workspaceId, formId);
+      expect(
+        page.responses.map(({ id, deletionPending }) => ({
+          id,
+          deletionPending,
+        })),
+      ).toEqual([
+        { id: removed, deletionPending: true },
+        { id: kept, deletionPending: false },
+      ]);
+    }),
+  30000,
+);
+
+it('answers deletion checks only for members of the scoped workspace', () =>
+  withResponses(async ({ tx, actor, workspaceId, ids }) => {
+    const check = (workspace: string, response: string | null) =>
+      tx.execute<{ pending: boolean }>(
+        sql`select public.response_deletion_pending(${workspace}::uuid,${response}::uuid) as pending`,
+      );
+    // The same transaction settings scope_workspace leaves for a member.
+    await tx.execute(
+      sql`select set_config('snapform.user_id',${actor},true),set_config('snapform.workspace_id',${workspaceId},true)`,
+    );
+    expect((await check(workspaceId, ids[0])).rows).toEqual([
+      { pending: false },
+    ]);
+    // Any other caller is told "pending", so NOT filters return nothing.
+    expect((await check(crypto.randomUUID(), ids[0])).rows).toEqual([
+      { pending: true },
+    ]);
+    await tx.execute(
+      sql`select set_config('snapform.user_id',${crypto.randomUUID()},true)`,
+    );
+    expect((await check(workspaceId, ids[0])).rows).toEqual([
+      { pending: true },
+    ]);
+    await tx.execute(
+      sql`select set_config('snapform.user_id',${actor},true),set_config('snapform.workspace_id','',true)`,
+    );
+    expect((await check(workspaceId, ids[0])).rows).toEqual([
+      { pending: true },
+    ]);
+    expect(
+      (
+        await tx.execute(sql`select
+          has_function_privilege('snapform_runtime','public.response_deletion_pending(uuid,uuid)','EXECUTE') as runtime,
+          has_function_privilege('snapform_jobs','public.response_deletion_pending(uuid,uuid)','EXECUTE') as jobs,
+          has_function_privilege('snapform_runtime','public.pending_target_deletion(uuid,uuid)','EXECUTE') as runtime_target,
+          exists(select 1 from aclexplode(p.proacl) a where a.grantee = 0) as anyone,
+          p.prosecdef as definer,p.provolatile as volatility,p.proconfig as config
+          from pg_proc p where p.oid='public.response_deletion_pending(uuid,uuid)'::regprocedure`)
+      ).rows,
+    ).toEqual([
+      {
+        runtime: true,
+        jobs: false,
+        runtime_target: false,
+        anyone: false,
+        definer: true,
+        volatility: 's',
+        config: ['search_path=pg_catalog'],
+      },
+    ]);
+  }));
 
 it(
   'exports the pinned version and rejects unknown versions and viewer exports',

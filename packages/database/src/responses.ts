@@ -74,6 +74,8 @@ export async function listResponses(
       const rows = await tx
         .select({
           ...projection,
+          // Migration 0045. Owners still list these so they can cancel.
+          deletionPending: sql<boolean>`public.response_deletion_pending(${responseSession.workspaceId},${responseSession.id})`,
           // Only string answers, cut in SQL so large answers stay in the database.
           texts: sql<AnsweredText | null>`(select jsonb_object_agg(e.key,left(e.value->>'value',240)) from jsonb_each(${responseSession.answers}) e where e.value->>'state'='value' and jsonb_typeof(e.value->'value')='string')`,
         })
