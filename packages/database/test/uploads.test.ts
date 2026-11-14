@@ -20,7 +20,6 @@ import {
   removeUpload,
 } from '../src/uploads.ts';
 import type { StoredUpload } from '../src/uploads.ts';
-import { formFixture } from '../../contracts/test/form-fixture.ts';
 import { seedForm } from './fixtures/forms.ts';
 
 type Seed = Awaited<ReturnType<typeof seedForm>>;
@@ -58,9 +57,10 @@ async function makePro(tx: Transaction, seed: Seed) {
     }),
   ).toBe('applied');
 }
-// Adds an optional two-file question and publishes it.
+// Adds an optional two-file question to the seeded draft and publishes it, so
+// seed.fieldIds name fields of the published version.
 async function publishFileForm(tx: Transaction, seed: Seed) {
-  const { definition } = formFixture();
+  const definition = structuredClone(seed.definition);
   const question = crypto.randomUUID();
   definition.pages[0].blocks.push({
     id: question,
@@ -112,6 +112,12 @@ const denied = (tx: Transaction, query: ReturnType<typeof sql>) =>
   expect(
     tx.transaction(async (savepoint) => savepoint.execute(query)),
   ).rejects.toThrow();
+// A refusal raised in SQL aborts its transaction. The API runs each call on
+// its own, but fixtures share one rollback transaction, so contain it.
+const contained = <T>(
+  tx: Transaction,
+  run: (savepoint: Transaction) => Promise<T>,
+) => tx.transaction(run);
 
 it(
   'refuses file questions and uploads on Free',
@@ -222,19 +228,27 @@ it(
           stored(seed, session, question),
         ),
       ).toBe('FILE_LIMIT_REACHED');
-      expect(await listUploads(tx, publicId, session, hash)).toEqual([
-        {
-          id: first.id,
-          questionId: question,
-          name: 'Brief.pdf',
-          size: 2048,
-          type: 'application/pdf',
-        },
-        expect.objectContaining({ id: second.id, name: 'تقرير.png' }),
-      ]);
+      // One fixture transaction gives both rows the same created_at, so the
+      // id tiebreak orders them; the collector shows answer order anyway.
+      const listed = await listUploads(tx, publicId, session, hash);
+      expect(listed).toHaveLength(2);
+      expect(listed).toEqual(
+        expect.arrayContaining([
+          {
+            id: first.id,
+            questionId: question,
+            name: 'Brief.pdf',
+            size: 2048,
+            type: 'application/pdf',
+          },
+          expect.objectContaining({ id: second.id, name: 'تقرير.png' }),
+        ]),
+      );
       expect(await listUploads(tx, publicId, other, otherHash)).toEqual([]);
       await expect(
-        listUploads(tx, publicId, session, otherHash),
+        contained(tx, (savepoint) =>
+          listUploads(savepoint, publicId, session, otherHash),
+        ),
       ).rejects.toThrow('INTAKE_UNAVAILABLE');
       expect(
         await removeUpload(tx, publicId, other, otherHash, first.id),
@@ -303,7 +317,9 @@ it(
       );
       expect((await submit([mine.id])).status).toBe('submitted');
       await expect(
-        removeUpload(tx, publicId, session, hash, mine.id),
+        contained(tx, (savepoint) =>
+          removeUpload(savepoint, publicId, session, hash, mine.id),
+        ),
       ).rejects.toThrow('INTAKE_ALREADY_SUBMITTED');
       expect(
         await discardUnreferencedUploads(tx, publicId, session, hash),

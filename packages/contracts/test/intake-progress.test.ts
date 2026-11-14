@@ -81,3 +81,35 @@ it('rejects forged applicability, unrelated identities, unknown operation keys a
     intakeMutationSchema.safeParse({ ...request, expectedRevision: 0 }).success,
   ).toBe(false);
 });
+it('submits file answers as file ids within the question’s limit', () => {
+  const { definition, ids } = formFixture();
+  const question = crypto.randomUUID();
+  definition.pages[0].blocks.push({
+    id: question,
+    type: 'file',
+    label: 'Brief',
+    description: '',
+    required: true,
+    aiEnabled: false,
+    maxFiles: 2,
+  });
+  const files = [crypto.randomUUID(), crypto.randomUUID()];
+  const answers = (value: string[]) => ({
+    [ids.budget]: { state: 'value', value: 0 },
+    [ids.contact]: { state: 'value', value: 'qa@example.invalid' },
+    [question]: { state: 'value', value },
+  });
+  const submitted = prepareIntakeProgress(definition, answers(files), true);
+  expect(submitted.ok).toBe(true);
+  if (submitted.ok)
+    expect(submitted.answers[question]).toEqual({
+      state: 'value',
+      value: files,
+    });
+  for (const value of [[], [...files, crypto.randomUUID()], ['not-an-id']]) {
+    const refused = prepareIntakeProgress(definition, answers(value), true);
+    expect(refused.ok).toBe(false);
+    if (!refused.ok)
+      expect(refused.issues.map((issue) => issue.targetId)).toContain(question);
+  }
+});
