@@ -781,9 +781,13 @@
   font-size: 14px;
   background: var(--surface-panel);
 }
-.embed-code {
+.embed-code,
+.embed-upsell {
   margin: 0 0 16px;
   font-size: 13px;
+}
+.embed-upsell {
+  color: var(--text-secondary);
 }
 .embed-code summary {
   cursor: pointer;

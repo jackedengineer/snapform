@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import type {
   PublishForm,
@@ -12,6 +14,7 @@ import {
   publishFormRequest,
   stopPublicationRequest,
   FormRequestError,
+  request,
 } from './api';
 import {
   publishLabel,
@@ -211,6 +214,58 @@ export function StatusChip({ publication }: { publication: Publication }) {
     </span>
   );
 }
+// Reads only the plan's embed flag from the billing API, so the editor does
+// not load the billing schemas. The API alone decides the plan.
+export function embedAllowed(value: unknown) {
+  const embed = (value as { billing?: { features?: { embed?: unknown } } })
+    ?.billing?.features?.embed;
+  if (typeof embed !== 'boolean') throw Error('Invalid billing response');
+  return embed;
+}
+// Embedding is a Pro feature; until the plan is known neither offer is shown.
+export function EmbedOffer({
+  workspaceId,
+  userId,
+  children,
+}: {
+  workspaceId: string;
+  userId: string;
+  children: ReactNode;
+}) {
+  const billing = useQuery({
+    queryKey: ['embed', userId, workspaceId],
+    queryFn: ({ signal }) =>
+      request(
+        `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/billing`,
+        { signal },
+        embedAllowed,
+      ),
+  });
+  if (billing.isError)
+    return (
+      <p className="embed-upsell">
+        Embed options couldn’t load.{' '}
+        <button
+          type="button"
+          className="text-button"
+          onClick={() => void billing.refetch()}
+        >
+          Try again
+        </button>
+      </p>
+    );
+  if (billing.data === undefined) return null;
+  return billing.data ? (
+    children
+  ) : (
+    <p className="embed-upsell">
+      Embed this form on your website with Snapform Pro.{' '}
+      <Link to="/workspaces/$workspaceId/billing" params={{ workspaceId }}>
+        Upgrade
+      </Link>
+    </p>
+  );
+}
 export const embedCode = (origin: string, publicId: string) =>
   `<div data-snapform="${publicId}"></div>\n<script async src="${origin}/embed.js"></script>`;
 const summaries = {
@@ -334,27 +389,32 @@ export function PublicationControls({
                   Open published form ↗
                 </a>
               </div>
-              <details className="embed-code">
-                <summary>Embed on your website</summary>
-                <p>
-                  Paste this code into your website’s HTML where the form should
-                  appear.
-                </p>
-                <textarea
-                  ref={code}
-                  aria-label="Embed code"
-                  readOnly
-                  rows={3}
-                  value={embedCode(origin, current.publicId)}
-                />
-                <button
-                  type="button"
-                  className="button secondary compact-button"
-                  onClick={() => void copyField(code.current, 'Code')}
-                >
-                  Copy code
-                </button>
-              </details>
+              <EmbedOffer
+                workspaceId={publication.workspaceId}
+                userId={publication.userId}
+              >
+                <details className="embed-code">
+                  <summary>Embed on your website</summary>
+                  <p>
+                    Paste this code into your website’s HTML where the form
+                    should appear.
+                  </p>
+                  <textarea
+                    ref={code}
+                    aria-label="Embed code"
+                    readOnly
+                    rows={3}
+                    value={embedCode(origin, current.publicId)}
+                  />
+                  <button
+                    type="button"
+                    className="button secondary compact-button"
+                    onClick={() => void copyField(code.current, 'Code')}
+                  >
+                    Copy code
+                  </button>
+                </details>
+              </EmbedOffer>
               {copied && <p role="status">{copied}</p>}
               {emailOffer && (
                 <EmailOffer
