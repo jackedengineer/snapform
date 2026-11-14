@@ -18,7 +18,7 @@ export function Pricing() {
   return (
     <PublicInfo
       title="Plans for each workspace."
-      intro="Start free. Upgrade a workspace when it needs more forms or responses."
+      intro="Start free. Upgrade a workspace when it needs more forms, more responses or a team."
     >
       <PlanChoices
         interval={interval}
@@ -32,7 +32,8 @@ export function Pricing() {
         <ul>
           <li>{plans.free.liveForms} live forms</li>
           <li>{plans.free.monthlyResponses} responses a month</li>
-          <li>{plans.free.seats} seat</li>
+          <li>{plans.free.seats} seat, for you</li>
+          <li>Share forms by link</li>
           <li>Forms show a “Powered by Snapform” badge</li>
         </ul>
         <Link to="/signup">Start free</Link>
@@ -43,11 +44,10 @@ export function Pricing() {
         <ul>
           <li>Unlimited live forms</li>
           <li>{counts.format(plans.pro.monthlyResponses)} responses a month</li>
-          <li>{plans.pro.seats} seats</li>
-          <li>
-            Coming soon: team invites, your own branding, file uploads and
-            embedding
-          </li>
+          <li>{plans.pro.seats} seats, so you can invite your team</li>
+          <li>No “Powered by Snapform” badge on your forms</li>
+          <li>Embed forms on your website</li>
+          <li>Coming soon: file uploads</li>
         </ul>
         <Link to="/app">Upgrade from your workspace</Link>
       </section>
