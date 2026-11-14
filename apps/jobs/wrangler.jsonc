@@ -13,6 +13,8 @@
   },
   "r2_buckets": [
     { "binding": "PURGE_LEDGER", "bucket_name": "snapform-purge-ledger" },
+    // Respondent files, deleted by prefix before a purge is finalized.
+    { "binding": "UPLOADS", "bucket_name": "snapform-uploads" },
   ],
   "triggers": { "crons": ["* * * * *"] },
   "queues": {

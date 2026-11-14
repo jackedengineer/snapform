@@ -1,6 +1,10 @@
 import { expect, it, vi } from 'vitest';
 import { env } from 'cloudflare:test';
-import { persistPurgeIntent, runPurgeBatch } from '../src/purge-ledger';
+import {
+  deleteUploads,
+  persistPurgeIntent,
+  runPurgeBatch,
+} from '../src/purge-ledger';
 import { openPurgeIntent } from '@snapform/contracts/purge';
 const secret = btoa('s'.repeat(32));
 const intent = () => ({
@@ -56,7 +60,7 @@ it('recovers a crash after ledger storage without replacing the durable intent',
           throw Error('DB lost');
         },
       }),
-    ).toEqual({ claimed: 1, completed: 0, failed: 1 });
+    ).toEqual({ claimed: 1, completed: 0, deferred: 0, failed: 1 });
     const original = await (await env.PURGE_LEDGER.get(key))?.text();
     expect(original).toBeTruthy();
     expect(
@@ -65,7 +69,7 @@ it('recovers a crash after ledger storage without replacing the durable intent',
         persist,
         finalize: async () => true,
       }),
-    ).toEqual({ claimed: 1, completed: 1, failed: 0 });
+    ).toEqual({ claimed: 1, completed: 1, deferred: 0, failed: 0 });
     expect(await (await env.PURGE_LEDGER.get(key))?.text()).toBe(original);
     expect(
       await runPurgeBatch({
@@ -73,7 +77,7 @@ it('recovers a crash after ledger storage without replacing the durable intent',
         persist,
         finalize: async () => true,
       }),
-    ).toEqual({ claimed: 0, completed: 0, failed: 0 });
+    ).toEqual({ claimed: 0, completed: 0, deferred: 0, failed: 0 });
   } finally {
     await env.PURGE_LEDGER.delete(key);
   }
@@ -94,7 +98,7 @@ it('never removes content before its ledger acknowledgment and keeps failures re
       },
       finalize: finalized,
     }),
-  ).toEqual({ claimed: 3, completed: 1, failed: 2 });
+  ).toEqual({ claimed: 3, completed: 1, deferred: 0, failed: 2 });
   expect(calls).toEqual([
     `ledger:${items[0].id}`,
     `delete:${items[0].id}`,
@@ -119,4 +123,50 @@ it('never removes content before its ledger acknowledgment and keeps failures re
       finalize: finalized,
     }),
   ).rejects.toThrow('DB unavailable');
+});
+it('deletes uploads in bounded pages and defers finalizing until none remain', async () => {
+  const workspace = crypto.randomUUID(),
+    item = { ...intent(), workspaceId: workspace };
+  const keys = ['a', 'b', 'c'].map(
+    (letter) =>
+      `${workspace}/${crypto.randomUUID()}/${crypto.randomUUID()}/${letter.repeat(43)}`,
+  );
+  const outside = `${crypto.randomUUID()}/${crypto.randomUUID()}/${crypto.randomUUID()}/${'z'.repeat(43)}`;
+  for (const key of [...keys, outside]) await env.UPLOADS.put(key, 'x');
+  const finalize = vi.fn(async () => true);
+  const files = () =>
+    deleteUploads(env.UPLOADS, `${workspace}/`, { rounds: 1, page: 2 });
+  try {
+    const batch = () =>
+      runPurgeBatch({
+        claim: async () => [item],
+        persist: async () => {},
+        files,
+        finalize,
+      });
+    expect(await batch()).toEqual({
+      claimed: 1,
+      completed: 0,
+      deferred: 1,
+      failed: 0,
+    });
+    expect(finalize).not.toHaveBeenCalled();
+    expect(await batch()).toEqual({
+      claimed: 1,
+      completed: 1,
+      deferred: 0,
+      failed: 0,
+    });
+    expect(
+      (await env.UPLOADS.list({ prefix: `${workspace}/` })).objects,
+    ).toEqual([]);
+    expect(await env.UPLOADS.head(outside)).not.toBeNull();
+    expect(await deleteUploads(env.UPLOADS, null)).toBe(true);
+    for (const prefix of ['', `${workspace}`, `${workspace}/x/`])
+      await expect(deleteUploads(env.UPLOADS, prefix)).rejects.toThrow(
+        'INVALID_UPLOAD_PREFIX',
+      );
+  } finally {
+    await env.UPLOADS.delete([...keys, outside]);
+  }
 });
