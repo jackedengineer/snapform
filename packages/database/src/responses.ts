@@ -7,6 +7,8 @@ import {
 import type { FormCursor } from '@snapform/contracts/draft';
 import type { Database, Transaction } from './client.ts';
 import { inWorkspace } from './workspaces.ts';
+import { readResponseFiles } from './uploads.ts';
+import { hasFileQuestion } from '@snapform/contracts/uploads';
 import { responseSession } from './intake-schema.ts';
 import { formVersion } from './publication-schema.ts';
 import { form, formDraft } from './form-schema.ts';
@@ -153,6 +155,10 @@ export async function getResponse(
       .innerJoin(formVersion, versionKey)
       .where(and(key(workspaceId, formId), eq(responseSession.id, id)));
     if (!record) throw Error('RESPONSE_NOT_FOUND');
-    return record;
+    // Forms without file questions never read the 0046 table.
+    const files = hasFileQuestion(record.definition)
+      ? ((await readResponseFiles(tx, workspaceId, formId, [id])).get(id) ?? [])
+      : undefined;
+    return { ...record, files };
   });
 }

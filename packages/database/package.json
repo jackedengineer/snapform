@@ -24,7 +24,8 @@
     "./retention": "./src/retention.ts",
     "./purge": "./src/purge.ts",
     "./deletion": "./src/deletion.ts",
-    "./billing": "./src/billing.ts"
+    "./billing": "./src/billing.ts",
+    "./uploads": "./src/uploads.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

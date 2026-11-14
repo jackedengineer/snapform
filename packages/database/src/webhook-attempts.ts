@@ -3,6 +3,10 @@ import type { WebhookOutcome } from '@snapform/contracts/webhook-protocol';
 import type { WebhookContext } from '@snapform/contracts/webhook-crypto';
 import type { ResponseDetail } from '@snapform/contracts/responses';
 import { responseEventMessageSchema } from '@snapform/contracts/response-event';
+import {
+  hasFileQuestion,
+  uploadedFilesSchema,
+} from '@snapform/contracts/uploads';
 import type { Database, Transaction } from './client.ts';
 
 export type WebhookClaim = WebhookContext & {
@@ -43,7 +47,7 @@ export async function claimWebhooks(
     version_number: number;
     submitted_at: Date | string | null;
   }>(sql`select * from public.claim_webhooks(${id ? 1 : 5},${id}::uuid)`);
-  return rows.map((row) => ({
+  const claims: WebhookClaim[] = rows.map((row) => ({
     id: row.id,
     leaseToken: row.lease_token,
     workspaceId: row.workspace_id,
@@ -68,6 +72,24 @@ export async function claimWebhooks(
           }
         : null,
   }));
+  // File questions add metadata (names, types, sizes) under the same lease.
+  for (const claim of claims) {
+    if (!claim.snapshot || !hasFileQuestion(claim.snapshot.definition))
+      continue;
+    const files = await db.execute<Record<string, unknown>>(
+      sql`select * from public.webhook_delivery_files(${claim.id}::uuid,${claim.leaseToken}::uuid)`,
+    );
+    claim.snapshot.files = uploadedFilesSchema.parse(
+      files.rows.map((file) => ({
+        id: file.id,
+        questionId: file.question_id,
+        name: file.name,
+        size: file.size,
+        type: file.content_type,
+      })),
+    );
+  }
+  return claims;
 }
 export async function prepareWebhookPayload(
   db: Database | Transaction,
