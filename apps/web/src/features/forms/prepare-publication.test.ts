@@ -44,17 +44,18 @@ it('refuses an older saved definition after a failed or incomplete save', async 
     ),
   ).rejects.toThrow('Save these changes');
 });
-it('blocks invalid definitions and files before attempting publication preparation', async () => {
+it('blocks invalid definitions before attempting publication preparation', async () => {
   const flush = vi.fn();
   const read = vi.fn();
   const definition = draft();
   await expect(
     preparePublication({ ...definition, title: '' }, flush, read),
   ).rejects.toThrow();
-  definition.pages[0].blocks.push(question('file', 'Brief'));
-  await expect(preparePublication(definition, flush, read)).rejects.toThrow();
   expect(flush).not.toHaveBeenCalled();
   expect(read).not.toHaveBeenCalled();
+  // The plan gate for file questions is the server's: the browser lacks the plan.
+  definition.pages[0].blocks.push(question('file', 'Brief'));
+  expect(publishingIssues(definition)).toEqual([]);
 });
 it('names the question, rule or ending behind each publishing issue', () => {
   const definition = draft();
@@ -77,12 +78,8 @@ it('names the question, rule or ending behind each publishing issue', () => {
       message: 'Ending 1: Add an ending title.',
       targetId: definition.endings[0].id,
     },
-    {
-      message:
-        'Question 3, “Upload your brief”: File upload isn’t available yet. Remove this question to publish.',
-      targetId: file.id,
-    },
   ]);
+  expect(file.type).toBe('file');
 });
 it('names the rule and both questions when a move breaks a rule’s order', () => {
   const definition = draft();

@@ -280,3 +280,26 @@ it('explains the Free live-form limit instead of a generic conflict', async () =
       'Free workspaces can have 3 live forms. Stop collecting on one, or upgrade to Pro in Plan and billing.',
   });
 });
+it('explains that file questions need Pro', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json(
+          { error: { code: 'UPLOADS_REQUIRE_PRO' } },
+          { status: 409 },
+        ),
+      ),
+  );
+  await expect(
+    publishFormRequest(workspaceId, id, {
+      versionId: crypto.randomUUID(),
+      expectedRevision: 1,
+    }),
+  ).rejects.toMatchObject({
+    code: 'conflict',
+    message:
+      'File upload questions need Pro. Upgrade in Plan and billing, or remove the question.',
+  });
+});

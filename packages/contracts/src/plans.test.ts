@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canAcceptResponse,
+  canPublishQuestions,
   canPublish,
   effectivePlan,
   features,
@@ -47,6 +48,12 @@ describe('plan limits', () => {
     expect(publicPlanFlags('pro')).toEqual({ badge: false, embed: true });
     for (const plan of [null, undefined, '', 'enterprise', 'PRO', 1])
       expect(publicPlanFlags(plan)).toBeUndefined();
+  });
+  it('publishes file questions only with the uploads feature', () => {
+    const form = (type: string) => ({ pages: [{ blocks: [{ type }] }] });
+    expect(canPublishQuestions('free', form('email'))).toBe(true);
+    expect(canPublishQuestions('free', form('file'))).toBe(false);
+    expect(canPublishQuestions('pro', form('file'))).toBe(true);
   });
   it('prices annual billing at ten monthly payments', () => {
     expect(prices.monthly).toEqual({ INR: 149900, USD: 1900 });

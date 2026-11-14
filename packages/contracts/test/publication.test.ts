@@ -74,33 +74,17 @@ function withFileQuestion() {
     maxFiles: 1,
   } as const;
   definition.pages[0].blocks.push(file);
-  return { definition, fileId: file.id };
+  return { definition };
 }
-it('refuses to publish file questions the public form cannot collect', () => {
+it('compiles file questions like any other question', () => {
   expect(compilePublication(formFixture().definition).ok).toBe(true);
-  const { definition, fileId } = withFileQuestion();
-  expect(compileDefinition(definition).ok).toBe(true);
-  expect(compilePublication(definition)).toEqual({
-    ok: false,
-    issues: [
-      {
-        code: 'FILE_COLLECTION_UNAVAILABLE',
-        message:
-          'File upload isn’t available yet. Remove this question to publish.',
-        targetId: fileId,
-      },
-    ],
-  });
-});
-it('lists file questions with the other publishing issues', () => {
-  const { definition, fileId } = withFileQuestion();
+  const { definition } = withFileQuestion();
+  expect(compilePublication(definition)).toEqual(compileDefinition(definition));
+  expect(compilePublication(definition).ok).toBe(true);
   const result = compilePublication({ ...definition, title: ' ' });
   expect(result.ok).toBe(false);
   if (result.ok) throw new Error('Expected publishing issues');
-  expect(result.issues.map((issue) => [issue.code, issue.targetId])).toEqual([
-    ['MISSING_TITLE', undefined],
-    ['FILE_COLLECTION_UNAVAILABLE', fileId],
-  ]);
+  expect(result.issues.map((issue) => issue.code)).toEqual(['MISSING_TITLE']);
   const malformed = compilePublication({ ...definition, pages: 'none' });
   expect(malformed.ok).toBe(false);
   if (!malformed.ok)

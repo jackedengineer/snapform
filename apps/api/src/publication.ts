@@ -36,6 +36,8 @@ export const publicationFailures = new Map([
   ['INVALID_PUBLICATION', 422],
   // Free workspaces may have three live forms; see migration 0041.
   ['LIVE_FORM_LIMIT', 409],
+  // File questions need Pro (uploads); see canPublishQuestions.
+  ['UPLOADS_REQUIRE_PRO', 409],
 ]);
 function serialize(publication: Awaited<ReturnType<typeof getPublication>>) {
   return publication

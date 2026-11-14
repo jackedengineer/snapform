@@ -232,7 +232,7 @@ it(
 );
 
 it(
-  'refuses file questions the public form cannot collect',
+  'refuses file questions on Free, where uploads are unavailable',
   async () =>
     fixture(async (tx, actor, workspaceId, formId) => {
       const { definition } = formFixture();
@@ -255,7 +255,7 @@ it(
           versionId: crypto.randomUUID(),
           expectedRevision: 2,
         }),
-      ).rejects.toThrow('INVALID_PUBLICATION');
+      ).rejects.toThrow('UPLOADS_REQUIRE_PRO');
       expect(await getPublication(tx, actor, workspaceId, formId)).toBeNull();
     }),
   30000,

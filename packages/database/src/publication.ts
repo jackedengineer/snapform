@@ -4,6 +4,7 @@ import {
   publishFormSchema,
   unpublishFormSchema,
 } from '@snapform/contracts/publication';
+import { canPublishQuestions } from '@snapform/contracts/plans';
 import type {
   PublishForm,
   UnpublishForm,
@@ -121,6 +122,19 @@ export async function publishForm(
       throw new Error('DRAFT_CONFLICT');
     const compiled = compilePublication(draft.definition);
     if (!compiled.ok) throw new Error('INVALID_PUBLICATION');
+    // File questions need Pro (uploads). A downgrade leaves live forms live.
+    const [billing] = (
+      await tx.execute<{ plan: unknown }>(
+        sql`select plan from public.workspace_billing(${workspaceId}::uuid)`,
+      )
+    ).rows;
+    if (
+      !canPublishQuestions(
+        billing?.plan === 'pro' ? 'pro' : 'free',
+        compiled.definition,
+      )
+    )
+      throw new Error('UPLOADS_REQUIRE_PRO');
     const [last] = await tx
       .select({ number: formVersion.number })
       .from(formVersion)

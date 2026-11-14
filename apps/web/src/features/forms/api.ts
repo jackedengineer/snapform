@@ -113,7 +113,9 @@ export async function request<T>(
           ? 'This workspace is scheduled for deletion. Cancel it from workspace data controls before making changes.'
           : code === 'LIVE_FORM_LIMIT'
             ? 'Free workspaces can have 3 live forms. Stop collecting on one, or upgrade to Pro in Plan and billing.'
-            : 'This operation conflicts with saved changes. Review the saved version before trying again.',
+            : code === 'UPLOADS_REQUIRE_PRO'
+              ? 'File upload questions need Pro. Upgrade in Plan and billing, or remove the question.'
+              : 'This operation conflicts with saved changes. Review the saved version before trying again.',
       );
     }
     if (response.status === 429)

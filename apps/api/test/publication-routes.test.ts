@@ -1,15 +1,15 @@
 import { SELF } from 'cloudflare:test';
 import { expect, it } from 'vitest';
 import { compilePublication } from '@snapform/contracts/publication';
+import { canPublishQuestions } from '@snapform/contracts/plans';
 import { matchPublicationRoute } from '../src/publication.ts';
 import { formFixture } from '../../../packages/contracts/test/form-fixture.ts';
 import { sessionCookie } from './session-cookie.ts';
-it('refuses file questions with the publication compiler inside workerd', () => {
+it('compiles file questions inside workerd and leaves the plan gate to publishing', () => {
   const { definition } = formFixture();
   expect(compilePublication(definition).ok).toBe(true);
-  const fileId = crypto.randomUUID();
   definition.pages[0].blocks.push({
-    id: fileId,
+    id: crypto.randomUUID(),
     type: 'file',
     label: 'Upload your brief',
     description: '',
@@ -17,15 +17,9 @@ it('refuses file questions with the publication compiler inside workerd', () => 
     aiEnabled: false,
     maxFiles: 1,
   });
-  const result = compilePublication(definition);
-  expect(result.ok).toBe(false);
-  if (!result.ok)
-    expect(result.issues).toContainEqual(
-      expect.objectContaining({
-        code: 'FILE_COLLECTION_UNAVAILABLE',
-        targetId: fileId,
-      }),
-    );
+  expect(compilePublication(definition).ok).toBe(true);
+  expect(canPublishQuestions('free', definition)).toBe(false);
+  expect(canPublishQuestions('pro', definition)).toBe(true);
 });
 const workspaceId = crypto.randomUUID(),
   formId = crypto.randomUUID();

@@ -1,3 +1,4 @@
+import { hasFileQuestion } from './uploads.ts';
 // Plan rules shared by the API and browser. The database repeats these limits
 // in migration 0041 (public.plan_limits); change both together.
 export type PlanId = 'free' | 'pro';
@@ -95,6 +96,13 @@ export function canPublish(
   const limit = plans[plan].liveForms;
   count(liveForms);
   return alreadyLive || limit === null || liveForms < limit;
+}
+/** File questions need the uploads feature; downgrades keep live forms live. */
+export function canPublishQuestions(
+  plan: PlanId,
+  definition: Parameters<typeof hasFileQuestion>[0],
+) {
+  return plans[plan].uploads || !hasFileQuestion(definition);
 }
 /** Unexpired reservations hold capacity, so concurrent starts cannot overshoot. */
 export function canAcceptResponse(
