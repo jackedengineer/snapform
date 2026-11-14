@@ -1,6 +1,7 @@
 import { openDatabase } from '@snapform/database';
 import { applyBillingEvent } from '@snapform/database/billing';
 import {
+  maxWebhookBody as limit,
   toBillingEvent,
   verifyRazorpaySignature,
 } from '@snapform/contracts/razorpay';
@@ -12,7 +13,6 @@ export const razorpayWebhookPath = '/api/v1/billing/razorpay/webhook';
 type Apply = (
   event: BillingEvent,
 ) => Promise<'applied' | 'ignored' | 'duplicate'>;
-const limit = 65536;
 function reply(status: number, body: unknown, headers: HeadersInit = {}) {
   return Response.json(body, {
     status,
@@ -58,9 +58,13 @@ function persist(environment: AuthEnvironment): Apply {
   };
 }
 /**
- * Razorpay webhook: verify X-Razorpay-Signature over the raw body, dedupe by
- * X-Razorpay-Event-Id in the database, and only then change a plan. Unknown or
- * foreign events are recorded as ignored; storage failures ask for a retry.
+ * Razorpay webhook: read at most 1 MiB, verify X-Razorpay-Signature over those
+ * raw bytes (Web Crypto, constant time), dedupe by X-Razorpay-Event-Id in the
+ * database, and only then change a plan. The event ID header is not signed, so
+ * apply_billing_event also keeps state monotonic: a replayed or late event
+ * cannot move a plan backwards. Unknown or foreign events are recorded as
+ * ignored and acknowledged; storage failures ask for a retry. Logs carry only
+ * the event type, never IDs, customer or payment data.
  */
 export async function handleRazorpayWebhook(
   request: Request,
@@ -97,7 +101,11 @@ export async function handleRazorpayWebhook(
   } catch {
     // A signed but unreadable body is answered below as an invalid event.
   }
-  if (!event) return reply(400, { error: { code: 'INVALID_EVENT' } });
+  if (!event) {
+    // Signed by Razorpay but not in its documented shape; nothing from it is logged.
+    console.warn(JSON.stringify({ event: 'billing_event_invalid' }));
+    return reply(400, { error: { code: 'INVALID_EVENT' } });
+  }
   try {
     return reply(200, { outcome: await apply(event) });
   } catch {

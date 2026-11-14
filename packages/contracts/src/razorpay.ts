@@ -6,7 +6,8 @@ import type { BillingCurrency, BillingInterval } from './plans.ts';
 // Server-only Razorpay webhook rules. Docs:
 // https://razorpay.com/docs/webhooks/validate-test/ (raw-body HMAC-SHA256, hex, event-id dedupe)
 // https://razorpay.com/docs/webhooks/subscriptions/ (subscription event payloads)
-const maxBody = 65536;
+/** Razorpay events are a few KiB; 1 MiB leaves room without buffering abuse. */
+export const maxWebhookBody = 1048576;
 /** Web Crypto's HMAC verify compares in constant time; nothing here compares strings. */
 export async function verifyRazorpaySignature(
   body: Uint8Array<ArrayBuffer>,
@@ -14,7 +15,11 @@ export async function verifyRazorpaySignature(
   secret: string,
 ) {
   const hex = signature?.toLowerCase() ?? '';
-  if (!/^[0-9a-f]{64}$/.test(hex) || !secret || body.byteLength > maxBody)
+  if (
+    !/^[0-9a-f]{64}$/.test(hex) ||
+    !secret ||
+    body.byteLength > maxWebhookBody
+  )
     return false;
   const digest = new Uint8Array(32);
   for (let index = 0; index < 32; index++)
@@ -106,9 +111,19 @@ export type RazorpayConfig = NonNullable<ReturnType<typeof razorpaySettings>>;
 /** The part of a create or cancel response the API relies on. */
 export const createdSubscriptionSchema = z.object({ id: subscriptionIdSchema });
 const seconds = z.int().check(z.minimum(1), z.maximum(4102444800));
+const eventType = z.string().check(z.regex(/^[a-z_.]{1,64}$/));
+/** Events that can change a plan; every other signed event is acknowledged and ignored. */
+export const handledEvents: ReadonlySet<string> = new Set([
+  'subscription.activated',
+  'subscription.charged',
+  'subscription.halted',
+  'subscription.cancelled',
+  'subscription.completed',
+]);
+const envelopeSchema = z.object({ event: eventType, created_at: seconds });
 // Razorpay adds fields over time, so only the used subset is strict about types.
 const eventSchema = z.object({
-  event: z.string().check(z.regex(/^[a-z_.]{1,64}$/)),
+  event: eventType,
   created_at: seconds,
   payload: z.object({
     subscription: z.optional(
@@ -133,15 +148,32 @@ const at = (value: number | null | undefined) =>
  * Reduces a signature-verified webhook to the fields the database applies.
  * Only Snapform's configured plan IDs produce an interval and currency, and
  * only Snapform-set notes produce a workspace; anything else maps to null.
+ * Unhandled event types keep only their type and time, whatever their payload,
+ * so they are recorded for dedupe and acknowledged without changing a plan.
  */
 export function toBillingEvent(
   eventId: string | null,
   raw: unknown,
   plans: RazorpayPlans,
 ): BillingEvent | null {
-  const parsed = eventSchema.safeParse(raw),
+  const envelope = envelopeSchema.safeParse(raw),
     id = billingEventSchema.shape.id.safeParse(eventId);
-  if (!parsed.success || !id.success) return null;
+  if (!envelope.success || !id.success) return null;
+  if (!handledEvents.has(envelope.data.event))
+    return {
+      id: id.data,
+      type: envelope.data.event,
+      createdAt: new Date(envelope.data.created_at * 1000),
+      workspaceId: null,
+      subscriptionId: null,
+      customerId: null,
+      interval: null,
+      currency: null,
+      periodStart: null,
+      periodEnd: null,
+    };
+  const parsed = eventSchema.safeParse(raw);
+  if (!parsed.success || !parsed.data.payload.subscription) return null;
   const subscription = parsed.data.payload.subscription?.entity,
     notes = subscription?.notes,
     workspace = z

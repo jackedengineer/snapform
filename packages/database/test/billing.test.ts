@@ -238,6 +238,50 @@ it(
 );
 
 it(
+  'ignores a replayed or stale event under a fresh event ID, and unknown events',
+  async () =>
+    fixture(async (tx, seed) => {
+      const activated = event(seed, {
+        createdAt: new Date(Date.now() - 5 * 60000),
+      });
+      await applyBillingEvent(tx, activated);
+      const halted = event(seed, {
+        type: 'subscription.halted',
+        subscriptionId: activated.subscriptionId,
+        createdAt: new Date(Date.now() - 60000),
+        periodStart: null,
+        periodEnd: null,
+      });
+      expect(await applyBillingEvent(tx, halted)).toBe('applied');
+      const before = await getBilling(tx, seed.actor, seed.workspaceId);
+      // The event ID header is unsigned: the same signed body under new IDs.
+      expect(
+        await applyBillingEvent(tx, { ...activated, id: 'evt_QAreplay0001' }),
+      ).toBe('applied');
+      expect(
+        await applyBillingEvent(tx, {
+          ...halted,
+          id: 'evt_QAreplay0002',
+          type: 'subscription.cancelled',
+          createdAt: new Date(Date.now() - 4 * 60000),
+        }),
+      ).toBe('ignored');
+      for (const type of ['payment.captured', 'subscription.updated'])
+        expect(
+          await applyBillingEvent(tx, {
+            ...event(seed, { type }),
+            subscriptionId: null,
+            workspaceId: null,
+          }),
+        ).toBe('ignored');
+      expect(await getBilling(tx, seed.actor, seed.workspaceId)).toEqual(
+        before,
+      );
+    }),
+  30000,
+);
+
+it(
   'records checkout for owners only and refuses a second live subscription',
   async () =>
     fixture(async (tx, seed) => {

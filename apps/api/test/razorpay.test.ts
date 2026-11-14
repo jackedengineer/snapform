@@ -283,10 +283,35 @@ describe('webhook', () => {
       (await handleRazorpayWebhook(await signed(body, ''), environment, apply))
         .status,
     ).toBe(400);
-    const huge = await signed(' '.repeat(70000) + body, 'evt_H');
+    const huge = await signed(
+      ' '.repeat(1048577 - body.length) + body,
+      'evt_H',
+    );
     expect((await handleRazorpayWebhook(huge, environment, apply)).status).toBe(
       413,
     );
+    // A streamed body without Content-Length is cut off at the same limit.
+    const streamed = await signed(
+      ' '.repeat(1048577 - body.length) + body,
+      'evt_H',
+    );
+    const chunks = new Blob([await streamed.arrayBuffer()]).stream();
+    const headers = new Headers(streamed.headers);
+    headers.delete('content-length');
+    expect(
+      (
+        await handleRazorpayWebhook(
+          new Request(streamed.url, {
+            method: 'POST',
+            headers,
+            body: chunks,
+            duplex: 'half',
+          } as RequestInit),
+          environment,
+          apply,
+        )
+      ).status,
+    ).toBe(413);
     expect(
       (
         await handleRazorpayWebhook(
@@ -297,6 +322,121 @@ describe('webhook', () => {
       ).status,
     ).toBe(405);
     expect(apply).not.toHaveBeenCalled();
+  });
+  it('accepts a signed body of exactly 1 MiB', async () => {
+    const apply = vi.fn(async () => 'applied' as const);
+    const body = event('subscription.charged');
+    const response = await handleRazorpayWebhook(
+      await signed(body + ' '.repeat(1048576 - body.length), 'evt_L'),
+      environment,
+      apply,
+    );
+    expect(response.status).toBe(200);
+    expect(apply).toHaveBeenCalledOnce();
+  });
+  it('acknowledges unknown events with 200 and only records them for dedupe', async () => {
+    const seen: BillingEvent[] = [];
+    const apply = async (value: BillingEvent) => {
+      seen.push(value);
+      return 'ignored' as const;
+    };
+    for (const [type, eventId] of [
+      ['payment.captured', 'evt_M'],
+      ['subscription.updated', 'evt_N'],
+      ['refund.processed', 'evt_O'],
+    ]) {
+      const response = await handleRazorpayWebhook(
+        await signed(
+          JSON.stringify({
+            entity: 'event',
+            event: type,
+            created_at: 1794579000,
+            payload: { payment: { entity: { id: 'pay_Synthetic01' } } },
+          }),
+          eventId,
+        ),
+        environment,
+        apply,
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ outcome: 'ignored' });
+    }
+    expect(seen).toMatchObject([
+      { type: 'payment.captured', subscriptionId: null, workspaceId: null },
+      { type: 'subscription.updated', subscriptionId: null },
+      { type: 'refund.processed', subscriptionId: null },
+    ]);
+  });
+  it('never logs customer, payment or subscription details', async () => {
+    const lines: string[] = [];
+    const capture = (...values: unknown[]) => {
+      lines.push(values.map(String).join(' '));
+    };
+    const spies = (['log', 'info', 'warn', 'error', 'debug'] as const).map(
+      (level) => vi.spyOn(console, level).mockImplementation(capture),
+    );
+    try {
+      const body = JSON.stringify({
+        entity: 'event',
+        event: 'subscription.charged',
+        created_at: 1794579000,
+        payload: {
+          subscription: {
+            entity: {
+              ...JSON.parse(event('subscription.charged')).payload.subscription
+                .entity,
+              id: 'sub_PrivateSub00001',
+              customer_id: 'cust_PrivateCust001',
+            },
+          },
+          payment: {
+            entity: {
+              id: 'pay_PrivatePay00001',
+              email: 'payer@example.invalid',
+              contact: '+919999999999',
+              card: { last4: '4242' },
+            },
+          },
+        },
+      });
+      const failing = async () => {
+        throw new Error('database unavailable cust_PrivateCust001');
+      };
+      await handleRazorpayWebhook(
+        await signed(body, 'evt_P'),
+        environment,
+        failing,
+      );
+      await handleRazorpayWebhook(
+        await signed(body, 'evt_Q', 'attacker-secret'),
+        environment,
+        failing,
+      );
+      await handleRazorpayWebhook(
+        await signed(body.replace('1794579000', '"x"'), 'evt_R'),
+        environment,
+        failing,
+      );
+      await handleRazorpayWebhook(
+        await signed(body, 'evt_S'),
+        environment,
+        async () => 'applied' as const,
+      );
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
+    expect(lines.length).toBeGreaterThan(0);
+    for (const secret of [
+      'sub_PrivateSub00001',
+      'cust_PrivateCust001',
+      'pay_PrivatePay00001',
+      'payer@example.invalid',
+      '9999999999',
+      '4242',
+      workspaceId,
+      'synthetic-webhook-secret',
+    ])
+      expect(lines.join('\n')).not.toContain(secret);
   });
   it('asks Razorpay to retry when the event cannot be recorded', async () => {
     const response = await handleRazorpayWebhook(

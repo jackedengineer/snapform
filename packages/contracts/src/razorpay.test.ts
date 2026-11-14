@@ -71,10 +71,19 @@ describe('webhook signature', () => {
       expect(await verifyRazorpaySignature(encode(raw), signature, key)).toBe(
         false,
       );
-    const oversized = 'x'.repeat(65537);
+    const oversized = 'x'.repeat(1048577);
     expect(
       await verifyRazorpaySignature(encode(oversized), sign(oversized), secret),
     ).toBe(false);
+  });
+});
+
+describe('body limit', () => {
+  it('verifies bodies up to exactly 1 MiB', async () => {
+    const largest = 'x'.repeat(1048576);
+    expect(
+      await verifyRazorpaySignature(encode(largest), sign(largest), secret),
+    ).toBe(true);
   });
 });
 
@@ -130,6 +139,39 @@ describe('event mapping', () => {
         plans,
       ),
     ).toMatchObject({ workspaceId: null, customerId: null });
+  });
+  it('acknowledges unknown event types whatever their payload shape', () => {
+    for (const [type, body] of [
+      ['payment.captured', { payment: { entity: { id: 'pay_Synthetic01' } } }],
+      ['subscription.updated', { subscription: { entity: { id: 42 } } }],
+      ['invoice.paid', 'not an object'],
+    ] as const)
+      expect(
+        toBillingEvent(
+          'evt_Synthetic08',
+          { ...payload(type), payload: body },
+          plans,
+        ),
+      ).toEqual({
+        id: 'evt_Synthetic08',
+        type,
+        createdAt: new Date(1794579000 * 1000),
+        workspaceId: null,
+        subscriptionId: null,
+        customerId: null,
+        interval: null,
+        currency: null,
+        periodStart: null,
+        periodEnd: null,
+      });
+    // A handled event that does not match Razorpay's documented shape is refused.
+    expect(
+      toBillingEvent(
+        'evt_Synthetic09',
+        { ...payload('subscription.charged'), payload: {} },
+        plans,
+      ),
+    ).toBeNull();
   });
   it('keeps unrelated events for dedupe without a subscription', () => {
     expect(
