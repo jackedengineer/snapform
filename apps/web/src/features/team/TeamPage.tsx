@@ -30,6 +30,8 @@ type Ask = {
   action: string;
   run: () => Promise<unknown>;
   leaving?: boolean;
+  /** Where focus goes once the change is confirmed and the list refreshed. */
+  then?: () => void;
 };
 type Ready = Awaited<ReturnType<typeof createInvite>>;
 export function TeamPage({ workspaceId }: { workspaceId: string }) {
@@ -49,7 +51,8 @@ export function TeamPage({ workspaceId }: { workspaceId: string }) {
   });
   const refresh = () => cache.invalidateQueries({ queryKey: key });
   const dialog = useRef<HTMLDialogElement>(null),
-    heading = useRef<HTMLHeadingElement>(null);
+    heading = useRef<HTMLHeadingElement>(null),
+    invitesHeading = useRef<HTMLHeadingElement>(null);
   const [asking, setAsking] = useState<Ask | null>(null);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'editor' | 'viewer'>('editor');
@@ -58,7 +61,11 @@ export function TeamPage({ workspaceId }: { workspaceId: string }) {
   const [copied, setCopied] = useState('');
   const change = useMutation({
     mutationFn: (ask: Ask) => ask.run(),
-    onSuccess: (_, ask) => (ask.leaving ? navigate({ to: '/app' }) : refresh()),
+    onSuccess: async (_, ask) => {
+      if (ask.leaving) return navigate({ to: '/app' });
+      await refresh();
+      ask.then?.();
+    },
     onError: () => void refresh(),
   });
   const invite = useMutation({
@@ -324,7 +331,9 @@ export function TeamPage({ workspaceId }: { workspaceId: string }) {
       </section>
       {owner && (
         <section className="team-panel" aria-labelledby="invites-title">
-          <h2 id="invites-title">Pending invites</h2>
+          <h2 id="invites-title" ref={invitesHeading} tabIndex={-1}>
+            Pending invites
+          </h2>
           {invites.isError ? (
             <p role="alert">{invites.error.message}</p>
           ) : !invites.data ? (
@@ -353,6 +362,8 @@ export function TeamPage({ workspaceId }: { workspaceId: string }) {
                         body: 'The link stops working straight away.',
                         action: 'Revoke invite',
                         run: () => revokeInvite(workspaceId, invitation.id),
+                        // The revoked row disappears; keep focus nearby.
+                        then: () => invitesHeading.current?.focus(),
                       })
                     }
                   >
