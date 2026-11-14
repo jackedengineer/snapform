@@ -89,7 +89,6 @@ async function request<T>(
             ? 'This form isn’t accepting responses right now. If you need to reach the business, contact whoever sent you the link.'
             : 'Your saved response changed. Reload the saved version before continuing.',
         );
-      if (code === 'FILE_COLLECTION_UNAVAILABLE') throw closed();
       if (response.status === 422)
         throw new IntakeRequestError(
           'invalid',

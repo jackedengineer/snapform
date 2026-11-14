@@ -95,3 +95,14 @@ export function hasFileQuestion(definition: {
     page.blocks.some((block) => block.type === 'file'),
   );
 }
+/** A file answer for people: stored names, one per line; never ids or keys. */
+export function fileNames(
+  value: unknown,
+  files: readonly { id: string; name: string }[] = [],
+): string {
+  return (Array.isArray(value) ? value : [])
+    .map(
+      (id) => files.find((file) => file.id === id)?.name ?? 'Unavailable file',
+    )
+    .join('\n');
+}

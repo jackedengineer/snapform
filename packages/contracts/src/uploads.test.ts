@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_UPLOAD_BYTES,
+  fileNames,
   formatFileSize,
   hasFileQuestion,
   isUploadType,
@@ -111,6 +112,15 @@ describe('uploaded file metadata', () => {
     expect(formatFileSize(900)).toBe('900 bytes');
     expect(formatFileSize(1536)).toBe('1.5 KB');
     expect(formatFileSize(MAX_UPLOAD_BYTES)).toBe('25 MB');
+  });
+  it('names file answers without exposing identities', () => {
+    const [brief, missing] = [crypto.randomUUID(), crypto.randomUUID()];
+    const files = [{ id: brief, name: 'Brief.pdf' }];
+    expect(fileNames([brief, missing], files)).toBe(
+      'Brief.pdf\nUnavailable file',
+    );
+    expect(fileNames([brief])).toBe('Unavailable file');
+    expect(fileNames('not a list', files)).toBe('');
   });
   it('finds file questions on any page', () => {
     expect(hasFileQuestion({ pages: [{ blocks: [{ type: 'email' }] }] })).toBe(

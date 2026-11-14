@@ -301,6 +301,61 @@
   font-size: 13px;
   margin: 12px 0 0;
 }
+.intake-files {
+  border: 1px dashed var(--border-control);
+  border-radius: 12px;
+  padding: 16px;
+}
+.intake-files[data-over='true'] {
+  border-color: var(--action-primary);
+  background: var(--surface-action-tint);
+}
+.intake-field .intake-files input[type='file'] {
+  min-height: 48px;
+  padding: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.intake-files input[type='file']::file-selector-button {
+  min-height: 40px;
+  margin-right: 12px;
+  border: 1px solid var(--border-control);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  font: inherit;
+  padding: 0 14px;
+}
+.intake-file-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.intake-file-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface-panel);
+}
+.intake-file-name {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  unicode-bidi: plaintext;
+}
+.intake-file-size {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.intake-file-list progress {
+  flex: 1 1 8rem;
+  accent-color: var(--action-primary);
+}
 .intake-unit {
   display: block;
   font-size: 12px;

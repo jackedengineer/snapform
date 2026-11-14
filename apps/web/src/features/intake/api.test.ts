@@ -119,20 +119,6 @@ it('separates a missing form, a form not accepting responses and an expired sess
     vi
       .fn()
       .mockResolvedValue(
-        Response.json(
-          { error: { code: 'FILE_COLLECTION_UNAVAILABLE' } },
-          { status: 503 },
-        ),
-      ),
-  );
-  await expect(readPublicForm(publicId)).rejects.toMatchObject({
-    code: 'closed',
-  });
-  vi.stubGlobal(
-    'fetch',
-    vi
-      .fn()
-      .mockResolvedValue(
         Response.json({ error: { code: 'FORM_UNAVAILABLE' } }, { status: 503 }),
       ),
   );

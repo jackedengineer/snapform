@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { evaluateForm } from '@snapform/contracts/evaluate';
 import type { Block, Field } from '@snapform/contracts/form';
+import type { Answer } from '@snapform/contracts/answers';
+import { useQuery } from '@tanstack/react-query';
+import { hasFileQuestion } from '@snapform/contracts/uploads';
 import { useIntake } from './use-intake';
+import { listFiles } from './files';
 import { FieldControl } from './FieldControl';
 import { Turnstile } from './Turnstile';
 import { collectionSteps } from './steps';
@@ -22,6 +26,8 @@ import {
   Welcome,
 } from './screens';
 import { unavailableTitle } from './titles';
+// Only forms with a file question load the upload control.
+const FileField = lazy(() => import('./FileField'));
 const saveLabels = {
   saved: 'Progress saved',
   saving: 'Saving…',
@@ -60,6 +66,13 @@ export function Collector({
     returnFocus = useRef('');
   const session = intake.progress?.record.session;
   const definition = session?.definition || intake.form?.definition;
+  const identity = intake.progress?.record.identity;
+  // Names for the review screen; shares its cache with the upload control.
+  const uploaded = useQuery({
+    queryKey: ['intake-files', publicId, identity?.id],
+    queryFn: () => (identity ? listFiles(publicId, identity) : []),
+    enabled: Boolean(session && definition && hasFileQuestion(definition)),
+  });
   const evaluation = definition
     ? evaluateForm(definition, session?.answers || {})
     : null;
@@ -200,28 +213,55 @@ export function Collector({
     void intake.forget();
   }
   function fields(blocks: Block[]) {
-    return blocks.map((block) => (
-      <FieldControl
-        key={block.id}
-        block={block}
-        answer={session?.answers[block.id]}
-        error={
-          touched.has(block.id) && evaluation?.ok
-            ? evaluation.issues.find((issue) => issue.targetId === block.id)
-                ?.message
-            : undefined
-        }
-        onChange={(answer) =>
-          intake.controller?.edit({
-            ...intake.controller.state.record.session?.answers,
-            [block.id]: answer,
-          })
-        }
-        onBlur={() =>
-          setTouched((previous) => new Set([...previous, block.id]))
-        }
-      />
-    ));
+    return blocks.map((block) => {
+      const answer = session?.answers[block.id];
+      const error =
+        touched.has(block.id) && evaluation?.ok
+          ? evaluation.issues.find((issue) => issue.targetId === block.id)
+              ?.message
+          : undefined;
+      const change = (next: Answer) =>
+        intake.controller?.edit({
+          ...intake.controller.state.record.session?.answers,
+          [block.id]: next,
+        });
+      const blur = () =>
+        setTouched((previous) => new Set([...previous, block.id]));
+      return (
+        <FieldControl
+          key={block.id}
+          block={block}
+          answer={answer}
+          error={error}
+          onChange={change}
+          onBlur={blur}
+          files={
+            block.type === 'file' && identity
+              ? (describedBy) => (
+                  <Suspense
+                    fallback={<p role="status">Loading file upload…</p>}
+                  >
+                    <FileField
+                      block={block}
+                      ids={
+                        answer?.state === 'value' && Array.isArray(answer.value)
+                          ? answer.value
+                          : []
+                      }
+                      publicId={publicId}
+                      identity={identity}
+                      describedBy={describedBy}
+                      invalid={Boolean(error)}
+                      onChange={change}
+                      onBlur={blur}
+                    />
+                  </Suspense>
+                )
+              : undefined
+          }
+        />
+      );
+    });
   }
   const embed = search.embed === 1;
   // Without plan flags (an older server or a failed read) nothing changes.
@@ -404,7 +444,7 @@ export function Collector({
               />
               {review ? (
                 <Review
-                  sections={reviewSections(steps, evaluation)}
+                  sections={reviewSections(steps, evaluation, uploaded.data)}
                   status={status}
                   frozen={frozen}
                   pendingSubmit={pendingSubmit}

@@ -68,3 +68,29 @@ it('points card questions at their own step and omits hidden questions', () => {
     definition.rules = [];
   }
 });
+it('shows uploaded file names on review, never their identities', () => {
+  const withFile = structuredClone(definition);
+  const question = crypto.randomUUID(),
+    file = crypto.randomUUID();
+  withFile.pages[0].blocks.push({
+    id: question,
+    type: 'file',
+    label: 'Brief',
+    description: '',
+    required: false,
+    aiEnabled: false,
+    maxFiles: 1,
+  });
+  const evaluation = evaluateForm(withFile, {
+    ...answers,
+    [question]: { state: 'value', value: [file] },
+  });
+  if (!evaluation.ok) throw new Error('Invalid fixture');
+  const steps = collectionSteps(withFile, evaluation);
+  const row = (files?: { id: string; name: string }[]) =>
+    reviewSections(steps, evaluation, files)
+      .flatMap((section) => section.rows)
+      .find((item) => item.id === question)?.answer;
+  expect(row([{ id: file, name: 'Brief.pdf' }])).toBe('Brief.pdf');
+  expect(row()).toBe('Unavailable file');
+});

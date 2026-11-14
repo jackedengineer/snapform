@@ -2,6 +2,7 @@ import type { FormEvaluation } from '@snapform/contracts/evaluate';
 import type { Answer } from '@snapform/contracts/answers';
 import type { Field } from '@snapform/contracts/form';
 import { formatResponseAnswer } from '@snapform/contracts/response-display';
+import { fileNames } from '@snapform/contracts/uploads';
 import type { CollectionStep } from './steps';
 export type ReviewRow = {
   id: string;
@@ -15,16 +16,20 @@ export type ReviewSection = {
   title: string;
   rows: ReviewRow[];
 };
-function readable(field: Field, answer: Answer | undefined) {
+type Named = readonly { id: string; name: string }[];
+function readable(field: Field, answer: Answer | undefined, files: Named) {
   if (!answer || answer.state !== 'value')
     return answer?.state === 'refused'
       ? 'Prefer not to answer'
       : 'Not answered';
-  return formatResponseAnswer(field, answer);
+  return field.type === 'file'
+    ? fileNames(answer.value, files)
+    : formatResponseAnswer(field, answer);
 }
 export function reviewSections(
   steps: CollectionStep[],
   evaluation: Extract<FormEvaluation, { ok: true }>,
+  files: Named = [],
 ) {
   const sections: ReviewSection[] = [];
   steps.forEach((step, stepIndex) => {
@@ -41,7 +46,7 @@ export function reviewSections(
       section.rows.push({
         id: block.id,
         label: block.label,
-        answer: readable(block, evaluation.answers[block.id]),
+        answer: readable(block, evaluation.answers[block.id], files),
         stepIndex,
         ...(issue ? { issue } : {}),
       });
