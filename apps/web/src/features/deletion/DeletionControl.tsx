@@ -7,7 +7,11 @@ import type {
 } from '@snapform/contracts/deletion';
 import { fetchDeletion, scheduleDeletion, cancelDeletion } from './api';
 import { DeletionForm } from './DeletionForm';
-import { deletionKey, cacheConfirmedDeletion } from './deletion-cache';
+import {
+  deletionKey,
+  cacheConfirmedDeletion,
+  refreshAfterDeletion,
+} from './deletion-cache';
 import './deletion.css';
 type Props = {
   userId: string;
@@ -74,8 +78,10 @@ function ManagedDeletion({ userId, workspaceId, target, confirmation }: Props) {
         value,
         active,
       )
-    )
+    ) {
       requestAnimationFrame(() => status.current?.focus());
+      void refreshAfterDeletion(client, userId, workspaceId, target);
+    }
   }
   const schedule = useMutation({
     mutationFn: (input: unknown) => scheduleDeletion(workspaceId, input),
