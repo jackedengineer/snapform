@@ -8,20 +8,25 @@ import {
   usageFields,
 } from './billing.ts';
 import type { BillingSummary } from './billing.ts';
+import type { BillingCurrency } from './plans.ts';
 // What public.workspace_billing returns for a member of the scoped workspace.
 export const billingRecordSchema = z.strictObject({
   ...usageFields,
   subscriptionId: z.nullable(subscriptionIdSchema),
 });
 export type BillingRecord = z.infer<typeof billingRecordSchema>;
-/** The member-visible projection; provider identifiers never leave the API. */
+/**
+ * The member-visible projection; provider identifiers never leave the API.
+ * `currencies` lists what checkout offers; empty means billing isn't configured.
+ */
 export function billingSummary(
   record: BillingRecord,
-  configured: boolean,
+  currencies: readonly BillingCurrency[],
 ): BillingSummary {
   const summary: Record<string, unknown> = {
     ...record,
-    configured,
+    configured: currencies.length > 0,
+    currencies: [...currencies],
     features: features(record.plan),
   };
   delete summary.subscriptionId;

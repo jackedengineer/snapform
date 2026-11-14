@@ -36,6 +36,8 @@ export const usageFields = {
 export const billingSummarySchema = z.strictObject({
   ...usageFields,
   configured: z.boolean(),
+  /** Currencies with Razorpay plans in the server's current mode; INR first. */
+  currencies: z.array(currencySchema).check(z.maxLength(2)),
   features: z.strictObject({
     branding: z.boolean(),
     uploads: z.boolean(),
@@ -49,8 +51,12 @@ export const checkoutInputSchema = z.strictObject({
   currency: currencySchema,
 });
 export type CheckoutInput = z.infer<typeof checkoutInputSchema>;
-// Test mode only: a live key is never accepted by the browser either.
+/** Public pricing options: what the pricing page may offer before sign-in. */
+export const billingOptionsSchema = z.strictObject({
+  currencies: z.array(currencySchema).check(z.maxLength(2)),
+});
+// The server chooses test or live mode (see razorpay.ts); either public key opens Checkout.
 export const checkoutSchema = z.strictObject({
-  key: z.string().check(z.regex(/^rzp_test_[A-Za-z0-9]{1,40}$/)),
+  key: z.string().check(z.regex(/^rzp_(?:test|live)_[A-Za-z0-9]{1,40}$/)),
   subscriptionId: subscriptionIdSchema,
 });

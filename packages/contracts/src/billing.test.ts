@@ -53,16 +53,18 @@ it('reads the database projection strictly', () => {
 it('projects a summary without provider identifiers and adds plan features', () => {
   const summary = billingSummary(
     { ...record, subscriptionId: 'sub_00000000000001' },
-    true,
+    ['INR'],
   );
   expect(summary).not.toHaveProperty('subscriptionId');
   expect(summary).toMatchObject({
     configured: true,
+    currencies: ['INR'],
     features: { badgeRequired: true, branding: false },
   });
   expect(billingSummarySchema.parse(summary)).toEqual(summary);
-  expect(billingSummary({ ...record, plan: 'pro' }, false)).toMatchObject({
+  expect(billingSummary({ ...record, plan: 'pro' }, [])).toMatchObject({
     configured: false,
+    currencies: [],
     features: { badgeRequired: false, embed: true },
   });
 });
@@ -84,10 +86,16 @@ it('accepts only offered intervals and currencies for checkout', () => {
       subscriptionId: 'sub_00000000000001',
     }).success,
   ).toBe(true);
+  // The server decides the mode; the browser accepts either kind of key.
   expect(
     checkoutSchema.safeParse({
       key: 'rzp_live_abc123',
       subscriptionId: 'sub_00000000000001',
     }).success,
-  ).toBe(false);
+  ).toBe(true);
+  for (const key of ['rzp_abc123', 'rzp_prod_abc123', 'sk_live_abc123'])
+    expect(
+      checkoutSchema.safeParse({ key, subscriptionId: 'sub_00000000000001' })
+        .success,
+    ).toBe(false);
 });

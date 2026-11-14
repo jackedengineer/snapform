@@ -17,7 +17,11 @@ function PlanActions({
   refresh: () => Promise<{ data?: BillingSummary }>;
 }) {
   const [interval, setInterval] = useState(billing.interval ?? 'monthly'),
-    [currency, setCurrency] = useState(billing.currency ?? 'INR'),
+    [currency, setCurrency] = useState(
+      billing.currency && billing.currencies.includes(billing.currency)
+        ? billing.currency
+        : 'INR',
+    ),
     [busy, setBusy] = useState(false),
     [confirming, setConfirming] = useState(false),
     [message, setMessage] = useState('');
@@ -118,6 +122,7 @@ function PlanActions({
           <PlanChoices
             interval={interval}
             currency={currency}
+            currencies={billing.currencies}
             onInterval={setInterval}
             onCurrency={setCurrency}
           />

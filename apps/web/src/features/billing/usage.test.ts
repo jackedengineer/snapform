@@ -19,6 +19,7 @@ const free: BillingSummary = {
   seatLimit: 1,
   resetsAt: '2026-12-01T00:00:00.000Z',
   configured: true,
+  currencies: ['INR'],
   features: {
     branding: false,
     uploads: false,

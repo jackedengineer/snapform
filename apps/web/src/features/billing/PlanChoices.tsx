@@ -40,6 +40,8 @@ function Choices<T extends string>(props: {
 export function PlanChoices(props: {
   interval: BillingInterval;
   currency: BillingCurrency;
+  /** Currencies with plans; the toggle appears only when there is a choice. */
+  currencies: readonly BillingCurrency[];
   onInterval: (value: BillingInterval) => void;
   onCurrency: (value: BillingCurrency) => void;
 }) {
@@ -52,13 +54,17 @@ export function PlanChoices(props: {
         options={intervals}
         onChange={props.onInterval}
       />
-      <Choices
-        legend="Currency"
-        name="currency"
-        value={props.currency}
-        options={currencies}
-        onChange={props.onCurrency}
-      />
+      {props.currencies.length > 1 && (
+        <Choices
+          legend="Currency"
+          name="currency"
+          value={props.currency}
+          options={currencies.filter(([code]) =>
+            props.currencies.includes(code),
+          )}
+          onChange={props.onCurrency}
+        />
+      )}
     </>
   );
 }

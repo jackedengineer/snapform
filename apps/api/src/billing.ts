@@ -25,12 +25,19 @@ export function matchBillingRoute(path: string) {
     match[2] === 'checkout' || match[2] === 'cancel' ? match[2] : 'read';
   return workspaceId.success ? { workspaceId: workspaceId.data, action } : null;
 }
+/** Public: which currencies checkout offers in the current mode, for /pricing. */
+export function billingOptions(_req: Request, res: Response) {
+  const environment = requestScope.getStore()?.environment;
+  if (!environment) throw new Error('Request context is required.');
+  res.json({ currencies: razorpayConfig(environment)?.currencies ?? [] });
+}
 export const billingFailures = new Map([
   ['WORKSPACE_NOT_FOUND', 404],
   ['FORBIDDEN', 403],
   ['WORKSPACE_DELETION_PENDING', 409],
   ['BILLING_ALREADY_ACTIVE', 409],
   ['BILLING_NOT_ACTIVE', 409],
+  ['BILLING_CURRENCY_UNAVAILABLE', 422],
   ['BILLING_PROVIDER_UNAVAILABLE', 502],
   ['BILLING_NOT_CONFIGURED', 503],
 ]);
@@ -54,7 +61,7 @@ export async function handleBillingRequest(
   try {
     if (route.action === 'read') {
       const record = await getBilling(db, actor, workspaceId);
-      res.json({ billing: billingSummary(record, config !== null) });
+      res.json({ billing: billingSummary(record, config?.currencies ?? []) });
       return;
     }
     const input =
@@ -66,6 +73,8 @@ export async function handleBillingRequest(
       return;
     }
     if (!config) throw Error('BILLING_NOT_CONFIGURED');
+    if (input?.success && !config.currencies.includes(input.data.currency))
+      throw Error('BILLING_CURRENCY_UNAVAILABLE');
     // Authorize and read before any provider call; no transaction stays open
     // across the Razorpay request.
     const record = await getBilling(db, actor, workspaceId);
@@ -100,7 +109,10 @@ export async function handleBillingRequest(
     await cancelSubscription(config, record.subscriptionId);
     await markCancellation(db, actor, workspaceId, record.subscriptionId);
     res.json({
-      billing: billingSummary(await getBilling(db, actor, workspaceId), true),
+      billing: billingSummary(
+        await getBilling(db, actor, workspaceId),
+        config.currencies,
+      ),
     });
   } catch (error) {
     const status =

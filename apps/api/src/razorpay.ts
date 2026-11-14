@@ -1,15 +1,15 @@
-import type {
-  BillingCurrency,
-  BillingInterval,
-} from '@snapform/contracts/plans';
 import {
   subscriptionIdSchema,
   type CheckoutInput,
 } from '@snapform/contracts/billing';
-import { createdSubscriptionSchema } from '@snapform/contracts/razorpay';
+import {
+  createdSubscriptionSchema,
+  razorpaySettings,
+  type RazorpayConfig,
+} from '@snapform/contracts/razorpay';
 import type { AuthEnvironment } from './environment.ts';
 
-// Razorpay Subscriptions API, test mode. Docs:
+// Razorpay Subscriptions API, in the configured test or live mode. Docs:
 // https://razorpay.com/docs/api/payments/subscriptions/create-subscription/
 // https://razorpay.com/docs/api/payments/subscriptions/cancel-subscription/
 const subscriptions = 'https://api.razorpay.com/v1/subscriptions';
@@ -54,11 +54,14 @@ export function createSubscription(
   workspaceId: string,
   fetcher: typeof fetch = fetch,
 ) {
+  const plan = config.plans[input.interval][input.currency];
+  // USD plans are optional; never send Razorpay an empty plan.
+  if (!plan) return Promise.reject(Error('BILLING_CURRENCY_UNAVAILABLE'));
   return call(
     config,
     subscriptions,
     {
-      plan_id: config.plans[input.interval][input.currency],
+      plan_id: plan,
       // Billing cycles until Razorpay completes it: ten years either way.
       total_count: input.interval === 'annual' ? 10 : 120,
       notes: { workspace_id: workspaceId },
@@ -80,46 +83,14 @@ export function cancelSubscription(
   );
 }
 
-const testKey = /^rzp_test_[A-Za-z0-9]{10,30}$/,
-  planId = /^plan_[A-Za-z0-9]{10,30}$/;
-export type RazorpayConfig = {
-  keyId: string;
-  keySecret: string;
-  webhookSecret: string;
-  plans: Record<BillingInterval, Record<BillingCurrency, string>>;
-};
+export type { RazorpayConfig };
 /**
- * Billing is configured only with a complete test-mode setup. A live key or a
- * placeholder plan leaves it off, so the page says so instead of charging.
+ * Billing is configured only for one explicit RAZORPAY_MODE with matching keys
+ * and that mode's plans (see contracts/razorpay.ts). A mismatch leaves billing
+ * off, so the page says so instead of charging in the wrong mode.
  */
 export function razorpayConfig(
   environment: AuthEnvironment,
 ): RazorpayConfig | null {
-  const {
-    RAZORPAY_KEY_ID: keyId = '',
-    RAZORPAY_KEY_SECRET: keySecret = '',
-    RAZORPAY_WEBHOOK_SECRET: webhookSecret = '',
-    RAZORPAY_PLAN_PRO_MONTHLY_INR: monthlyInr = '',
-    RAZORPAY_PLAN_PRO_MONTHLY_USD: monthlyUsd = '',
-    RAZORPAY_PLAN_PRO_ANNUAL_INR: annualInr = '',
-    RAZORPAY_PLAN_PRO_ANNUAL_USD: annualUsd = '',
-  } = environment;
-  if (
-    !testKey.test(keyId) ||
-    keySecret.length < 8 ||
-    webhookSecret.length < 8 ||
-    ![monthlyInr, monthlyUsd, annualInr, annualUsd].every((id) =>
-      planId.test(id),
-    )
-  )
-    return null;
-  return {
-    keyId,
-    keySecret,
-    webhookSecret,
-    plans: {
-      monthly: { INR: monthlyInr, USD: monthlyUsd },
-      annual: { INR: annualInr, USD: annualUsd },
-    },
-  };
+  return razorpaySettings(environment);
 }

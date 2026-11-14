@@ -1,4 +1,6 @@
-export interface AuthEnvironment {
+import type { RazorpayEnvironment } from '@snapform/contracts/razorpay';
+// Razorpay names (mode, keys, per-mode plans) are in RazorpayEnvironment; see docs/runbooks/billing.md.
+export interface AuthEnvironment extends RazorpayEnvironment {
   DATABASE_URL: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
@@ -8,14 +10,6 @@ export interface AuthEnvironment {
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
   AUTH_ALLOWED_RECIPIENT?: string;
-  // Razorpay test mode only; see razorpay.ts. Secrets come from .dev.vars or Wrangler secrets.
-  RAZORPAY_KEY_ID?: string;
-  RAZORPAY_KEY_SECRET?: string;
-  RAZORPAY_WEBHOOK_SECRET?: string;
-  RAZORPAY_PLAN_PRO_MONTHLY_INR?: string;
-  RAZORPAY_PLAN_PRO_MONTHLY_USD?: string;
-  RAZORPAY_PLAN_PRO_ANNUAL_INR?: string;
-  RAZORPAY_PLAN_PRO_ANNUAL_USD?: string;
   AUTH_RATE_LIMIT: RateLimit;
   WRITE_RATE_LIMIT: RateLimit;
   PRIVATE_IP_RATE_LIMIT: RateLimit;

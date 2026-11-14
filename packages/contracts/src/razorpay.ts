@@ -28,6 +28,81 @@ export async function verifyRazorpaySignature(
   );
   return crypto.subtle.verify('HMAC', key, digest, body);
 }
+export type RazorpayMode = 'test' | 'live';
+export type RazorpayPlans = Record<
+  BillingInterval,
+  Partial<Record<BillingCurrency, string>>
+>;
+/** Environment names read by razorpaySettings; values come from Wrangler vars, secrets or .dev.vars. */
+export interface RazorpayEnvironment {
+  SNAPFORM_ENV?: string;
+  RAZORPAY_MODE?: string;
+  RAZORPAY_KEY_ID?: string;
+  RAZORPAY_KEY_SECRET?: string;
+  RAZORPAY_WEBHOOK_SECRET?: string;
+  // Test-mode plans keep their original names; live plans have their own.
+  RAZORPAY_PLAN_PRO_MONTHLY_INR?: string;
+  RAZORPAY_PLAN_PRO_MONTHLY_USD?: string;
+  RAZORPAY_PLAN_PRO_ANNUAL_INR?: string;
+  RAZORPAY_PLAN_PRO_ANNUAL_USD?: string;
+  RAZORPAY_LIVE_PLAN_PRO_MONTHLY_INR?: string;
+  RAZORPAY_LIVE_PLAN_PRO_MONTHLY_USD?: string;
+  RAZORPAY_LIVE_PLAN_PRO_ANNUAL_INR?: string;
+  RAZORPAY_LIVE_PLAN_PRO_ANNUAL_USD?: string;
+}
+const keys = {
+    test: /^rzp_test_[A-Za-z0-9]{10,30}$/,
+    live: /^rzp_live_[A-Za-z0-9]{10,30}$/,
+  },
+  planId = /^plan_[A-Za-z0-9]{10,30}$/;
+/**
+ * Razorpay credentials for exactly one explicit mode. Test mode needs an
+ * rzp_test_ key; live mode needs an rzp_live_ key and SNAPFORM_ENV=production.
+ * Any mismatch gives null (billing "not configured"), never another mode.
+ */
+export function razorpayCredentials(environment: RazorpayEnvironment) {
+  const mode = environment.RAZORPAY_MODE,
+    keyId = environment.RAZORPAY_KEY_ID ?? '',
+    keySecret = environment.RAZORPAY_KEY_SECRET ?? '';
+  if (mode !== 'test' && mode !== 'live') return null;
+  if (mode === 'live' && environment.SNAPFORM_ENV !== 'production') return null;
+  if (!keys[mode].test(keyId) || keySecret.length < 8) return null;
+  return { mode: mode as RazorpayMode, keyId, keySecret };
+}
+/**
+ * Full API configuration: credentials, webhook secret and the current mode's
+ * plans. INR plans are required. USD is offered only when both USD plans are
+ * set; one USD plan or any malformed plan ID leaves billing unconfigured.
+ */
+export function razorpaySettings(environment: RazorpayEnvironment) {
+  const credentials = razorpayCredentials(environment),
+    webhookSecret = environment.RAZORPAY_WEBHOOK_SECRET ?? '';
+  if (!credentials || webhookSecret.length < 8) return null;
+  const live = credentials.mode === 'live',
+    read = (interval: 'MONTHLY' | 'ANNUAL', code: BillingCurrency) =>
+      environment[
+        `RAZORPAY_${live ? 'LIVE_' : ''}PLAN_PRO_${interval}_${code}`
+      ] ?? '';
+  const inr = [read('MONTHLY', 'INR'), read('ANNUAL', 'INR')],
+    usd = [read('MONTHLY', 'USD'), read('ANNUAL', 'USD')],
+    withUsd = usd.every(Boolean);
+  if (
+    !inr.every((id) => planId.test(id)) ||
+    (withUsd ? !usd.every((id) => planId.test(id)) : usd.some(Boolean))
+  )
+    return null;
+  const plans: RazorpayPlans = {
+    monthly: { INR: inr[0], ...(withUsd ? { USD: usd[0] } : {}) },
+    annual: { INR: inr[1], ...(withUsd ? { USD: usd[1] } : {}) },
+  };
+  return {
+    ...credentials,
+    webhookSecret,
+    currencies: (withUsd ? ['INR', 'USD'] : ['INR']) as BillingCurrency[],
+    plans,
+  };
+}
+export type RazorpayConfig = NonNullable<ReturnType<typeof razorpaySettings>>;
 /** The part of a create or cancel response the API relies on. */
 export const createdSubscriptionSchema = z.object({ id: subscriptionIdSchema });
 const seconds = z.int().check(z.minimum(1), z.maximum(4102444800));
@@ -62,7 +137,7 @@ const at = (value: number | null | undefined) =>
 export function toBillingEvent(
   eventId: string | null,
   raw: unknown,
-  plans: Record<BillingInterval, Record<BillingCurrency, string>>,
+  plans: RazorpayPlans,
 ): BillingEvent | null {
   const parsed = eventSchema.safeParse(raw),
     id = billingEventSchema.shape.id.safeParse(eventId);

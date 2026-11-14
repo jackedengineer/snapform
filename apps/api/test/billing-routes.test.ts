@@ -11,6 +11,8 @@ const workspaceId = crypto.randomUUID();
 const path = `/api/v1/workspaces/${workspaceId}/billing`;
 const origin = 'http://127.0.0.1:5173';
 const testBilling = {
+  SNAPFORM_ENV: 'production',
+  RAZORPAY_MODE: 'test',
   RAZORPAY_KEY_ID: 'rzp_test_SyntheticKey01',
   RAZORPAY_KEY_SECRET: 'synthetic-test-secret',
   RAZORPAY_WEBHOOK_SECRET: 'synthetic-webhook-secret',
@@ -84,11 +86,13 @@ it('maps plan limits to stable codes without leaking database detail', () => {
   expect(billingFailures.get('BILLING_NOT_CONFIGURED')).toBe(503);
 });
 
-it('configures billing only with a complete Razorpay test-mode setup', () => {
+it('configures billing for one explicit Razorpay mode and fails closed otherwise', () => {
   expect(razorpayConfig(environment(testBilling))).toEqual({
+    mode: 'test',
     keyId: testBilling.RAZORPAY_KEY_ID,
     keySecret: testBilling.RAZORPAY_KEY_SECRET,
     webhookSecret: testBilling.RAZORPAY_WEBHOOK_SECRET,
+    currencies: ['INR', 'USD'],
     plans: {
       monthly: { INR: 'plan_SyntheticMonINR', USD: 'plan_SyntheticMonUSD' },
       annual: { INR: 'plan_SyntheticAnnINR', USD: 'plan_SyntheticAnnUSD' },
@@ -96,6 +100,8 @@ it('configures billing only with a complete Razorpay test-mode setup', () => {
   });
   expect(razorpayConfig(environment({}))).toBeNull();
   for (const change of [
+    { RAZORPAY_MODE: undefined },
+    { RAZORPAY_MODE: 'live' },
     { RAZORPAY_KEY_ID: 'rzp_live_SyntheticKey01' },
     { RAZORPAY_KEY_ID: 'rzp_test_replace' },
     { RAZORPAY_KEY_SECRET: '' },
@@ -106,4 +112,15 @@ it('configures billing only with a complete Razorpay test-mode setup', () => {
     expect(
       razorpayConfig(environment({ ...testBilling, ...change })),
     ).toBeNull();
+});
+
+it('offers only the configured currencies on the public pricing options', async () => {
+  const response = await SELF.fetch(origin + '/api/v1/billing/options');
+  expect(response.status).toBe(200);
+  expect(response.headers.get('Cache-Control')).toBe('no-store');
+  expect(await response.json()).toEqual({ currencies: ['INR', 'USD'] });
+  const post = await SELF.fetch(origin + '/api/v1/billing/options', {
+    method: 'POST',
+  });
+  expect(post.status).toBe(404);
 });

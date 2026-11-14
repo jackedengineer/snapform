@@ -17,6 +17,13 @@
     "BETTER_AUTH_URL": "https://snapform.jacked.dev",
     "EMAIL_FROM": "Snapform <no-reply@jacked.dev>",
     "TURNSTILE_SITE_KEY": "0x4AAAAAAFq-UmrCxZJJpkUN",
+    // Live Razorpay billing (docs/runbooks/billing.md). Plan IDs are not
+    // secrets; keys and the webhook secret are Wrangler secrets. Live mode is
+    // refused unless SNAPFORM_ENV is production; local .dev.vars sets test mode.
+    // No USD plans exist, so checkout offers INR only.
+    "RAZORPAY_MODE": "live",
+    "RAZORPAY_LIVE_PLAN_PRO_MONTHLY_INR": "plan_Tzv3aPxiqwY0NV",
+    "RAZORPAY_LIVE_PLAN_PRO_ANNUAL_INR": "plan_Tzv4ZTrM9Fyak0",
   },
   "ratelimits": [
     {

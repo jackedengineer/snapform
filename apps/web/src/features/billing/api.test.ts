@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { cancelPlan, startCheckout } from './api';
+import { cancelPlan, fetchBillingOptions, startCheckout } from './api';
 
 afterEach(() => vi.unstubAllGlobals());
 const workspaceId = '28765529-6337-4512-b148-f735ad07d28b';
@@ -29,9 +29,23 @@ it('starts test-mode checkout with only the chosen interval and currency', async
   });
 });
 
-it('refuses a live key or malformed checkout from the server', async () => {
+it('opens live-mode checkout with a live public key', async () => {
+  const checkout = {
+    key: 'rzp_live_SyntheticKey01',
+    subscriptionId: 'sub_Synthetic000001',
+  };
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(Response.json({ checkout })),
+  );
+  expect(
+    await startCheckout(workspaceId, { interval: 'monthly', currency: 'INR' }),
+  ).toEqual(checkout);
+});
+
+it('refuses a malformed checkout from the server', async () => {
   for (const checkout of [
-    { key: 'rzp_live_SyntheticKey01', subscriptionId: 'sub_Synthetic000001' },
+    { key: 'sk_live_SyntheticKey01', subscriptionId: 'sub_Synthetic000001' },
     { key: 'rzp_test_SyntheticKey01', subscriptionId: 'pay_Synthetic000001' },
   ]) {
     vi.stubGlobal(
@@ -50,6 +64,11 @@ it('turns billing failures into plain explanations', async () => {
     ['BILLING_ALREADY_ACTIVE', 409, 'This workspace already has Pro.'],
     ['FORBIDDEN', 403, 'Only the workspace owner can change the plan.'],
     [
+      'BILLING_CURRENCY_UNAVAILABLE',
+      422,
+      'That currency isn’t available. Choose INR.',
+    ],
+    [
       'BILLING_PROVIDER_UNAVAILABLE',
       502,
       'Razorpay didn’t respond, so nothing changed. Try again.',
@@ -66,4 +85,23 @@ it('turns billing failures into plain explanations', async () => {
   await expect(cancelPlan(workspaceId)).rejects.toThrow(
     'We couldn’t confirm that billing change.',
   );
+});
+
+it('offers INR only unless the server confirms USD plans', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(Response.json({ currencies: ['INR', 'USD'] })),
+  );
+  expect(await fetchBillingOptions()).toEqual(['INR', 'USD']);
+  for (const reply of [
+    Response.json({ currencies: ['INR'] }),
+    Response.json({ currencies: [] }),
+    Response.json({ currencies: ['EUR'] }),
+    Response.json({ error: { code: 'NOT_FOUND' } }, { status: 404 }),
+  ]) {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(reply));
+    expect(await fetchBillingOptions()).toEqual(['INR']);
+  }
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
+  expect(await fetchBillingOptions()).toEqual(['INR']);
 });

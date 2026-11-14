@@ -1,6 +1,10 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { toBillingEvent, verifyRazorpaySignature } from './razorpay.ts';
+import {
+  razorpaySettings,
+  toBillingEvent,
+  verifyRazorpaySignature,
+} from './razorpay.ts';
 
 const secret = 'synthetic-webhook-secret';
 const encode = (value: string) => new TextEncoder().encode(value);
@@ -149,5 +153,123 @@ describe('event mapping', () => {
       payload('subscription.charged', { id: 'plan_wrongKind00001' }),
     ])
       expect(toBillingEvent('evt_Synthetic05', body, plans)).toBeNull();
+  });
+});
+
+describe('mode settings', () => {
+  // Synthetic values only; the live-looking key never reaches Razorpay.
+  const test = {
+    SNAPFORM_ENV: 'development',
+    RAZORPAY_MODE: 'test',
+    RAZORPAY_KEY_ID: 'rzp_test_SyntheticKey01',
+    RAZORPAY_KEY_SECRET: 'synthetic-test-secret',
+    RAZORPAY_WEBHOOK_SECRET: 'synthetic-webhook-secret',
+    RAZORPAY_PLAN_PRO_MONTHLY_INR: 'plan_SyntheticMonINR',
+    RAZORPAY_PLAN_PRO_ANNUAL_INR: 'plan_SyntheticAnnINR',
+  };
+  const live = {
+    SNAPFORM_ENV: 'production',
+    RAZORPAY_MODE: 'live',
+    RAZORPAY_KEY_ID: 'rzp_live_SyntheticKey01',
+    RAZORPAY_KEY_SECRET: 'synthetic-live-secret',
+    RAZORPAY_WEBHOOK_SECRET: 'synthetic-webhook-secret',
+    RAZORPAY_LIVE_PLAN_PRO_MONTHLY_INR: 'plan_SyntheticLiveMon',
+    RAZORPAY_LIVE_PLAN_PRO_ANNUAL_INR: 'plan_SyntheticLiveAnn',
+  };
+  it('reads test keys and test plans in test mode, INR only when USD is unset', () => {
+    expect(razorpaySettings(test)).toEqual({
+      mode: 'test',
+      keyId: test.RAZORPAY_KEY_ID,
+      keySecret: test.RAZORPAY_KEY_SECRET,
+      webhookSecret: test.RAZORPAY_WEBHOOK_SECRET,
+      currencies: ['INR'],
+      plans: {
+        monthly: { INR: 'plan_SyntheticMonINR' },
+        annual: { INR: 'plan_SyntheticAnnINR' },
+      },
+    });
+  });
+  it('offers USD only when both USD plans exist in the current mode', () => {
+    expect(
+      razorpaySettings({
+        ...test,
+        RAZORPAY_PLAN_PRO_MONTHLY_USD: 'plan_SyntheticMonUSD',
+        RAZORPAY_PLAN_PRO_ANNUAL_USD: 'plan_SyntheticAnnUSD',
+      }),
+    ).toMatchObject({
+      currencies: ['INR', 'USD'],
+      plans: {
+        monthly: { INR: 'plan_SyntheticMonINR', USD: 'plan_SyntheticMonUSD' },
+        annual: { INR: 'plan_SyntheticAnnINR', USD: 'plan_SyntheticAnnUSD' },
+      },
+    });
+    // Live mode never borrows test plans, and the reverse.
+    expect(
+      razorpaySettings({
+        ...live,
+        RAZORPAY_PLAN_PRO_MONTHLY_USD: 'plan_SyntheticMonUSD',
+        RAZORPAY_PLAN_PRO_ANNUAL_USD: 'plan_SyntheticAnnUSD',
+      })?.currencies,
+    ).toEqual(['INR']);
+    expect(
+      razorpaySettings({
+        ...test,
+        RAZORPAY_LIVE_PLAN_PRO_MONTHLY_INR: 'plan_SyntheticLiveMon',
+        RAZORPAY_PLAN_PRO_MONTHLY_INR: undefined,
+      }),
+    ).toBeNull();
+  });
+  it('reads live keys and live plans only in production', () => {
+    expect(razorpaySettings(live)).toMatchObject({
+      mode: 'live',
+      keyId: live.RAZORPAY_KEY_ID,
+      plans: {
+        monthly: { INR: 'plan_SyntheticLiveMon' },
+        annual: { INR: 'plan_SyntheticLiveAnn' },
+      },
+    });
+  });
+  it('reports not configured for any mismatch instead of falling back', () => {
+    for (const settings of [
+      {},
+      { ...test, RAZORPAY_MODE: undefined },
+      { ...test, RAZORPAY_MODE: 'TEST' },
+      { ...test, RAZORPAY_MODE: 'sandbox' },
+      { ...test, RAZORPAY_KEY_ID: 'rzp_live_SyntheticKey01' },
+      { ...test, RAZORPAY_KEY_ID: 'rzp_test_replace' },
+      { ...test, RAZORPAY_KEY_SECRET: '' },
+      { ...test, RAZORPAY_WEBHOOK_SECRET: 'short' },
+      { ...test, RAZORPAY_PLAN_PRO_ANNUAL_INR: 'plan_replace' },
+      { ...test, RAZORPAY_PLAN_PRO_MONTHLY_INR: undefined },
+      { ...test, RAZORPAY_PLAN_PRO_MONTHLY_USD: 'plan_SyntheticMonUSD' },
+      {
+        ...test,
+        RAZORPAY_PLAN_PRO_MONTHLY_USD: 'plan_SyntheticMonUSD',
+        RAZORPAY_PLAN_PRO_ANNUAL_USD: 'plan_replace',
+      },
+      { ...live, RAZORPAY_KEY_ID: 'rzp_test_SyntheticKey01' },
+      { ...live, SNAPFORM_ENV: 'development' },
+      { ...live, SNAPFORM_ENV: undefined },
+      { ...live, RAZORPAY_LIVE_PLAN_PRO_ANNUAL_INR: '' },
+    ])
+      expect(razorpaySettings(settings)).toBeNull();
+  });
+  it('matches webhook plans when only INR plans exist', () => {
+    const inrOnly = razorpaySettings(live)?.plans;
+    if (!inrOnly) throw Error('Expected settings');
+    expect(
+      toBillingEvent(
+        'evt_Synthetic06',
+        payload('subscription.charged', { plan_id: 'plan_SyntheticLiveAnn' }),
+        inrOnly,
+      ),
+    ).toMatchObject({ interval: 'annual', currency: 'INR' });
+    expect(
+      toBillingEvent(
+        'evt_Synthetic07',
+        payload('subscription.charged'),
+        inrOnly,
+      ),
+    ).toMatchObject({ interval: null, currency: null });
   });
 });

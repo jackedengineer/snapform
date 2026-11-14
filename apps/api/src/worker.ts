@@ -13,6 +13,7 @@ import { intakeRoutes } from './intake-routes.ts';
 import { handleIntakeFile, matchIntakeFileRoute } from './intake-files.ts';
 import { authFailure, checkAuthRequest } from './auth-boundary.ts';
 import type { AuthEnvironment } from './environment.ts';
+import { billingOptions } from './billing.ts';
 import {
   handleRazorpayWebhook,
   razorpayWebhookPath,
@@ -52,6 +53,7 @@ app.use((req, res, next) => {
   next();
 });
 app.get('/api/v1/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/api/v1/billing/options', billingOptions);
 app.use(authRoutes);
 app.use(publicFormRoutes);
 app.use(intakeRoutes);

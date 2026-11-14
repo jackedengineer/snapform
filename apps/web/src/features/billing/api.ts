@@ -1,8 +1,10 @@
 import {
+  billingOptionsSchema,
   billingSummarySchema,
   checkoutSchema,
   type CheckoutInput,
 } from '@snapform/contracts/billing';
+import type { BillingCurrency } from '@snapform/contracts/plans';
 
 export const billingQueryKey = (userId: string, workspaceId: string) => [
   'billing',
@@ -15,6 +17,7 @@ const failures: Record<string, string> = {
   BILLING_NOT_CONFIGURED: 'Billing isn’t configured yet.',
   BILLING_ALREADY_ACTIVE: 'This workspace already has Pro.',
   FORBIDDEN: 'Only the workspace owner can change the plan.',
+  BILLING_CURRENCY_UNAVAILABLE: 'That currency isn’t available. Choose INR.',
   BILLING_PROVIDER_UNAVAILABLE:
     'Razorpay didn’t respond, so nothing changed. Try again.',
 };
@@ -84,4 +87,30 @@ export async function startCheckout(workspaceId: string, input: CheckoutInput) {
 }
 export async function cancelPlan(workspaceId: string) {
   await change(workspaceId, 'cancel', {});
+}
+/**
+ * Currencies /pricing may show. INR always has plans; USD appears only when the
+ * server confirms USD plans in its current mode, so no toggle leads nowhere.
+ */
+export async function fetchBillingOptions(
+  signal?: AbortSignal,
+): Promise<BillingCurrency[]> {
+  try {
+    const options = billingOptionsSchema.safeParse(
+      await request(
+        '/api/v1/billing/options',
+        {
+          signal: signal
+            ? AbortSignal.any([signal, AbortSignal.timeout(10000)])
+            : AbortSignal.timeout(10000),
+        },
+        '',
+      ),
+    );
+    if (options.success && options.data.currencies.includes('USD'))
+      return ['INR', 'USD'];
+  } catch {
+    // Pricing still shows INR, which every configured mode offers.
+  }
+  return ['INR'];
 }

@@ -14,6 +14,7 @@ import type { AuthEnvironment } from '../src/environment.ts';
 
 // Synthetic test-mode values; the same ones are bound in vitest.config.ts.
 const settings = {
+  RAZORPAY_MODE: 'test',
   RAZORPAY_KEY_ID: 'rzp_test_SyntheticKey01',
   RAZORPAY_KEY_SECRET: 'synthetic-test-secret',
   RAZORPAY_WEBHOOK_SECRET: 'synthetic-webhook-secret',
@@ -156,6 +157,25 @@ describe('Subscriptions API client', () => {
       auth: 'Basic ' + btoa(`${config.keyId}:${config.keySecret}`),
       body: { cancel_at_cycle_end: true },
     });
+  });
+  it('never creates a subscription for a currency without a plan in this mode', async () => {
+    const razorpay = fakeRazorpay();
+    await expect(
+      createSubscription(
+        {
+          ...config,
+          currencies: ['INR'],
+          plans: {
+            monthly: { INR: 'plan_SyntheticMonINR' },
+            annual: { INR: 'plan_SyntheticAnnINR' },
+          },
+        },
+        { interval: 'monthly', currency: 'USD' },
+        workspaceId,
+        razorpay.fetcher,
+      ),
+    ).rejects.toThrow('BILLING_CURRENCY_UNAVAILABLE');
+    expect(razorpay.calls).toEqual([]);
   });
   it('reports provider failures without leaking provider responses', async () => {
     const razorpay = fakeRazorpay();

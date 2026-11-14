@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
   formatMoney,
@@ -7,6 +7,7 @@ import {
   type BillingInterval,
 } from '@snapform/contracts/plans';
 import { PublicInfo } from '../info/PublicInfo';
+import { fetchBillingOptions } from './api';
 import { PlanChoices, proPrice } from './PlanChoices';
 import './billing.css';
 
@@ -14,7 +15,13 @@ const counts = new Intl.NumberFormat('en');
 // Only features that exist today, or are flagged and labelled as coming soon.
 export function Pricing() {
   const [interval, setInterval] = useState<BillingInterval>('monthly'),
-    [currency, setCurrency] = useState<BillingCurrency>('INR');
+    [currency, setCurrency] = useState<BillingCurrency>('INR'),
+    [offered, setOffered] = useState<BillingCurrency[]>(['INR']);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchBillingOptions(controller.signal).then(setOffered);
+    return () => controller.abort();
+  }, []);
   return (
     <PublicInfo
       title="Plans for each workspace."
@@ -23,6 +30,7 @@ export function Pricing() {
       <PlanChoices
         interval={interval}
         currency={currency}
+        currencies={offered}
         onInterval={setInterval}
         onCurrency={setCurrency}
       />
