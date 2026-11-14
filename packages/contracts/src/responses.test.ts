@@ -142,7 +142,14 @@ it('accepts bounded summaries and published versions in response pages', () => {
     nextCursor: null,
   };
   expect(responsePageSchema.parse(page)).toEqual(page);
+  // Servers since migration 0045 mark responses awaiting deletion.
+  const marked = {
+    ...page,
+    responses: [{ ...row, deletionPending: true }],
+  };
+  expect(responsePageSchema.parse(marked)).toEqual(marked);
   for (const forged of [
+    { ...page, responses: [{ ...row, deletionPending: 'yes' }] },
     { ...page, responses: [{ ...row, preview: 'x'.repeat(121) }] },
     { ...page, responses: [{ ...row, respondent: '' }] },
     { ...page, responses: [{ ...row, answers: {} }] },

@@ -266,8 +266,15 @@ export function ResponseInbox({
                           <span className="response-respondent">
                             {response.respondent ?? anonymous}
                           </span>
-                          {opened && !opened.has(response.id) && (
-                            <span className="response-new">New</span>
+                          {response.deletionPending ? (
+                            <span className="response-new response-deleting">
+                              Scheduled for deletion
+                            </span>
+                          ) : (
+                            opened &&
+                            !opened.has(response.id) && (
+                              <span className="response-new">New</span>
+                            )
                           )}
                         </span>
                         {response.preview && (

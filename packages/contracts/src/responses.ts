@@ -76,7 +76,14 @@ const summaryText = z.nullable(
 export const responsePageSchema = z.strictObject({
   title: formDefinitionSchema.shape.title,
   responses: z
-    .array(z.extend(summary, { respondent: summaryText, preview: summaryText }))
+    .array(
+      z.extend(summary, {
+        respondent: summaryText,
+        preview: summaryText,
+        // Absent from servers that predate migration 0045.
+        deletionPending: z.optional(z.boolean()),
+      }),
+    )
     .check(z.maxLength(20)),
   versions: z
     .array(

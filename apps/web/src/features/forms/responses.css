@@ -80,6 +80,11 @@
   font-size: 0.75rem;
   font-weight: 600;
 }
+.response-deleting {
+  border: 1px solid var(--border-default);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+}
 .response-preview {
   overflow: hidden;
   color: var(--text-secondary);
