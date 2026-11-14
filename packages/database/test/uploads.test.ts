@@ -9,6 +9,7 @@ import { startIntake, mutateIntake, getIntake } from '../src/intake.ts';
 import { applyBillingEvent } from '../src/billing.ts';
 import { getResponse } from '../src/responses.ts';
 import { getResponseExport } from '../src/response-export.ts';
+import { scheduleDeletion } from '../src/deletion.ts';
 import {
   authorizeUpload,
   discardUnreferencedUploads,
@@ -385,6 +386,37 @@ it(
           mine.id,
         ),
       ).rejects.toThrow('WORKSPACE_NOT_FOUND');
+      // A response awaiting deletion (0045) no longer serves its files.
+      await scheduleDeletion(
+        tx,
+        seed.actor,
+        seed.workspaceId,
+        { kind: 'response', targetId: session },
+        {
+          requestId: crypto.randomUUID(),
+          confirmation: 'DELETE',
+          acknowledgeDeletion: true,
+        },
+      );
+      await expect(
+        getResponseFile(
+          tx,
+          seed.actor,
+          seed.workspaceId,
+          seed.formId,
+          session,
+          mine.id,
+        ),
+      ).rejects.toThrow('FILE_NOT_FOUND');
+      expect(
+        await listResponseFiles(
+          tx,
+          seed.actor,
+          seed.workspaceId,
+          seed.formId,
+          session,
+        ),
+      ).toEqual([]);
     }),
   40000,
 );

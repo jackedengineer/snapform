@@ -151,6 +151,7 @@ export async function readResponseFiles(
       from public.response_file f
       where f.workspace_id=${workspaceId}::uuid and f.form_id=${formId}::uuid
         and f.session_id in ${sessionIds.map((id) => identity.parse(id))}
+        and not public.response_deletion_pending(f.workspace_id,f.session_id)
       order by f.created_at,f.id`,
   );
   const grouped = new Map<string, Record<string, unknown>[]>(
@@ -199,7 +200,8 @@ export async function getResponseFile(
     } = await tx.execute<Record<string, unknown>>(
       sql`select f.object_key,f.name,f.content_type,f.size from public.response_file f
         where f.workspace_id=${workspaceId}::uuid and f.form_id=${formId}::uuid
-          and f.session_id=${responseId}::uuid and f.id=${fileId}::uuid`,
+          and f.session_id=${responseId}::uuid and f.id=${fileId}::uuid
+          and not public.response_deletion_pending(f.workspace_id,f.session_id)`,
     );
     if (
       !row ||
