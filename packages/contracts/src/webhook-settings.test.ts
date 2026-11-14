@@ -62,6 +62,27 @@ it('accepts verified state while rejecting leaked signing material and impossibl
     { ...saved, url: null },
   ])
     expect(webhookSettingsSchema.safeParse(value).success).toBe(false);
+  // A stored endpoint that can no longer be used comes back without its URL.
+  const unusable = {
+    ...saved,
+    enabled: true,
+    verifiedAt: '2026-10-30T00:00:00.000Z',
+    url: null,
+    attention: 'DESTINATION_UNAVAILABLE',
+  };
+  expect(webhookSettingsSchema.parse(unusable)).toEqual(unusable);
+  expect(webhookSettingsSchema.parse({ ...saved, attention: null })).toEqual({
+    ...saved,
+    attention: null,
+  });
+  for (const value of [
+    { ...unusable, url: saved.url },
+    { ...unusable, attention: 'SOMETHING_ELSE' },
+    { ...absent, attention: 'DESTINATION_UNAVAILABLE' },
+    { ...unusable, verifiedAt: null },
+    { ...saved, url: null, attention: null },
+  ])
+    expect(webhookSettingsSchema.safeParse(value).success).toBe(false);
   const secret = 'whsec_' + Buffer.alloc(32, 7).toString('base64');
   expect(webhookSecretSchema.parse({ secret })).toEqual({ secret });
   expect(webhookSecretSchema.safeParse({ secret: 'invalid' }).success).toBe(

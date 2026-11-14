@@ -47,8 +47,9 @@ export function matchWebhookRoute(path: string): WebhookRoute | null {
       }
     : null;
 }
-// The shared contract cannot describe an endpoint that must be replaced yet,
-// so that state is an explicit allowlist; everything else matches the contract.
+// An endpoint that must be replaced is returned without its stored value.
+// attention is sent only when set, so browsers built before it still parse
+// every healthy response.
 export function webhookSettingsBody({
   attention,
   ...settings
@@ -60,15 +61,9 @@ export function webhookSettingsBody({
   verifiedAt: string | null;
   attention: 'DESTINATION_UNAVAILABLE' | null;
 }) {
-  if (!attention) return webhookSettingsSchema.parse(settings);
-  return {
-    enabled: settings.enabled,
-    revision: settings.revision,
-    configurationId: settings.configurationId,
-    url: null,
-    verifiedAt: settings.verifiedAt,
-    attention,
-  };
+  return webhookSettingsSchema.parse(
+    attention ? { ...settings, url: null, attention } : settings,
+  );
 }
 export async function handleWebhookRequest(
   req: Request,

@@ -34,6 +34,10 @@ export const webhookSettingsSchema = z
     configurationId: z.nullable(z.uuid()),
     url: z.nullable(z.string().check(z.maxLength(2048))),
     verifiedAt: z.nullable(z.iso.datetime()),
+    // A saved endpoint that can no longer be read or used (for example after
+    // a key rotation or a new target rule). Its URL is never returned, and
+    // the owner must enter a new one. Absent from older servers.
+    attention: z.optional(z.nullable(z.literal('DESTINATION_UNAVAILABLE'))),
   })
   .check(
     z.refine((value) =>
@@ -41,9 +45,10 @@ export const webhookSettingsSchema = z
         ? !value.enabled &&
           value.configurationId === null &&
           value.url === null &&
-          value.verifiedAt === null
+          value.verifiedAt === null &&
+          !value.attention
         : value.configurationId !== null &&
-          value.url !== null &&
+          (value.attention ? value.url === null : value.url !== null) &&
           (!value.enabled || value.verifiedAt !== null),
     ),
   );
