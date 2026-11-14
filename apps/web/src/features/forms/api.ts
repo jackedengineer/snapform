@@ -114,7 +114,7 @@ export async function request<T>(
           : code === 'LIVE_FORM_LIMIT'
             ? 'Free workspaces can have 3 live forms. Stop collecting on one, or upgrade to Pro in Plan and billing.'
             : code === 'UPLOADS_REQUIRE_PRO'
-              ? 'File upload questions need Pro. Upgrade in Plan and billing, or remove the question.'
+              ? 'File upload questions need Pro. Remove the question, or upgrade to Pro in Plan and billing.'
               : 'This operation conflicts with saved changes. Review the saved version before trying again.',
       );
     }

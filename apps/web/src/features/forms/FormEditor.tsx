@@ -516,26 +516,24 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
                     id="question-palette"
                     data-open={pickerOpen}
                   >
-                    {Object.entries(blockNames)
-                      .filter(([value]) => value !== 'file')
-                      .map(([value, label]) => (
-                        <button
-                          type="button"
-                          key={value}
-                          disabled={
-                            value === 'heading' || value === 'help'
-                              ? blocks.length - answerCount >= 100
-                              : answerCount >= 50
-                          }
-                          onClick={() => {
-                            add(value as Block['type']);
-                            setPickerOpen(false);
-                          }}
-                        >
-                          <span aria-hidden="true">+</span>{' '}
-                          {value === 'acknowledgment' ? 'Consent' : label}
-                        </button>
-                      ))}
+                    {Object.entries(blockNames).map(([value, label]) => (
+                      <button
+                        type="button"
+                        key={value}
+                        disabled={
+                          value === 'heading' || value === 'help'
+                            ? blocks.length - answerCount >= 100
+                            : answerCount >= 50
+                        }
+                        onClick={() => {
+                          add(value as Block['type']);
+                          setPickerOpen(false);
+                        }}
+                      >
+                        <span aria-hidden="true">+</span>{' '}
+                        {value === 'acknowledgment' ? 'Consent' : label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}

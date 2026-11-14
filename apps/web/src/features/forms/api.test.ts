@@ -300,6 +300,6 @@ it('explains that file questions need Pro', async () => {
   ).rejects.toMatchObject({
     code: 'conflict',
     message:
-      'File upload questions need Pro. Upgrade in Plan and billing, or remove the question.',
+      'File upload questions need Pro. Remove the question, or upgrade to Pro in Plan and billing.',
   });
 });

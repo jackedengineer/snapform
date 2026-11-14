@@ -234,10 +234,6 @@ function SettingsDialog({
                 </option>
               ))}
             </select>
-            <p className="field-help">
-              Files remain private. Upload checks and scanning are required
-              before publication.
-            </p>
           </div>
         )}
         {error && (

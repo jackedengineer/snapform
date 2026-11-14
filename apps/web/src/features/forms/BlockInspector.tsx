@@ -146,8 +146,8 @@ export function BlockInspector({
       <AnswerSettings key={block.id} block={block} onChange={onChange} />
       {block.type === 'file' && (
         <p className="field-help">
-          Files stay private and require validation and scanning before they can
-          be used. AI reading is disabled.
+          File upload questions need Pro. Files stay private, up to 25 MB each.{' '}
+          <a href="../billing">Plan and billing</a>
         </p>
       )}
     </section>
