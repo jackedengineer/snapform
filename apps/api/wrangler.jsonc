@@ -8,6 +8,10 @@
   "workers_dev": false,
   "preview_urls": false,
   "services": [{ "binding": "JOBS", "service": "snapform-jobs" }],
+  // Private respondent uploads: no public access, no custom domain, no r2.dev.
+  // Objects are keyed workspace/form/session/<random> and downloaded only
+  // through authenticated API routes as attachments.
+  "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "snapform-uploads" }],
   "vars": {
     "SNAPFORM_ENV": "production",
     "BETTER_AUTH_URL": "https://snapform.jacked.dev",

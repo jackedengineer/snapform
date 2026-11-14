@@ -3,9 +3,16 @@ import type { UploadType } from './uploads.ts';
 // Server-side upload checks. They never trust the declared type or name:
 // every allowed type has a byte-level check, and names are display text only.
 export type UploadKind = 'signature' | 'office' | 'text';
+export type OfficeType = Extract<
+  UploadType,
+  `${string}openxmlformats${string}`
+>;
+export function isOfficeType(type: UploadType): type is OfficeType {
+  return type.includes('openxmlformats');
+}
 export function uploadKind(type: UploadType): UploadKind {
   if (type.startsWith('text/')) return 'text';
-  return type.includes('openxmlformats') ? 'office' : 'signature';
+  return isOfficeType(type) ? 'office' : 'signature';
 }
 
 const hidden = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu;
@@ -176,7 +183,6 @@ export function readZipDirectory(
   }
   return null;
 }
-type OfficeType = Extract<UploadType, `${string}openxmlformats${string}`>;
 const officeParts: Record<OfficeType, [part: string, mainType: string]> = {
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [
     'word/document.xml',

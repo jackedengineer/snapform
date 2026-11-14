@@ -77,15 +77,7 @@ async function handlePublicForm(
       res.status(503).json({ error: { code: 'FORM_UNAVAILABLE' } });
       return;
     }
-    // File forms stay unavailable until the real quarantine/scanning slice ships.
-    if (
-      compiled.definition.pages.some((page) =>
-        page.blocks.some((block) => block.type === 'file'),
-      )
-    ) {
-      res.status(503).json({ error: { code: 'FILE_COLLECTION_UNAVAILABLE' } });
-      return;
-    }
+    // File questions are served; uploads themselves need Pro (intake-files.ts).
     res.json(publicFormBody(record, compiled.definition));
   } finally {
     await close();

@@ -13,6 +13,7 @@ import {
   intakeEnvelopeSchema,
 } from '@snapform/contracts/intake';
 import type { IntakeSession } from '@snapform/contracts/intake';
+import { discardUnreferencedUploads } from '@snapform/database/uploads';
 import { compileDefinition } from '@snapform/contracts/compile';
 import { requestScope } from './request-context.ts';
 import { intakeAuthorizationHash } from './intake-capability.ts';
@@ -137,12 +138,6 @@ intakeRoutes.use(async (req, res, next) => {
 function validateSession(session: IntakeSession) {
   if (!compileDefinition(session.definition).ok)
     throw new Error('INTAKE_UNAVAILABLE');
-  if (
-    session.definition.pages.some((page) =>
-      page.blocks.some((block) => block.type === 'file'),
-    )
-  )
-    throw new Error('FILE_COLLECTION_UNAVAILABLE');
   return session;
 }
 async function handleIntake(
@@ -206,6 +201,17 @@ async function handleIntake(
         mutation.data,
       );
       res.json({ receipt });
+      // Files the final answers left out go now, after the response; any that
+      // survive a failure here are deleted with the response by purge.
+      if (
+        route.kind === 'submit' &&
+        Object.values(mutation.data.answers).some(
+          (answer) => answer.state === 'value' && Array.isArray(answer.value),
+        )
+      )
+        scope.context.waitUntil(
+          discardFiles(settings, route.publicId, route.id, hash),
+        );
       return;
     }
     const session =
@@ -233,17 +239,31 @@ async function handleIntake(
       res.status(409).json({ error: { code: error.message } });
       return;
     }
-    if (
-      error instanceof Error &&
-      ['INTAKE_UNAVAILABLE', 'FILE_COLLECTION_UNAVAILABLE'].includes(
-        error.message,
-      )
-    )
-      res
-        .status(error.message === 'INTAKE_UNAVAILABLE' ? 404 : 503)
-        .json({ error: { code: error.message } });
+    if (error instanceof Error && error.message === 'INTAKE_UNAVAILABLE')
+      res.status(404).json({ error: { code: error.message } });
     else throw error;
   } finally {
     await close();
+  }
+}
+async function discardFiles(
+  settings: { DATABASE_URL: string; UPLOADS?: R2Bucket },
+  publicId: string,
+  sessionId: string,
+  hash: string,
+) {
+  const bucket = settings.UPLOADS;
+  if (!bucket) return;
+  try {
+    const { db, close } = await openDatabase(settings.DATABASE_URL);
+    let keys: string[];
+    try {
+      keys = await discardUnreferencedUploads(db, publicId, sessionId, hash);
+    } finally {
+      await close();
+    }
+    if (keys.length) await bucket.delete(keys);
+  } catch {
+    console.error(JSON.stringify({ event: 'intake_file_discard_failed' }));
   }
 }

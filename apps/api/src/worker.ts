@@ -10,6 +10,7 @@ import {
 import { publicFormRoutes } from './public-form.ts';
 import { intakeConfigRoutes } from './intake-config.ts';
 import { intakeRoutes } from './intake-routes.ts';
+import { handleIntakeFile, matchIntakeFileRoute } from './intake-files.ts';
 import { authFailure, checkAuthRequest } from './auth-boundary.ts';
 import type { AuthEnvironment } from './environment.ts';
 import {
@@ -135,6 +136,9 @@ export default {
     // Raw body and provider signature, so this never passes through Express parsers.
     if (new URL(request.url).pathname === razorpayWebhookPath)
       return handleRazorpayWebhook(request, environment);
+    // Respondent files stream to R2 without passing through Express.
+    const fileRoute = matchIntakeFileRoute(new URL(request.url).pathname);
+    if (fileRoute) return handleIntakeFile(request, fileRoute, { environment });
     if (new URL(request.url).pathname.startsWith('/api/auth/')) {
       const checked = await checkAuthRequest(
         request,
