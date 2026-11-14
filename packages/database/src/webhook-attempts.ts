@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import type { WebhookOutcome } from '@snapform/contracts/webhook-protocol';
 import type { WebhookContext } from '@snapform/contracts/webhook-crypto';
 import type { ResponseDetail } from '@snapform/contracts/responses';
+import type { WebhookSnapshot } from '@snapform/contracts/webhook-payload';
 import { responseEventMessageSchema } from '@snapform/contracts/response-event';
 import {
   hasFileQuestion,
@@ -19,7 +20,7 @@ export type WebhookClaim = WebhookContext & {
   sealedDestination: string;
   attempts: number;
   createdAt: string;
-  snapshot: ResponseDetail | null;
+  snapshot: WebhookSnapshot | null;
 };
 export async function claimWebhooks(
   db: Database | Transaction,

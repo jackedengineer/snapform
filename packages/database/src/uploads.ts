@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import {
   capabilityHashSchema,
   intakeEnvelopeSchema,
@@ -11,7 +11,6 @@ import {
 import type { UploadType } from '@snapform/contracts/uploads';
 import type { Database, Transaction } from './client.ts';
 import { inWorkspace } from './workspaces.ts';
-import { responseFile } from './upload-schema.ts';
 type Connection = Database | Transaction;
 const identity = intakeEnvelopeSchema.shape.session.shape.id;
 const keyPattern =
@@ -147,31 +146,38 @@ export async function readResponseFiles(
   sessionIds: string[],
 ) {
   if (!sessionIds.length) return new Map<string, ReturnType<typeof fileRows>>();
-  const rows = await tx
-    .select({
-      sessionId: responseFile.sessionId,
-      id: responseFile.id,
-      question_id: responseFile.questionId,
-      name: responseFile.name,
-      size: responseFile.size,
-      content_type: responseFile.contentType,
-    })
-    .from(responseFile)
-    .where(
-      and(
-        eq(responseFile.workspaceId, workspaceId),
-        eq(responseFile.formId, formId),
-        inArray(responseFile.sessionId, sessionIds),
-      ),
-    )
-    .orderBy(asc(responseFile.createdAt), asc(responseFile.id));
-  const grouped = new Map<string, typeof rows>(
+  const { rows } = await tx.execute<Record<string, unknown>>(
+    sql`select f.session_id,f.id,f.question_id,f.name,f.size,f.content_type
+      from public.response_file f
+      where f.workspace_id=${workspaceId}::uuid and f.form_id=${formId}::uuid
+        and f.session_id in ${sessionIds.map((id) => identity.parse(id))}
+      order by f.created_at,f.id`,
+  );
+  const grouped = new Map<string, Record<string, unknown>[]>(
     sessionIds.map((id) => [id, []]),
   );
-  for (const row of rows) grouped.get(row.sessionId)?.push(row);
+  for (const row of rows) grouped.get(String(row.session_id))?.push(row);
   return new Map(
     [...grouped].map(([id, files]) => [id, fileRows(files)] as const),
   );
+}
+/** A submitted response's files for a member; empty when there are none. */
+export async function listResponseFiles(
+  db: Connection,
+  actor: string,
+  workspaceId: string,
+  formId: string,
+  responseId: string,
+) {
+  workspaceId = identity.parse(workspaceId);
+  formId = identity.parse(formId);
+  responseId = identity.parse(responseId);
+  return inWorkspace(db, actor, workspaceId, 'responses.read', async (tx) => {
+    const files = await readResponseFiles(tx, workspaceId, formId, [
+      responseId,
+    ]);
+    return files.get(responseId) ?? [];
+  });
 }
 /** One stored file for a member who may read responses. */
 export async function getResponseFile(
@@ -187,23 +193,26 @@ export async function getResponseFile(
   responseId = identity.parse(responseId);
   fileId = identity.parse(fileId);
   return inWorkspace(db, actor, workspaceId, 'responses.read', async (tx) => {
-    const [row] = await tx
-      .select({
-        key: responseFile.objectKey,
-        name: responseFile.name,
-        type: responseFile.contentType,
-        size: responseFile.size,
-      })
-      .from(responseFile)
-      .where(
-        and(
-          eq(responseFile.workspaceId, workspaceId),
-          eq(responseFile.formId, formId),
-          eq(responseFile.sessionId, responseId),
-          eq(responseFile.id, fileId),
-        ),
-      );
-    if (!row || !keyPattern.test(row.key)) throw Error('FILE_NOT_FOUND');
-    return { ...row, type: uploadTypeSchema.parse(row.type) };
+    // RLS adds membership and the submitted state of the response.
+    const {
+      rows: [row],
+    } = await tx.execute<Record<string, unknown>>(
+      sql`select f.object_key,f.name,f.content_type,f.size from public.response_file f
+        where f.workspace_id=${workspaceId}::uuid and f.form_id=${formId}::uuid
+          and f.session_id=${responseId}::uuid and f.id=${fileId}::uuid`,
+    );
+    if (
+      !row ||
+      typeof row.object_key !== 'string' ||
+      !keyPattern.test(row.object_key)
+    )
+      throw Error('FILE_NOT_FOUND');
+    const [file] = fileRows([{ ...row, id: fileId, question_id: fileId }]);
+    return {
+      key: row.object_key,
+      name: file.name,
+      type: file.type,
+      size: file.size,
+    };
   });
 }

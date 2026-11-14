@@ -11,6 +11,10 @@ import {
   handleNotificationRequest,
 } from './notifications.ts';
 import { matchResponsesRoute, handleResponsesRequest } from './responses.ts';
+import {
+  matchResponseFilesRoute,
+  handleResponseFiles,
+} from './response-files.ts';
 import type { Request, Response, RequestHandler } from 'express';
 import type { Database } from '@snapform/database';
 import { handleWorkspaceRequest, workspacePath } from './workspaces.ts';
@@ -31,6 +35,7 @@ export function isPrivatePath(path: string) {
     matchFormsRoute(path) !== null ||
     matchPublicationRoute(path) !== null ||
     matchResponsesRoute(path) !== null ||
+    matchResponseFilesRoute(path) !== null ||
     matchResponseExportRoute(path) !== null ||
     matchNotificationRoute(path) !== null ||
     matchWebhookRoute(path) !== null ||
@@ -87,6 +92,7 @@ export async function handlePrivateRequest(
   const webhookRoute = matchWebhookRoute(req.path);
   const exportRoute = matchResponseExportRoute(req.path);
   const responseRoute = matchResponsesRoute(req.path);
+  const filesRoute = matchResponseFilesRoute(req.path);
   const notificationRoute = matchNotificationRoute(req.path);
   const publicationRoute = matchPublicationRoute(req.path);
   const deletionRoute = matchDeletionRoute(req.path);
@@ -136,6 +142,8 @@ export async function handlePrivateRequest(
     await handleNotificationRequest(req, res, db, user.id, notificationRoute);
   } else if (responseRoute) {
     await handleResponsesRequest(req, res, db, user.id, responseRoute);
+  } else if (filesRoute) {
+    await handleResponseFiles(req, res, db, user.id, filesRoute);
   } else if (publicationRoute) {
     await handlePublicationRequest(req, res, db, user.id, publicationRoute);
   } else {

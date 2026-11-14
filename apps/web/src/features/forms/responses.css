@@ -135,6 +135,22 @@
   overflow-wrap: anywhere;
   line-height: 1.65;
 }
+.response-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  white-space: normal;
+}
+.response-files li + li {
+  margin-top: 0.4rem;
+}
+.response-file-name {
+  unicode-bidi: plaintext;
+}
+.response-file-size {
+  color: var(--text-muted);
+  font-size: 13px;
+}
 .response-placeholder {
   padding-block: 3rem;
 }

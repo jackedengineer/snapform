@@ -3,6 +3,7 @@ import type { Field, FormDefinition } from './form.ts';
 import { sessionAnswersSchema } from './intake.ts';
 import type { Answer } from './answers.ts';
 import { formatResponseAnswer } from './response-display.ts';
+import { fileNames } from './uploads.ts';
 import { publishFormSchema } from './publication.ts';
 import { z } from './zod.ts';
 // An export names one published version, with no other query parameters.
@@ -73,16 +74,24 @@ function questionHeaders(fields: Field[]) {
 function answerCell(
   field: Field,
   answer: Answer | undefined,
+  files: ExportRow['files'],
 ): string | number | boolean {
   if (answer?.state === 'refused') return formatResponseAnswer(field, answer);
   if (answer?.state !== 'value') return '';
+  if (field.type === 'file') return fileNames(answer.value, files);
   return typeof answer.value === 'number' || typeof answer.value === 'boolean'
     ? answer.value
     : formatResponseAnswer(field, answer);
 }
+// File cells list names only: never storage keys or download links.
+type ExportRow = {
+  submittedAt: string;
+  answers: Record<string, Answer>;
+  files?: readonly { id: string; name: string }[];
+};
 export function createResponseCsv(
   definition: FormDefinition,
-  rows: { submittedAt: string; answers: Record<string, Answer> }[],
+  rows: ExportRow[],
 ): string {
   if (rows.length > MAX_EXPORT_ROWS) throw Error('EXPORT_TOO_LARGE');
   const fields = formDefinitionSchema
@@ -99,7 +108,7 @@ export function createResponseCsv(
     const answers = sessionAnswersSchema.parse(row.answers);
     const line = [
       submittedCell(row.submittedAt),
-      ...fields.map((field) => answerCell(field, answers[field.id])),
+      ...fields.map((field) => answerCell(field, answers[field.id], row.files)),
     ]
       .map(encodeCsvCell)
       .join(',');

@@ -18,6 +18,8 @@ import { WebhookSettings } from './WebhookSettings';
 import { EmailNotifications } from './EmailNotifications';
 import { DeletionControl } from '../deletion/DeletionControl';
 import { responseReference } from '../intake/reference';
+import { hasFileQuestion } from '@snapform/contracts/uploads';
+import { ResponseFiles, useResponseFiles } from './ResponseFiles';
 const dates = new Intl.DateTimeFormat('en', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -130,6 +132,13 @@ export function ResponseInbox({
     queryFn: ({ signal }) =>
       fetchResponse(workspaceId, formId, selected || '', signal),
   });
+  const files = useResponseFiles(
+    user.id,
+    workspaceId,
+    formId,
+    detail.data?.id,
+    Boolean(detail.data && hasFileQuestion(detail.data.definition)),
+  );
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (detail.data) heading.current?.focus();
@@ -372,9 +381,22 @@ export function ResponseInbox({
                             <div key={block.id}>
                               <dt>{block.label}</dt>
                               <dd>
-                                {formatResponseAnswer(
-                                  block,
-                                  detail.data.answers[block.id],
+                                {block.type === 'file' ? (
+                                  <ResponseFiles
+                                    answer={detail.data.answers[block.id]}
+                                    files={files.data}
+                                    failed={files.isError}
+                                    path={{
+                                      workspaceId,
+                                      formId,
+                                      responseId: detail.data.id,
+                                    }}
+                                  />
+                                ) : (
+                                  formatResponseAnswer(
+                                    block,
+                                    detail.data.answers[block.id],
+                                  )
                                 )}
                               </dd>
                             </div>

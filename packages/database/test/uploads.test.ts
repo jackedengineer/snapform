@@ -13,6 +13,7 @@ import {
   authorizeUpload,
   discardUnreferencedUploads,
   getResponseFile,
+  listResponseFiles,
   listUploads,
   recordUpload,
   removeUpload,
@@ -316,10 +317,27 @@ it(
         seed.formId,
         session,
       );
-      expect(detail.files).toEqual([
+      const files = await listResponseFiles(
+        tx,
+        seed.actor,
+        seed.workspaceId,
+        seed.formId,
+        session,
+      );
+      expect(files).toEqual([
         expect.objectContaining({ id: mine.id, name: 'Brief.pdf' }),
       ]);
-      expect(JSON.stringify(detail)).not.toContain(mine.key);
+      expect(JSON.stringify([detail, files])).not.toContain(mine.key);
+      // An unfinished session lists nothing to members.
+      expect(
+        await listResponseFiles(
+          tx,
+          seed.actor,
+          seed.workspaceId,
+          seed.formId,
+          other,
+        ),
+      ).toEqual([]);
       const exported = await getResponseExport(
         tx,
         seed.actor,

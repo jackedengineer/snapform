@@ -4,7 +4,6 @@ import { formDefinitionSchema } from './form.ts';
 import type { Block, FormDefinition } from './form.ts';
 import { sessionAnswersSchema } from './intake.ts';
 import { roleSchema } from './workspace.ts';
-import { uploadedFilesSchema } from './uploads.ts';
 export const responseQuerySchema = formsQuerySchema;
 export function decodeResponseCursor(token?: string) {
   if (token === undefined) return undefined;
@@ -98,8 +97,6 @@ export const responseDetailSchema = z.strictObject({
   response: z.extend(summary, {
     definition: formDefinitionSchema,
     answers: sessionAnswersSchema,
-    // Metadata only: names, sizes and types, never keys, links or bytes.
-    files: z.optional(uploadedFilesSchema),
   }),
 });
 export type ResponsePage = z.infer<typeof responsePageSchema>;

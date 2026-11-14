@@ -2,6 +2,7 @@ import { compileDefinition } from './compile.ts';
 import { createWebhookPayload } from './webhook-payload.ts';
 import type { FormDefinition } from './form.ts';
 import type { Answer } from './answers.ts';
+import type { UploadedFile } from './uploads.ts';
 
 // A deterministic example; never reads an intake session or existing response.
 export function createWebhookTestPayload(
@@ -12,6 +13,7 @@ export function createWebhookTestPayload(
     const compiled = compileDefinition(version.definition);
     if (!compiled.ok) throw Error();
     const answers: Record<string, Answer> = {};
+    const files: UploadedFile[] = [];
     for (const page of compiled.definition.pages) {
       for (const field of page.blocks) {
         let value: string | number | boolean | string[];
@@ -51,7 +53,16 @@ export function createWebhookTestPayload(
             value = true;
             break;
           case 'file':
-            throw Error();
+            // A described example file; no object exists for it.
+            value = [field.id];
+            files.push({
+              id: field.id,
+              questionId: field.id,
+              name: 'example.pdf',
+              size: 1024,
+              type: 'application/pdf',
+            });
+            break;
         }
         answers[field.id] = { state: 'value', value };
       }
@@ -65,6 +76,7 @@ export function createWebhookTestPayload(
         submittedAt: event.createdAt,
         definition: compiled.definition,
         answers,
+        files,
       },
       true,
     );

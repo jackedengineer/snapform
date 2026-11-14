@@ -111,6 +111,34 @@ it('names downloads from the form title, version and export date', () => {
   for (const name of ['../x.csv', 'a.csv"; x', '-a.csv', 'A.csv', 'a.txt'])
     expect(EXPORT_FILENAME_PATTERN.test(name)).toBe(false);
 });
+it('exports file names, never file identities or links, with formula guards', () => {
+  const { definition } = formFixture();
+  const question = crypto.randomUUID(),
+    [brief, formula] = [crypto.randomUUID(), crypto.randomUUID()];
+  definition.pages[0].blocks.push({
+    id: question,
+    type: 'file',
+    label: 'Attachments',
+    description: '',
+    required: false,
+    aiEnabled: false,
+    maxFiles: 2,
+  });
+  const csv = createResponseCsv(definition, [
+    {
+      submittedAt: '2026-11-13T09:05:00Z',
+      answers: { [question]: { state: 'value', value: [brief, formula] } },
+      files: [
+        { id: brief, name: 'Brief.pdf' },
+        { id: formula, name: '=HYPERLINK("x").csv' },
+      ],
+    },
+  ]);
+  const cells = csv.trim().split('\r\n')[1];
+  expect(cells).toContain(`,"Brief.pdf\n=HYPERLINK(""x"").csv"`);
+  expect(csv).not.toContain(brief);
+  expect(csv).not.toMatch(/https?:/);
+});
 it('rejects excessive export rows and encoded output instead of silently truncating', () => {
   const { definition, ids } = formFixture();
   const row = {
