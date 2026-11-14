@@ -46,9 +46,14 @@ function Home() {
           </span>
           snapform
         </Link>
-        <Link to="/login" className="landing-signin">
-          Sign in
-        </Link>
+        <nav className="landing-nav" aria-label="Main">
+          <Link to="/pricing" className="landing-signin">
+            Pricing
+          </Link>
+          <Link to="/login" className="landing-signin">
+            Sign in
+          </Link>
+        </nav>
       </header>
       <main id="main" className="landing-main">
         <section className="landing-hero" aria-labelledby="landing-title">

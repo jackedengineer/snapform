@@ -1,6 +1,10 @@
 .landing-shell .intake-header {
   min-height: 80px;
 }
+.landing-nav {
+  display: flex;
+  gap: 24px;
+}
 .landing-signin {
   display: grid;
   align-items: center;
