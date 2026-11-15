@@ -542,7 +542,11 @@ function Editor({ snapshot }: { snapshot: FormSnapshot }) {
               {block ? (
                 <>
                   <fieldset disabled={!editable}>
-                    <BlockInspector block={block} onChange={update} />
+                    <BlockInspector
+                      block={block}
+                      onChange={update}
+                      workspaceId={snapshot.workspaceId}
+                    />
                   </fieldset>
                   {editable && (
                     <div className="block-actions">

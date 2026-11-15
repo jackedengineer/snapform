@@ -1,13 +1,19 @@
 import { useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { Block } from '@snapform/contracts/form';
+import { useAccountUser } from '../auth/AccountLayout';
+import { request } from './api';
+import { uploadsAllowed } from './plan-features';
 import { blockNames, insertOption } from './new-form';
 import { AnswerSettings } from './AnswerSettings';
 export function BlockInspector({
   block,
   onChange,
+  workspaceId,
 }: {
   block: Block;
   onChange: (block: Block) => void;
+  workspaceId: string;
 }) {
   const labelInput = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   useEffect(() => labelInput.current?.focus(), [block.id]);
@@ -144,12 +150,33 @@ export function BlockInspector({
         </div>
       )}
       <AnswerSettings key={block.id} block={block} onChange={onChange} />
-      {block.type === 'file' && (
-        <p className="field-help">
-          File upload questions need Pro. Files stay private, up to 25 MB each.{' '}
-          <a href="../billing">Plan and billing</a>
-        </p>
-      )}
+      {block.type === 'file' && <FileQuestionNote workspaceId={workspaceId} />}
     </section>
+  );
+}
+// Only Free owners need the upgrade note; until the plan is known, state the
+// limits that apply to every plan.
+function FileQuestionNote({ workspaceId }: { workspaceId: string }) {
+  const user = useAccountUser();
+  const plan = useQuery({
+    queryKey: ['uploads', user.id, workspaceId],
+    queryFn: ({ signal }) =>
+      request(
+        `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/billing`,
+        { signal },
+        uploadsAllowed,
+      ),
+  });
+  return (
+    <p className="field-help">
+      Files stay private, up to 25 MB each.
+      {plan.data === false && (
+        <>
+          {' '}
+          File upload questions need Pro.{' '}
+          <a href="../billing">Plan and billing</a>
+        </>
+      )}
+    </p>
   );
 }
