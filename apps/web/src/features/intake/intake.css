@@ -315,6 +315,14 @@
   padding: 8px;
   font-size: 16px;
   cursor: pointer;
+  /* Hide the browser's "No file chosen" text; the list below shows the files. */
+  color: transparent;
+}
+.intake-field .intake-files input[type='file']:disabled {
+  cursor: not-allowed;
+}
+.intake-files input[type='file']:disabled::file-selector-button {
+  opacity: 0.5;
 }
 .intake-files input[type='file']::file-selector-button {
   min-height: 40px;
