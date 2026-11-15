@@ -1,6 +1,6 @@
 {
   "id": "7d05c769-c1be-4c1b-91ec-81d5a7d5d277",
-  "prevId": "492cdf15-e7ca-484d-94cd-b6955bbc1ad4",
+  "prevId": "2952afef-5512-4a6d-b7bc-5ff308ace960",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3149,6 +3149,37 @@
         "workspace_response_usage_month": {
           "name": "workspace_response_usage_month",
           "value": "extract(day from \"workspace_response_usage\".\"period_start\") = 1"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.jobs_heartbeat": {
+      "name": "jobs_heartbeat",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "default": 1
+        },
+        "succeeded_at": {
+          "name": "succeeded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "jobs_heartbeat_singleton": {
+          "name": "jobs_heartbeat_singleton",
+          "value": "\"jobs_heartbeat\".\"id\"=1"
         }
       },
       "isRLSEnabled": true

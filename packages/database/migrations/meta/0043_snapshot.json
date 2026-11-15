@@ -3317,6 +3317,37 @@
         }
       },
       "isRLSEnabled": true
+    },
+    "public.jobs_heartbeat": {
+      "name": "jobs_heartbeat",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "default": 1
+        },
+        "succeeded_at": {
+          "name": "succeeded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "jobs_heartbeat_singleton": {
+          "name": "jobs_heartbeat_singleton",
+          "value": "\"jobs_heartbeat\".\"id\"=1"
+        }
+      },
+      "isRLSEnabled": true
     }
   },
   "enums": {
