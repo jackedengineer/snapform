@@ -14,7 +14,7 @@ function question(type: Parameters<typeof newBlock>[0], label: string) {
   return 'label' in block ? { ...block, label } : block;
 }
 function draft() {
-  const definition = newBlankDefinition();
+  const definition = { ...newBlankDefinition(), title: 'Synthetic enquiry' };
   definition.pages[0].blocks.push(question('email', 'Where can we reach you?'));
   return definition;
 }

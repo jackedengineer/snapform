@@ -17,7 +17,7 @@ function question(type: Parameters<typeof newBlock>[0]) {
   return 'label' in block ? { ...block, label: `About ${type}` } : block;
 }
 function threeQuestions() {
-  const definition = newBlankDefinition();
+  const definition = { ...newBlankDefinition(), title: 'Synthetic enquiry' };
   const [a, b, c] = [
     question('email'),
     question('long-text'),
@@ -170,7 +170,7 @@ it('generates compiler-compatible comparisons for all nine answer types', () => 
   for (const type of types) {
     const field = question(type);
     if (!('required' in field)) throw new Error('Expected answer field');
-    const definition = newBlankDefinition();
+    const definition = { ...newBlankDefinition(), title: 'Synthetic enquiry' };
     definition.pages[0].blocks.push(field);
     for (const op of operatorsFor(field)) {
       definition.rules = [

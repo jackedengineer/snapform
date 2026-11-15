@@ -14,7 +14,7 @@ function question(
   return { ...block, label, required };
 }
 function contactForm() {
-  const definition = newBlankDefinition();
+  const definition = { ...newBlankDefinition(), title: 'Synthetic enquiry' };
   definition.pages[0].blocks = [
     question('short-text', 'Your name'),
     question('email', 'Work email', true),

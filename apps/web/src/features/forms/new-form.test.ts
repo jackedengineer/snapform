@@ -33,6 +33,9 @@ it('adds an empty option after the one being edited and stops at twenty', () => 
 });
 it('starts new questions and the first page empty so authors write their own words', () => {
   const definition = newBlankDefinition();
+  // The title field shows "Untitled form" as a placeholder; publishing asks
+  // for a real title instead of showing respondents that placeholder.
+  expect(definition.title).toBe('');
   expect(definition.pages[0].title).toBe('');
   for (const type of Object.keys(blockNames) as Block['type'][]) {
     const block = newBlock(type);

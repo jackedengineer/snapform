@@ -16,7 +16,7 @@ export function newBlankDefinition(): FormDefinition {
   const endingId = crypto.randomUUID();
   return {
     contractVersion: 1,
-    title: 'Untitled form',
+    title: '',
     description: '',
     presentation: 'page',
     rules: [],
