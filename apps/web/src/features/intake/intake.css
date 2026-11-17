@@ -642,6 +642,23 @@
   animation: intake-option-in var(--motion-step) var(--ease-spring) backwards;
   animation-delay: calc(var(--i, 0) * var(--motion-stagger) + 60ms);
 }
+/* The stagger index lives here, not in a style attribute: the CSP's
+   style-src 'self' refuses inline styles in server-rendered HTML. */
+.intake-option:nth-child(2) {
+  --i: 1;
+}
+.intake-option:nth-child(3) {
+  --i: 2;
+}
+.intake-option:nth-child(4) {
+  --i: 3;
+}
+.intake-option:nth-child(5) {
+  --i: 4;
+}
+.intake-option:nth-child(n + 6) {
+  --i: 5;
+}
 @keyframes intake-enter {
   from {
     opacity: 0;

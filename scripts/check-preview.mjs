@@ -56,6 +56,19 @@ assert.ok(
     .includes('challenges.cloudflare.com'),
   'private/marketing pages must not authorize the challenge provider',
 );
+// style-src 'self' blocks style attributes, so server HTML must carry none:
+// the browser would refuse them and log a violation on every visit.
+assert.match(
+  response.headers.get('content-security-policy'),
+  /style-src 'self'(;|$)/,
+);
+for (const path of ['/', '/start', '/pricing', '/login', '/signup']) {
+  const body = path === '/' ? html : await (await fetch(base + path)).text();
+  assert.ok(
+    !/<[^>]+\sstyle="/.test(body),
+    `${path} must not render style attributes that the CSP blocks`,
+  );
+}
 assert.match(
   response.headers.get('content-security-policy'),
   /frame-ancestors 'none'/,
