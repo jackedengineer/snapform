@@ -30,6 +30,16 @@ export default defineConfig({
           TURNSTILE_SITE_KEY: '',
           TURNSTILE_SECRET_KEY: '',
           BETTER_AUTH_URL: 'http://127.0.0.1:5173',
+          // Synthetic Razorpay test-mode settings; no request reaches Razorpay.
+          // They override the production RAZORPAY_MODE and live plans in wrangler.jsonc.
+          RAZORPAY_MODE: 'test',
+          RAZORPAY_KEY_ID: 'rzp_test_SyntheticKey01',
+          RAZORPAY_KEY_SECRET: 'synthetic-test-secret',
+          RAZORPAY_WEBHOOK_SECRET: 'synthetic-webhook-secret',
+          RAZORPAY_PLAN_PRO_MONTHLY_INR: 'plan_SyntheticMonINR',
+          RAZORPAY_PLAN_PRO_MONTHLY_USD: 'plan_SyntheticMonUSD',
+          RAZORPAY_PLAN_PRO_ANNUAL_INR: 'plan_SyntheticAnnINR',
+          RAZORPAY_PLAN_PRO_ANNUAL_USD: 'plan_SyntheticAnnUSD',
         },
       },
     }),

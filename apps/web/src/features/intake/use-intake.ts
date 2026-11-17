@@ -4,6 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { PublicForm } from '@snapform/contracts/public-form';
 import type { IntakeRecovery } from '@snapform/contracts/intake-progress';
 import { getRecovery, putRecovery, removeRecovery } from './storage';
+import { withTabLock } from './tab-lock';
+import type { TabAccess } from './tab-lock';
 import { newRecovery } from './recovery';
 import { IntakeProgress } from './progress';
 import type { ProgressState } from './progress';
@@ -18,11 +20,14 @@ import {
 export function useIntake(publicId: string) {
   const query = useQueryClient();
   const [form, setForm] = useState<PublicForm | null>(null),
+    // What the public form says about its owner: name and plan flags.
+    [label, setLabel] = useState<Pick<PublicForm, 'business' | 'plan'>>({}),
     [siteKey, setSiteKey] = useState(''),
     [progress, setProgress] = useState<ProgressState | null>(null);
   const [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
     [storageError, setStorageError] = useState(false),
+    [unavailable, setUnavailable] = useState<'missing' | 'closed' | null>(null),
     [busy, setBusy] = useState(false),
     [attempt, setAttempt] = useState(0),
     [reload, setReload] = useState(0);
@@ -36,20 +41,28 @@ export function useIntake(publicId: string) {
   useEffect(() => {
     let ownedController: IntakeProgress | null = null;
     let active = true,
+      // Without the tab lock this frame has no browser storage either (such as
+      // a third-party embed with storage blocked), so answers stay in memory.
+      recoverable = true,
       release: () => void = () => {};
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
     setLoading(true);
     setError('');
+    setUnavailable(null);
     setProgress(null);
     setForm(null);
+    setLabel({});
     function attach(
       record: IntakeRecovery,
       acknowledged: NonNullable<IntakeRecovery['session']>['answers'],
     ) {
       const next = new IntakeProgress(record, acknowledged, {
-        persist: putRecovery,
+        persist: (state) =>
+          recoverable
+            ? putRecovery(state)
+            : Promise.reject(Error('Browser recovery is unavailable.')),
         send: (input, kind) =>
           writeIntakeRequest(publicId, record.identity, input, kind),
         changed: (state) => {
@@ -61,27 +74,29 @@ export function useIntake(publicId: string) {
       setProgress({ ...next.state });
       return next;
     }
-    async function run(lock: Lock | null) {
+    async function run(access: TabAccess) {
       if (!active) return;
-      if (!lock) {
+      if (access === 'busy') {
         setError(
           'This form is already open in another tab. Close that tab, then retry here.',
         );
         setLoading(false);
         return;
       }
+      recoverable = access === 'held';
+      if (!recoverable) setStorageError(true);
       actions.current.forget = async () => {
         setBusy(true);
         try {
           await controller.current?.close();
           controller.current = null;
-          await removeRecovery(publicId);
+          if (recoverable) await removeRecovery(publicId);
           replaceSaved.current = false;
           if (active) setReload((value) => value + 1);
         } catch {
           if (active)
             setError(
-              'The browser copy could not be removed. Keep this tab open and try again.',
+              'Saved answers couldn’t be cleared from this browser. Try again.',
             );
         } finally {
           if (active) setBusy(false);
@@ -90,19 +105,30 @@ export function useIntake(publicId: string) {
       let record = newRecovery(publicId),
         stored = false;
       try {
-        try {
-          const recovered = await getRecovery(publicId);
-          stored = Boolean(recovered);
-          record = recovered || record;
-        } catch {
-          if (active) setStorageError(true);
-        }
+        if (recoverable)
+          try {
+            const recovered = await getRecovery(publicId);
+            stored = Boolean(recovered);
+            record = recovered || record;
+          } catch {
+            if (active) setStorageError(true);
+          }
         if (!active) return;
         let resumed = false;
         if (stored)
           try {
-            const session = await readIntakeRequest(publicId, record.identity);
+            // The session alone decides whether to resume. The business name
+            // and plan flags only label the form; without them the generic
+            // wording and earlier footer and embed behaviour stay.
+            const [session, named] = await Promise.all([
+              readIntakeRequest(publicId, record.identity),
+              readPublicForm(publicId).then(
+                ({ business, plan }) => ({ business, plan }),
+                () => ({}),
+              ),
+            ]);
             if (!active) return;
+            setLabel(named);
             const recovery = reconcileRecovery(
               record,
               session,
@@ -150,6 +176,7 @@ export function useIntake(publicId: string) {
           ]);
           if (!active) return;
           setForm(published);
+          setLabel({ business: published.business, plan: published.plan });
           setSiteKey(configuration.siteKey);
         }
         actions.current.start = async (token) => {
@@ -157,11 +184,12 @@ export function useIntake(publicId: string) {
           setBusy(true);
           setError('');
           try {
-            try {
-              await putRecovery(record);
-            } catch {
-              if (active) setStorageError(true);
-            }
+            if (recoverable)
+              try {
+                await putRecovery(record);
+              } catch {
+                if (active) setStorageError(true);
+              }
             const session = await startIntakeRequest(
               publicId,
               record.identity,
@@ -174,11 +202,12 @@ export function useIntake(publicId: string) {
               pending: null,
               expiresAt: Date.parse(session.expiresAt),
             };
-            try {
-              await putRecovery(record);
-            } catch {
-              setStorageError(true);
-            }
+            if (recoverable)
+              try {
+                await putRecovery(record);
+              } catch {
+                setStorageError(true);
+              }
             attach(record, session.answers);
             setForm({
               publicId,
@@ -186,7 +215,13 @@ export function useIntake(publicId: string) {
               definition: session.definition,
             });
           } catch (failure) {
-            if (active) {
+            if (
+              active &&
+              failure instanceof IntakeRequestError &&
+              ['closed', 'quota'].includes(failure.code)
+            )
+              setUnavailable('closed');
+            else if (active) {
               setError(
                 failure instanceof Error
                   ? failure.message
@@ -199,7 +234,14 @@ export function useIntake(publicId: string) {
           }
         };
       } catch (failure) {
-        if (active) {
+        if (
+          active &&
+          !record.session &&
+          failure instanceof IntakeRequestError &&
+          (failure.code === 'missing' || failure.code === 'closed')
+        )
+          setUnavailable(failure.code);
+        else if (active) {
           const message =
             failure instanceof IntakeRequestError
               ? failure.message
@@ -209,7 +251,7 @@ export function useIntake(publicId: string) {
             const retained = attach(record, record.session.answers);
             retained.state.status = 'blocked';
             retained.state.message =
-              'Your browser copy is shown below. Reload to retry, or forget this copy to start again.';
+              'Your answers in this browser are shown below. Reload to try again, or clear saved answers to start over.';
             setProgress({ ...retained.state });
             setForm({
               publicId,
@@ -232,16 +274,16 @@ export function useIntake(publicId: string) {
       setLoading(false);
     } else
       lifecycle.current = lifecycle.current.then(() =>
-        navigator.locks
-          .request('snapform-intake:' + publicId, { ifAvailable: true }, run)
-          .catch(() => {
+        withTabLock(navigator.locks, 'snapform-intake:' + publicId, run).catch(
+          () => {
             if (active) {
               setError(
                 'This browser couldn’t open the saved form. Retry to continue.',
               );
               setLoading(false);
             }
-          }),
+          },
+        ),
       );
     return () => {
       active = false;
@@ -268,12 +310,15 @@ export function useIntake(publicId: string) {
   }, []);
   return {
     form,
+    business: label.business,
+    plan: label.plan,
     siteKey,
     progress,
     controller: controller.current,
     loading,
     error,
     storageError,
+    unavailable,
     busy,
     attempt,
     start: (token: string) => actions.current.start?.(token),

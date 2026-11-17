@@ -7,6 +7,23 @@ const states = {
   'not-applicable': 'Not applicable',
 };
 const numbers = new Intl.NumberFormat('en', { maximumFractionDigits: 20 });
+const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+const units: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 31536000],
+  ['month', 2592000],
+  ['week', 604800],
+  ['day', 86400],
+  ['hour', 3600],
+  ['minute', 60],
+];
+// Clock skew can place a fresh submission slightly in the future.
+export function formatRelativeTime(iso: string, now: number): string {
+  const seconds = Math.min(0, (Date.parse(iso) - now) / 1000);
+  for (const [unit, size] of units)
+    if (-seconds >= size)
+      return relative.format(Math.trunc(seconds / size), unit);
+  return 'just now';
+}
 export function formatResponseAnswer(
   field: Field,
   answer: Answer | undefined,

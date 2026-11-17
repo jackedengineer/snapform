@@ -5,6 +5,7 @@ import {
   fetchForm,
   createFormRequest,
   saveDraftRequest,
+  publishFormRequest,
 } from './api';
 import { formFixture } from '../../../../../packages/contracts/test/form-fixture.ts';
 afterEach(() => vi.unstubAllGlobals());
@@ -258,4 +259,47 @@ it('requests a bounded retry without changing recipient or delivery identity', a
     } as unknown as Parameters<typeof retryEmailDelivery>[2]),
   ).rejects.toThrow();
   expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it('explains the Free live-form limit instead of a generic conflict', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ error: { code: 'LIVE_FORM_LIMIT' } }, { status: 409 }),
+      ),
+  );
+  await expect(
+    publishFormRequest(workspaceId, id, {
+      versionId: crypto.randomUUID(),
+      expectedRevision: 1,
+    }),
+  ).rejects.toMatchObject({
+    code: 'conflict',
+    message:
+      'Free workspaces can have 3 live forms. Stop collecting on one, or upgrade to Pro in Plan and billing.',
+  });
+});
+it('explains that file questions need Pro', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json(
+          { error: { code: 'UPLOADS_REQUIRE_PRO' } },
+          { status: 409 },
+        ),
+      ),
+  );
+  await expect(
+    publishFormRequest(workspaceId, id, {
+      versionId: crypto.randomUUID(),
+      expectedRevision: 1,
+    }),
+  ).rejects.toMatchObject({
+    code: 'conflict',
+    message:
+      'File upload questions need Pro. Remove the question, or upgrade to Pro in Plan and billing.',
+  });
 });

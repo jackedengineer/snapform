@@ -88,7 +88,8 @@ export async function inWorkspace<T>(
     const writing =
       action !== 'responses.read' &&
       action !== 'responses.export' &&
-      action !== 'integrations.read';
+      action !== 'integrations.read' &&
+      action !== 'members.read';
     let context: { role: unknown; deletion_pending: unknown } | undefined;
     try {
       context = (

@@ -47,6 +47,7 @@ it('saves immutable encrypted configurations and checks current revisions and ac
           configurationId: null,
           url: null,
           verifiedAt: null,
+          attention: null,
         });
         const input = {
           configurationId,
@@ -68,6 +69,7 @@ it('saves immutable encrypted configurations and checks current revisions and ac
           configurationId,
           url: 'https://hooks.example.com/intake',
           verifiedAt: null,
+          attention: null,
         });
         await expect(
           saveWebhookConfiguration(

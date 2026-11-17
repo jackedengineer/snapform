@@ -16,11 +16,11 @@ export function newBlankDefinition(): FormDefinition {
   const endingId = crypto.randomUUID();
   return {
     contractVersion: 1,
-    title: 'Untitled form',
+    title: '',
     description: '',
     presentation: 'page',
     rules: [],
-    pages: [{ id: crypto.randomUUID(), title: 'Your questions', blocks: [] }],
+    pages: [{ id: crypto.randomUUID(), title: '', blocks: [] }],
     endings: [
       {
         id: endingId,
@@ -35,7 +35,7 @@ export function newBlock(type: Block['type']): Block {
   const id = crypto.randomUUID();
   const common = {
     id,
-    label: blockNames[type],
+    label: '',
     description: '',
     required: false,
     aiEnabled: false,
@@ -85,6 +85,29 @@ export function duplicateBlock(block: Block): Block {
       id: crypto.randomUUID(),
     }));
   return copy;
+}
+
+type ChoiceField = Extract<Block, { options: unknown }>;
+export function insertOption<T extends ChoiceField>(block: T, afterId: string) {
+  if (block.options.length >= 20) return null;
+  const optionId = crypto.randomUUID();
+  const index = block.options.findIndex((option) => option.id === afterId);
+  const options = [...block.options];
+  options.splice(index < 0 ? options.length : index + 1, 0, {
+    id: optionId,
+    label: '',
+  });
+  return { block: { ...block, options }, optionId };
+}
+
+// One numbering for the outline, rules and readiness: answer questions in
+// form order across pages. Headings and help text are not numbered.
+export function questionNumbers(definition: FormDefinition) {
+  const numbers = new Map<string, number>();
+  for (const page of definition.pages)
+    for (const block of page.blocks)
+      if ('required' in block) numbers.set(block.id, numbers.size + 1);
+  return numbers;
 }
 
 const captionSegments = new Intl.Segmenter(undefined, {

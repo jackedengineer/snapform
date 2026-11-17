@@ -1,5 +1,7 @@
 /* A framed workspace: quiet navigation, a white sheet, questions in focus. */
 .app-shell {
+  /* Contain child margins so no body-coloured band appears below the shell. */
+  display: flow-root;
   min-height: 100svh;
   background: var(--surface-workspace);
   --surface-canvas: var(--surface-workspace);

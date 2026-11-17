@@ -7,11 +7,17 @@ export async function resolvePublicForm(
   rawId: string,
 ) {
   const id = publicationSchema.shape.publicId.parse(rawId);
+  // business_name and plan are read through to_jsonb so this query also works
+  // before migrations 0044 and 0045 add those columns; they are then null.
   const result = await db.execute<{
     publicId: string;
     versionId: string;
     definition: FormDefinition;
-  }>(sql`select public_id as "publicId", version_id as "versionId", definition
-    from public.resolve_published_form(${id}::uuid)`);
+    businessName: string | null;
+    plan: string | null;
+  }>(sql`select r.public_id as "publicId", r.version_id as "versionId",
+    r.definition, to_jsonb(r) ->> 'business_name' as "businessName",
+    to_jsonb(r) ->> 'plan' as "plan"
+    from public.resolve_published_form(${id}::uuid) r`);
   return result.rows[0] || null;
 }

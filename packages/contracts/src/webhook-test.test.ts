@@ -104,18 +104,34 @@ it('handles upper bounds and rejects unsupported or invalid definitions', () => 
       expect.objectContaining({ fieldId: ids.budget, value: 5 }),
     ]),
   );
+  const file = crypto.randomUUID();
   definition.pages[0].blocks.push({
-    id: crypto.randomUUID(),
+    id: file,
     type: 'file',
     label: 'File',
     description: '',
-    required: false,
+    required: true,
     aiEnabled: false,
     maxFiles: 1,
   });
-  expect(() => createWebhookTestPayload(event, version)).toThrow(
-    'INVALID_WEBHOOK_TEST',
-  );
+  // A described example file: metadata only, no bytes, key or link.
+  const sample = JSON.parse(createWebhookTestPayload(event, version));
+  expect(
+    sample.data.answers.find(
+      (answer: { fieldId: string }) => answer.fieldId === file,
+    ),
+  ).toEqual({
+    fieldId: file,
+    type: 'file',
+    label: 'File',
+    state: 'value',
+    value: [file],
+    display: 'example.pdf',
+    files: [
+      { id: file, name: 'example.pdf', size: 1024, type: 'application/pdf' },
+    ],
+  });
+  expect(JSON.stringify(sample)).not.toMatch(/https?:|object_?key/i);
   definition.pages[0].blocks = [];
   definition.title = '';
   expect(() => createWebhookTestPayload(event, version)).toThrow(

@@ -104,3 +104,56 @@ it('labels tests distinctly and never accepts an incomplete or foreign-field rec
     createWebhookPayload({ ...event, id: 'invalid' }, response, false),
   ).toThrow('INVALID_WEBHOOK_PAYLOAD');
 });
+it('describes uploaded files by metadata without bytes, keys or links', () => {
+  const { response } = fixture();
+  const question = crypto.randomUUID(),
+    [kept, unknown] = [crypto.randomUUID(), crypto.randomUUID()];
+  response.definition.pages[0].blocks.push({
+    id: question,
+    type: 'file',
+    label: 'Brief',
+    description: '',
+    required: false,
+    aiEnabled: false,
+    maxFiles: 2,
+  });
+  response.answers[question] = { state: 'value', value: [kept, unknown] };
+  const files = [
+    {
+      id: kept,
+      questionId: question,
+      name: 'Brief.pdf',
+      size: 2048,
+      type: 'application/pdf' as const,
+    },
+  ];
+  const raw = createWebhookPayload(event, { ...response, files }, false);
+  const answer = JSON.parse(raw).data.answers.find(
+    (item: { fieldId: string }) => item.fieldId === question,
+  );
+  expect(answer).toEqual({
+    fieldId: question,
+    type: 'file',
+    label: 'Brief',
+    state: 'value',
+    value: [kept, unknown],
+    display: 'Brief.pdf\nUnavailable file',
+    files: [
+      { id: kept, name: 'Brief.pdf', size: 2048, type: 'application/pdf' },
+    ],
+  });
+  expect(raw).not.toMatch(/https?:|questionId|object_?key|sha256/i);
+  expect(
+    JSON.parse(createWebhookPayload(event, response, false)).data.answers.find(
+      (item: { fieldId: string }) => item.fieldId === question,
+    ).files,
+  ).toEqual([]);
+  // Metadata that is not a stored file's description is refused.
+  expect(() =>
+    createWebhookPayload(
+      event,
+      { ...response, files: [{ ...files[0], size: 0 }] },
+      false,
+    ),
+  ).toThrow('INVALID_WEBHOOK_PAYLOAD');
+});

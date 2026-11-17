@@ -7,6 +7,7 @@ import {
   claimExpiredResponses,
   finalizeWorkspacePurge,
   finalizeResponsePurge,
+  purgeFilePrefix,
   pruneDeletionMetadata,
 } from '@snapform/database/purge';
 import { openPurgeIntent } from '@snapform/contracts/purge';
@@ -17,6 +18,7 @@ vi.mock('@snapform/database/purge', () => ({
   claimExpiredResponses: vi.fn(async () => []),
   finalizeWorkspacePurge: vi.fn(),
   finalizeResponsePurge: vi.fn(),
+  purgeFilePrefix: vi.fn(async () => null),
   pruneDeletionMetadata: vi.fn(async () => ({
     requestsDeleted: 0,
     intentsDeleted: 0,
@@ -75,6 +77,12 @@ it('routes a scheduled event through real R2 before the correct workspace and re
   };
   vi.mocked(claimOwnerDeletions).mockResolvedValue([owner]);
   vi.mocked(claimExpiredResponses).mockResolvedValue([expired]);
+  // Respondent files under the workspace go before its rows.
+  const upload = `${workspace}/${crypto.randomUUID()}/${expired.targetId}/${'u'.repeat(43)}`;
+  await env.UPLOADS.put(upload, 'bytes');
+  vi.mocked(purgeFilePrefix).mockImplementation(async (_db, item) =>
+    item.kind === 'workspace' ? `${item.workspaceId}/` : null,
+  );
   for (const finalize of [finalizeWorkspacePurge, finalizeResponsePurge])
     vi.mocked(finalize).mockImplementation(async (_db, item) => {
       const object = await env.PURGE_LEDGER.get(`intents/${item.id}.enc`);
@@ -82,6 +90,7 @@ it('routes a scheduled event through real R2 before the correct workspace and re
       expect(
         await openPurgeIntent(await object.text(), secret, item.id),
       ).toEqual(item);
+      expect(await env.UPLOADS.head(upload)).toBeNull();
       return true;
     });
   try {

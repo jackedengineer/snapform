@@ -1,9 +1,32 @@
 import { expect, it } from 'vitest';
 import { previewState } from './preview-state';
-import { newStarterDefinition } from './starters';
+import { newBlankDefinition, newBlock } from './new-form';
+
+// A local fixture keeps these preview checks independent of starter content.
+// New questions start unlabelled; an author labels them before previewing.
+function question(
+  type: 'short-text' | 'long-text' | 'email',
+  label: string,
+  required = false,
+) {
+  const block = newBlock(type);
+  if (!('required' in block)) throw new Error('Expected a question block.');
+  return { ...block, label, required };
+}
+function contactForm() {
+  const definition = { ...newBlankDefinition(), title: 'Synthetic enquiry' };
+  definition.pages[0].blocks = [
+    question('short-text', 'Your name'),
+    question('email', 'Work email', true),
+    question('short-text', 'Company'),
+    question('long-text', 'What do you need?'),
+    question('long-text', 'Anything else?'),
+  ];
+  return definition;
+}
 
 it('blocks incomplete preview steps and allows a valid contact answer', () => {
-  const definition = newStarterDefinition('agency');
+  const definition = contactForm();
   const empty = previewState(definition, {}, '');
   expect(empty.ok).toBe(true);
   if (!empty.ok) throw new Error('Invalid starter');
@@ -20,7 +43,7 @@ it('blocks incomplete preview steps and allows a valid contact answer', () => {
   expect(valid.ok && valid.index).toBe(0);
 });
 it('uses the collector card steps and rejects an invalid definition', () => {
-  const definition = newStarterDefinition('agency');
+  const definition = contactForm();
   definition.presentation = 'card';
   const state = previewState(definition, {}, definition.pages[0].blocks[1].id);
   expect(state.ok && state.index).toBe(1);

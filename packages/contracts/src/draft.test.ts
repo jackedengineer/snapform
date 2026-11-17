@@ -4,6 +4,9 @@ import {
   saveDraftSchema,
   draftReceiptSchema,
   formCursorSchema,
+  formsPageSchema,
+  formStatus,
+  formListResponseLimit,
 } from './draft.ts';
 import { formFixture } from '../test/form-fixture.ts';
 it('requires a typed definition, stable identity and bounded expected revision', () => {
@@ -50,4 +53,43 @@ it('preserves database cursor microseconds and rejects malformed cursors', () =>
   expect(
     formCursorSchema.safeParse({ ...value, createdAt: 'yesterday' }).success,
   ).toBe(false);
+});
+it('lists each form with its collection status and a bounded response count', () => {
+  const item = {
+    id: crypto.randomUUID(),
+    title: 'Project enquiry',
+    revision: 3,
+    updatedAt: '2026-11-12T09:30:00.000Z',
+    status: 'live',
+    responseCount: 12,
+  };
+  const page = {
+    workspace: {
+      id: crypto.randomUUID(),
+      name: 'QA Agency',
+      segment: 'agency',
+      role: 'editor',
+    },
+    forms: [item],
+    nextCursor: null,
+  };
+  expect(formsPageSchema.parse(page)).toEqual(page);
+  expect(formListResponseLimit).toBe(1000);
+  for (const changed of [
+    { status: 'archived' },
+    { status: undefined },
+    { responseCount: -1 },
+    { responseCount: 1.5 },
+    { responseCount: formListResponseLimit + 1 },
+    { responseCount: undefined },
+  ])
+    expect(
+      formsPageSchema.safeParse({ ...page, forms: [{ ...item, ...changed }] })
+        .success,
+    ).toBe(false);
+});
+it('derives draft, live and stopped from the publication flag', () => {
+  expect(formStatus(null)).toBe('draft');
+  expect(formStatus(true)).toBe('live');
+  expect(formStatus(false)).toBe('stopped');
 });

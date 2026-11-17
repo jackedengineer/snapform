@@ -1,7 +1,9 @@
 .intake-shell {
   min-height: 100svh;
+  padding-top: 32px;
   background: var(--surface-canvas);
 }
+/* Shared with the landing and help pages. */
 .intake-header {
   max-width: 1280px;
   margin: auto;
@@ -16,9 +18,35 @@
   color: var(--text-muted);
   font-size: 13px;
 }
+.intake-bar,
+.intake-footer {
+  width: min(100% - 48px, 720px);
+  margin-inline: auto;
+}
+.intake-bar {
+  margin-bottom: 16px;
+}
+.intake-business {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.intake-bar h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  /* Small text: reset the display-heading tracking it would otherwise inherit. */
+  letter-spacing: 0;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
 .intake-main {
   width: min(100% - 48px, 720px);
-  margin: 60px auto 0;
+  margin: 0 auto;
   padding-bottom: 32px;
 }
 .intake-card {
@@ -29,12 +57,24 @@
   line-height: 1.08;
   letter-spacing: -0.055em;
   font-weight: 600;
-  margin: 16px 0 24px;
+  margin: 0 0 24px;
   overflow-wrap: anywhere;
   outline-offset: 8px;
 }
+.intake-main h2 {
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
+  outline-offset: 8px;
+}
+.intake-card-question h2 {
+  font-size: clamp(26px, 4.5vw, 36px);
+}
 .intake-eyebrow {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.13em;
   color: var(--text-secondary);
@@ -49,27 +89,55 @@
   overflow-wrap: anywhere;
   max-width: 62ch;
 }
-.intake-privacy {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  padding: 20px 0;
-  margin: 28px 0;
-  border-top: 1px solid var(--border-default);
-  border-bottom: 1px solid var(--border-default);
+.intake-privacy-lead {
   color: var(--text-secondary);
-  font-size: 13px;
+  margin: 24px 0 16px;
 }
-.intake-privacy > span {
-  color: var(--action-primary);
-  font-size: 22px;
+.intake-turnstile {
+  min-height: 65px;
+  max-width: 100%;
+}
+.intake-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-top: 16px;
+}
+.intake-start .button {
+  width: auto;
+  min-width: 180px;
+  justify-content: center;
+}
+.intake-check-status {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.intake-cleared {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--status-success);
+}
+.intake-cleared:empty {
+  margin: 0;
+}
+.intake-privacy {
+  margin-top: 32px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.intake-privacy summary {
+  padding: 12px 0;
+  width: fit-content;
+  cursor: pointer;
 }
 .intake-privacy p {
   margin: 0;
-}
-.intake-welcome > .button {
-  margin-top: 24px;
-  max-width: 360px;
+  max-width: 62ch;
+  line-height: 1.6;
 }
 .intake-caption {
   font-size: 12px;
@@ -79,14 +147,24 @@
 }
 .intake-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  border-top: 1px solid var(--border-default);
-  margin-top: 64px;
-  padding-top: 20px;
+  gap: 0 20px;
+  padding: 8px 0 24px;
+  font-size: 13px;
+}
+.intake-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 20px;
+}
+.intake-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--text-muted);
-  font-size: 12px;
+  text-underline-offset: 4px;
 }
 .intake-text-button {
   border: 0;
@@ -103,13 +181,22 @@
   justify-content: space-between;
   gap: 16px;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
+}
+.intake-progress-line p,
+.intake-main .intake-progress-line h2 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: normal;
+  outline-offset: 4px;
 }
 .intake-main progress {
   display: block;
   width: 100%;
   height: 4px;
-  margin: 12px 0 48px;
+  margin: 12px 0 32px;
   border: 0;
   border-radius: 4px;
   accent-color: var(--brand-cobalt);
@@ -146,7 +233,7 @@
   max-width: 100%;
 }
 .intake-required {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 450;
   color: var(--text-muted);
   margin-left: 8px;
@@ -209,9 +296,73 @@
   outline-offset: 3px;
 }
 .intake-field-error {
+  display: block;
   color: var(--status-danger);
   font-size: 13px;
   margin: 12px 0 0;
+}
+.intake-files {
+  border: 1px dashed var(--border-control);
+  border-radius: 12px;
+  padding: 16px;
+}
+.intake-files[data-over='true'] {
+  border-color: var(--action-primary);
+  background: var(--surface-action-tint);
+}
+.intake-field .intake-files input[type='file'] {
+  min-height: 48px;
+  padding: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  /* Hide the browser's "No file chosen" text; the list below shows the files. */
+  color: transparent;
+}
+.intake-field .intake-files input[type='file']:disabled {
+  cursor: not-allowed;
+}
+.intake-files input[type='file']:disabled::file-selector-button {
+  opacity: 0.5;
+}
+.intake-files input[type='file']::file-selector-button {
+  min-height: 40px;
+  margin-right: 12px;
+  border: 1px solid var(--border-control);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  font: inherit;
+  padding: 0 14px;
+}
+.intake-file-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.intake-file-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface-panel);
+}
+.intake-file-name {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  unicode-bidi: plaintext;
+}
+.intake-file-size {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.intake-file-list progress {
+  flex: 1 1 8rem;
+  accent-color: var(--action-primary);
 }
 .intake-unit {
   display: block;
@@ -245,15 +396,46 @@
 }
 .intake-notice .intake-text-button {
   font-size: 13px;
+  margin-right: 16px;
 }
-.intake-review-section {
-  border-top: 1px solid var(--border-default);
-  padding-top: 20px;
-  margin-top: 32px;
+.intake-summary-section h3 {
+  font-size: 16px;
+  margin: 28px 0 4px;
+  overflow-wrap: anywhere;
 }
-.intake-review-section h2 {
-  font-size: 20px;
-  letter-spacing: -0.025em;
+.intake-summary {
+  margin: 0;
+}
+.intake-summary-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-default);
+}
+.intake-summary dt {
+  font-size: 14px;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.intake-summary dd {
+  margin: 0;
+}
+.intake-summary-answer {
+  grid-column: 1;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.intake-summary-edit {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.intake-summary-edit .intake-text-button {
+  font-size: 14px;
+  color: var(--action-primary);
+  padding-inline: 4px;
 }
 .intake-section-heading {
   font-size: 24px;
@@ -275,15 +457,24 @@
   padding: 20px 0;
   border-top: 1px solid var(--border-default);
   border-bottom: 1px solid var(--border-default);
-  font-size: 12px;
+}
+.intake-reference p {
+  margin: 0;
+  font-size: 14px;
   color: var(--text-secondary);
 }
-.intake-reference strong {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  overflow-wrap: anywhere;
+.intake-reference .intake-reference-code {
+  margin: 4px 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
   color: var(--text-primary);
-  font-weight: 500;
+}
+.intake-completion > .button {
+  width: auto;
+  min-width: 240px;
+  justify-content: center;
 }
 .intake-dialog {
   width: min(100% - 32px, 480px);
@@ -298,6 +489,7 @@
 }
 .intake-dialog h2 {
   margin-top: 0;
+  font-size: 22px;
   letter-spacing: -0.035em;
 }
 .intake-dialog .button {
@@ -327,37 +519,50 @@
   .intake-header > span {
     display: none;
   }
+  .intake-shell {
+    padding-top: 16px;
+  }
+  .intake-bar,
+  .intake-footer,
   .intake-main {
-    margin-top: 32px;
-    width: calc(100% - 40px);
+    width: calc(100% - 24px);
+  }
+  .intake-bar {
+    margin-bottom: 12px;
+    padding-inline: 8px;
+  }
+  .intake-footer {
+    padding-inline: 8px;
   }
   .intake-main h1 {
-    font-size: 38px;
+    font-size: 34px;
   }
   .intake-description {
     font-size: 16px;
   }
-  .intake-main progress {
-    margin-bottom: 32px;
-  }
   .intake-field > label:not(.intake-option),
   .intake-field > legend {
     font-size: 17px;
-  }
-  .intake-footer {
-    margin-top: 48px;
-  }
-  .intake-actions {
-    gap: 10px;
-  }
-  .intake-actions .button {
-    padding: 16px;
   }
   .intake-option {
     padding: 14px 16px;
   }
   .intake-dialog {
     padding: 24px;
+  }
+}
+/* Stack actions so labels such as "Saving your answers…" never wrap. */
+@media (max-width: 520px) {
+  .intake-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .intake-actions .button,
+  .intake-start .button,
+  .intake-completion > .button {
+    flex: none;
+    width: 100%;
+    padding: 16px;
   }
 }
 
@@ -374,10 +579,27 @@
   border: 0;
 }
 .intake-card-requirement {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   margin-top: -8px;
 }
 .intake-option input:focus-visible {
   outline: none;
+}
+/* Embedded on a customer's page, their page is the surface: no background or
+   outer margins, and no viewport height that would feed back into the frame. */
+body:has(.intake-embed) {
+  background: transparent;
+}
+.intake-shell.intake-embed {
+  display: flow-root;
+  min-height: 0;
+  padding-top: 0;
+  background: transparent;
+}
+.intake-embed :is(.intake-bar, .intake-main, .intake-footer) {
+  width: 100%;
+}
+.intake-embed .intake-footer {
+  padding-bottom: 0;
 }

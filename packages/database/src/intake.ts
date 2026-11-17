@@ -33,10 +33,21 @@ export async function startIntake(
   publicId = identity.parse(publicId);
   id = identity.parse(id);
   const hash = capabilityHashSchema.parse(rawHash);
-  return read(
-    db,
-    sql`public.open_intake_session(${publicId}::uuid,${id}::uuid,${hash})`,
-  );
+  try {
+    return await read(
+      db,
+      sql`public.open_intake_session(${publicId}::uuid,${id}::uuid,${hash})`,
+    );
+  } catch (error) {
+    // Migration 0041 raises this when the workspace's monthly allowance is reserved.
+    if (
+      error instanceof Error &&
+      error.cause instanceof Error &&
+      error.cause.message === 'FORM_NOT_ACCEPTING'
+    )
+      throw Error('FORM_NOT_ACCEPTING', { cause: error });
+    throw error;
+  }
 }
 export async function getIntake(
   db: Connection,
@@ -66,12 +77,6 @@ export async function mutateIntake(
   const hash = capabilityHashSchema.parse(rawHash),
     input = intakeMutationSchema.parse(raw);
   const current = await getIntake(db, publicId, id, hash);
-  if (
-    current.definition.pages.some((page) =>
-      page.blocks.some((block) => block.type === 'file'),
-    )
-  )
-    throw new Error('FILE_COLLECTION_UNAVAILABLE');
   const prepared = prepareIntakeProgress(
     current.definition,
     input.answers,
@@ -87,6 +92,15 @@ export async function mutateIntake(
     sql`select * from public.write_intake_session(${publicId}::uuid,${id}::uuid,${hash},${input.operationId}::uuid,${input.expectedRevision},${kind},${JSON.stringify(input.answers)}::jsonb,${JSON.stringify(prepared.answers)}::jsonb,${prepared.endingId}::uuid)`,
   );
   const receipt = result.rows[0];
+  // Migration 0046: the submission referenced a file this session did not
+  // upload to that question, or one it removed.
+  if (receipt?.outcome === 'INTAKE_FILES_INVALID')
+    throw new IntakeValidationError([
+      {
+        code: 'FILE_REFERENCE_INVALID',
+        message: 'Upload your files again before sending.',
+      },
+    ]);
   if (!receipt || receipt.outcome !== 'ok')
     throw new Error(receipt?.outcome || 'INTAKE_UNAVAILABLE');
   return intakeMutationReceiptSchema.parse({

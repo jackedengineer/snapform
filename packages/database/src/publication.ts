@@ -1,9 +1,10 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
-import { compileDefinition } from '@snapform/contracts/compile';
 import {
+  compilePublication,
   publishFormSchema,
   unpublishFormSchema,
 } from '@snapform/contracts/publication';
+import { canPublishQuestions } from '@snapform/contracts/plans';
 import type {
   PublishForm,
   UnpublishForm,
@@ -119,8 +120,21 @@ export async function publishForm(
     }
     if (draft.revision !== input.expectedRevision)
       throw new Error('DRAFT_CONFLICT');
-    const compiled = compileDefinition(draft.definition);
+    const compiled = compilePublication(draft.definition);
     if (!compiled.ok) throw new Error('INVALID_PUBLICATION');
+    // File questions need Pro (uploads). A downgrade leaves live forms live.
+    const [billing] = (
+      await tx.execute<{ plan: unknown }>(
+        sql`select plan from public.workspace_billing(${workspaceId}::uuid)`,
+      )
+    ).rows;
+    if (
+      !canPublishQuestions(
+        billing?.plan === 'pro' ? 'pro' : 'free',
+        compiled.definition,
+      )
+    )
+      throw new Error('UPLOADS_REQUIRE_PRO');
     const [last] = await tx
       .select({ number: formVersion.number })
       .from(formVersion)
@@ -148,6 +162,14 @@ export async function publishForm(
       .onConflictDoNothing()
       .returning({ id: formVersion.id });
     if (!inserted.length) throw new Error('OPERATION_CONFLICT');
+    // The database refuses a new live form over the plan limit (migration 0041).
+    const liveFormLimit = (error: unknown) => {
+      throw error instanceof Error &&
+        error.cause instanceof Error &&
+        error.cause.message === 'LIVE_FORM_LIMIT'
+        ? Error('LIVE_FORM_LIMIT', { cause: error })
+        : error;
+    };
     await tx
       .insert(formPublication)
       .values({
@@ -166,7 +188,8 @@ export async function publishForm(
           updatedBy: actor,
           updatedAt: sql`now()`,
         },
-      });
+      })
+      .catch(liveFormLimit);
     return {
       versionId: input.versionId,
       number,

@@ -1,12 +1,13 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
+const count = (max: number) => z.int().check(z.minimum(0), z.maximum(max));
 export const emailSettingsInputSchema = z.strictObject({
   enabled: z.boolean(),
-  expectedRevision: z.int().min(0).max(2147483646),
+  expectedRevision: count(2147483646),
 });
 export type EmailSettingsInput = z.infer<typeof emailSettingsInputSchema>;
 export const emailRetryInputSchema = z.strictObject({
   deliveryId: z.uuid(),
-  expectedAttempts: z.int().min(0).max(7),
+  expectedAttempts: count(7),
 });
 export type EmailRetryInput = z.infer<typeof emailRetryInputSchema>;
 export type EmailOutcome =
@@ -19,11 +20,13 @@ export type EmailOutcome =
 export const emailSettingsSchema = z
   .strictObject({
     enabled: z.boolean(),
-    revision: z.int().min(0).max(2147483647),
+    revision: count(2147483647),
   })
-  .refine(
-    (value) => value.revision > 0 || !value.enabled,
-    'Enabled notifications require a saved revision.',
+  .check(
+    z.refine(
+      (value) => value.revision > 0 || !value.enabled,
+      'Enabled notifications require a saved revision.',
+    ),
   );
 export const emailDeliveryStates = [
   'pending',
@@ -45,21 +48,21 @@ export const emailOverviewSchema = z.strictObject({
         id: z.uuid(),
         responseId: z.uuid(),
         status: z.enum(emailDeliveryStates),
-        attempts: z.int().min(0).max(8),
+        attempts: count(8),
         retryable: z.boolean(),
-        reason: z
-          .enum([
+        reason: z.nullable(
+          z.enum([
             'disabled',
             'recipient-unavailable',
             'configuration',
             'provider-rejected',
             'idempotency-expired',
             'attempts-exhausted',
-          ])
-          .nullable(),
+          ]),
+        ),
         createdAt: z.iso.datetime(),
       }),
     )
-    .max(20),
+    .check(z.maxLength(20)),
 });
 export type EmailOverview = z.infer<typeof emailOverviewSchema>;

@@ -1,15 +1,23 @@
 import { httpServerHandler } from 'cloudflare:node';
 import express from 'express';
-import type { ErrorRequestHandler } from 'express';
 import { briefSchema } from '@snapform/contracts';
 import { authRoutes } from './auth-routes.ts';
 import { requestScope } from './request-context.ts';
-import { requestObservation } from './request-observation.ts';
+import {
+  handleRequestError,
+  requestObservation,
+} from './request-observation.ts';
 import { publicFormRoutes } from './public-form.ts';
 import { intakeConfigRoutes } from './intake-config.ts';
 import { intakeRoutes } from './intake-routes.ts';
+import { handleIntakeFile, matchIntakeFileRoute } from './intake-files.ts';
 import { authFailure, checkAuthRequest } from './auth-boundary.ts';
 import type { AuthEnvironment } from './environment.ts';
+import { billingOptions } from './billing.ts';
+import {
+  handleRazorpayWebhook,
+  razorpayWebhookPath,
+} from './billing-webhook.ts';
 
 const app = express();
 app.disable('x-powered-by');
@@ -45,6 +53,7 @@ app.use((req, res, next) => {
   next();
 });
 app.get('/api/v1/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/api/v1/billing/options', billingOptions);
 app.use(authRoutes);
 app.use(publicFormRoutes);
 app.use(intakeRoutes);
@@ -71,28 +80,7 @@ app.post(
 app.use((_req, res) => {
   res.status(404).json({ error: { code: 'NOT_FOUND' } });
 });
-const handleError: ErrorRequestHandler = (error: unknown, _req, res, next) => {
-  if (res.headersSent) {
-    next(error);
-    return;
-  }
-  const type =
-    typeof error === 'object' && error !== null && 'type' in error
-      ? error.type
-      : '';
-  const status =
-    type === 'entity.too.large'
-      ? 413
-      : type === 'entity.parse.failed'
-        ? 400
-        : type === 'encoding.unsupported' || type === 'charset.unsupported'
-          ? 415
-          : 500;
-  res.status(status).json({
-    error: { code: status === 500 ? 'INTERNAL_ERROR' : 'INVALID_REQUEST' },
-  });
-};
-app.use(handleError);
+app.use(handleRequestError);
 app.listen(3000);
 const serve = httpServerHandler({ port: 3000 }).fetch;
 if (!serve)
@@ -147,17 +135,22 @@ export default {
         );
       }
     }
+    // Raw body and provider signature, so this never passes through Express parsers.
+    if (new URL(request.url).pathname === razorpayWebhookPath)
+      return handleRazorpayWebhook(request, environment);
+    // Respondent files stream to R2 without passing through Express.
+    const fileRoute = matchIntakeFileRoute(new URL(request.url).pathname);
+    if (fileRoute) return handleIntakeFile(request, fileRoute, { environment });
     if (new URL(request.url).pathname.startsWith('/api/auth/')) {
       const checked = await checkAuthRequest(
         request,
         environment.AUTH_ALLOWED_RECIPIENT,
       );
       if (checked instanceof Response) return checked;
-      if (request.method === 'POST') {
-        const key = request.headers.get('cf-connecting-ip') || 'local';
-        if (!(await environment.AUTH_RATE_LIMIT.limit({ key })).success)
-          return authFailure('RATE_LIMITED', 429);
-      }
+      // Emailed link callbacks also open a database connection.
+      const key = request.headers.get('cf-connecting-ip') || 'local';
+      if (!(await environment.AUTH_RATE_LIMIT.limit({ key })).success)
+        return authFailure('RATE_LIMITED', 429);
       request = checked;
     }
     return requestScope.run(

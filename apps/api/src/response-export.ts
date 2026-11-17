@@ -1,11 +1,13 @@
 import { Buffer } from 'node:buffer';
-import { publishFormSchema } from '@snapform/contracts/publication';
 import type { Request, Response } from 'express';
 import type { Database } from '@snapform/database';
 import { getResponseExport } from '@snapform/database/response-export';
-import { createResponseCsv } from '@snapform/contracts/response-csv';
+import {
+  createResponseCsv,
+  responseExportFilename,
+  responseExportQuerySchema as querySchema,
+} from '@snapform/contracts/response-csv';
 import { requestScope } from './request-context.ts';
-const querySchema = publishFormSchema.pick({ versionId: true });
 const identity = querySchema.shape.versionId;
 type ExportRoute = { workspaceId: string; formId: string };
 export function matchResponseExportRoute(path: string): ExportRoute | null {
@@ -60,17 +62,18 @@ export async function handleResponseExport(
       route.formId,
       input.data.versionId,
     );
-    const csv = createResponseCsv(
-      exported.definition,
+    const csv = createResponseCsv(exported.definition, exported.rows);
+    const filename = responseExportFilename(
+      exported.definition.title,
       exported.version,
-      exported.rows,
+      new Date(),
     );
     res
       .status(200)
       .set({
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Length': String(Buffer.byteLength(csv)),
-        'Content-Disposition': `attachment; filename="snapform-${route.formId}-v${exported.version}.csv"`,
+        'Content-Disposition': `attachment; filename="${filename}"`,
         'Cross-Origin-Resource-Policy': 'same-origin',
       })
       .end(csv);

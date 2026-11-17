@@ -26,3 +26,15 @@ it('builds page/card steps only from effective pages and visible fields', () => 
       .some((block) => block.id === ids.budget),
   ).toBe(false);
 });
+it('keeps only page titles an author actually wrote', () => {
+  const { definition } = formFixture();
+  definition.pages[0].title = '   ';
+  definition.pages[1].title = 'Your questions';
+  const result = evaluateForm(definition, {});
+  if (!result.ok) throw new Error('Invalid fixture');
+  expect(collectionSteps(definition, result).map((step) => step.title)).toEqual(
+    ['', ''],
+  );
+  definition.pages[1].title = 'How to reach you';
+  expect(collectionSteps(definition, result)[1].title).toBe('How to reach you');
+});

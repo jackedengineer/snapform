@@ -1,6 +1,26 @@
 import { SELF } from 'cloudflare:test';
 import { expect, it } from 'vitest';
+import { compilePublication } from '@snapform/contracts/publication';
+import { canPublishQuestions } from '@snapform/contracts/plans';
 import { matchPublicationRoute } from '../src/publication.ts';
+import { formFixture } from '../../../packages/contracts/test/form-fixture.ts';
+import { sessionCookie } from './session-cookie.ts';
+it('compiles file questions inside workerd and leaves the plan gate to publishing', () => {
+  const { definition } = formFixture();
+  expect(compilePublication(definition).ok).toBe(true);
+  definition.pages[0].blocks.push({
+    id: crypto.randomUUID(),
+    type: 'file',
+    label: 'Upload your brief',
+    description: '',
+    required: false,
+    aiEnabled: false,
+    maxFiles: 1,
+  });
+  expect(compilePublication(definition).ok).toBe(true);
+  expect(canPublishQuestions('free', definition)).toBe(false);
+  expect(canPublishQuestions('pro', definition)).toBe(true);
+});
 const workspaceId = crypto.randomUUID(),
   formId = crypto.randomUUID();
 const path = `/api/v1/workspaces/${workspaceId}/forms/${formId}/publication`;
@@ -25,12 +45,23 @@ it('requires verified identity for publication reads and mutations', async () =>
 });
 it('bounds publication and unpublication input before database access', async () => {
   for (const method of ['POST', 'DELETE']) {
-    expect((await SELF.fetch(url, { method, body: 'plain' })).status).toBe(415);
     expect(
       (
         await SELF.fetch(url, {
           method,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { Cookie: sessionCookie },
+          body: 'plain',
+        })
+      ).status,
+    ).toBe(415);
+    expect(
+      (
+        await SELF.fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: sessionCookie,
+          },
           body: JSON.stringify({ value: 'x'.repeat(17000) }),
         })
       ).status,

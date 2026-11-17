@@ -20,3 +20,16 @@ export async function cacheConfirmedDeletion(
   client.setQueryData(key, receipt);
   return true;
 }
+// Inbox lists show a "Scheduled for deletion" badge, so a response deletion
+// that was scheduled or cancelled makes this workspace's lists stale.
+export async function refreshAfterDeletion(
+  client: QueryClient,
+  userId: string,
+  workspaceId: string,
+  target: DeletionTarget,
+) {
+  if (target.kind !== 'response') return;
+  await client.invalidateQueries({
+    queryKey: ['responses', userId, workspaceId],
+  });
+}

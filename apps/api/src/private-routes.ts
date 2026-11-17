@@ -11,6 +11,10 @@ import {
   handleNotificationRequest,
 } from './notifications.ts';
 import { matchResponsesRoute, handleResponsesRequest } from './responses.ts';
+import {
+  matchResponseFilesRoute,
+  handleResponseFiles,
+} from './response-files.ts';
 import type { Request, Response, RequestHandler } from 'express';
 import type { Database } from '@snapform/database';
 import { handleWorkspaceRequest, workspacePath } from './workspaces.ts';
@@ -20,6 +24,9 @@ import {
   handlePublicationRequest,
 } from './publication.ts';
 import { matchDeletionRoute, handleDeletionRequest } from './deletions.ts';
+import { matchBillingRoute, handleBillingRequest } from './billing.ts';
+import { matchTeamRoute, handleTeamRequest, isTeamWrite } from './team.ts';
+import { makeInviteMailer } from './email.ts';
 
 export function isPrivatePath(path: string) {
   return (
@@ -28,11 +35,14 @@ export function isPrivatePath(path: string) {
     matchFormsRoute(path) !== null ||
     matchPublicationRoute(path) !== null ||
     matchResponsesRoute(path) !== null ||
+    matchResponseFilesRoute(path) !== null ||
     matchResponseExportRoute(path) !== null ||
     matchNotificationRoute(path) !== null ||
     matchWebhookRoute(path) !== null ||
     matchDeletionRoute(path) !== null ||
-    matchRetentionRoute(path) !== null
+    matchBillingRoute(path) !== null ||
+    matchRetentionRoute(path) !== null ||
+    matchTeamRoute(path) !== null
   );
 }
 const workspaceBody = json({ limit: 16384, strict: true, inflate: false });
@@ -53,13 +63,17 @@ export const privateBody: RequestHandler = (req, res, next) => {
     matchDeletionRoute(req.path) !== null && req.method === 'POST';
   const isRetention =
     matchRetentionRoute(req.path) !== null && req.method === 'PUT';
+  const isBilling =
+    matchBillingRoute(req.path) !== null && req.method === 'POST';
   if (
+    !isTeamWrite(req) &&
     !isWebhook &&
     !isForm &&
     !isPublication &&
     !isNotification &&
     !isDeletion &&
     !isRetention &&
+    !isBilling &&
     (req.path !== workspacePath || req.method !== 'POST')
   )
     return next();
@@ -78,10 +92,13 @@ export async function handlePrivateRequest(
   const webhookRoute = matchWebhookRoute(req.path);
   const exportRoute = matchResponseExportRoute(req.path);
   const responseRoute = matchResponsesRoute(req.path);
+  const filesRoute = matchResponseFilesRoute(req.path);
   const notificationRoute = matchNotificationRoute(req.path);
   const publicationRoute = matchPublicationRoute(req.path);
   const deletionRoute = matchDeletionRoute(req.path);
   const retentionRoute = matchRetentionRoute(req.path);
+  const billingRoute = matchBillingRoute(req.path);
+  const teamRoute = matchTeamRoute(req.path);
   if (req.path === '/api/v1/me') {
     if (req.method !== 'GET') {
       res.setHeader('Allow', 'GET');
@@ -91,8 +108,25 @@ export async function handlePrivateRequest(
     await handleWorkspaceRequest(req, res, db, user.id);
   } else if (deletionRoute) {
     await handleDeletionRequest(req, res, db, user.id, deletionRoute);
+  } else if (billingRoute) {
+    await handleBillingRequest(req, res, db, user.id, billingRoute);
   } else if (retentionRoute) {
     await handleRetentionRequest(req, res, db, user.id, retentionRoute);
+  } else if (teamRoute) {
+    const scope = requestScope.getStore();
+    if (!scope) throw new Error('Request context is required.');
+    const settings = scope.environment;
+    await handleTeamRequest(req, res, db, user, teamRoute, {
+      origin: new URL(settings.BETTER_AUTH_URL).origin,
+      allowed: async () =>
+        (await settings.INVITE_RATE_LIMIT.limit({ key: user.id })).success,
+      send: makeInviteMailer({
+        apiKey: settings.RESEND_API_KEY || '',
+        from: settings.EMAIL_FROM || '',
+        origin: new URL(settings.BETTER_AUTH_URL).origin,
+        allowedRecipient: settings.AUTH_ALLOWED_RECIPIENT,
+      }),
+    });
   } else if (webhookRoute) {
     await handleWebhookRequest(
       req,
@@ -108,6 +142,8 @@ export async function handlePrivateRequest(
     await handleNotificationRequest(req, res, db, user.id, notificationRoute);
   } else if (responseRoute) {
     await handleResponsesRequest(req, res, db, user.id, responseRoute);
+  } else if (filesRoute) {
+    await handleResponseFiles(req, res, db, user.id, filesRoute);
   } else if (publicationRoute) {
     await handlePublicationRequest(req, res, db, user.id, publicationRoute);
   } else {

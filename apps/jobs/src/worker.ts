@@ -31,6 +31,7 @@ import {
   finalizeResponsePurge,
   pruneDeletionMetadata,
   finalizeWorkspacePurge,
+  purgeFilePrefix,
 } from '@snapform/database/purge';
 import type { Database } from '@snapform/database';
 
@@ -38,6 +39,7 @@ type JobEnvironment = {
   PURGE_ENABLED?: string;
   PURGE_LEDGER_KEY?: string;
   PURGE_LEDGER?: R2Bucket;
+  UPLOADS?: R2Bucket;
   DATABASE_URL?: string;
   RESEND_API_KEY?: string;
   RESEND_WEBHOOK_SECRET?: string;
@@ -114,10 +116,12 @@ export default {
             enabled: environment.PURGE_ENABLED,
             secret: environment.PURGE_LEDGER_KEY,
             bucket: environment.PURGE_LEDGER,
+            uploads: environment.UPLOADS,
           },
           {
             owner: () => claimOwnerDeletions(db),
             expired: () => claimExpiredResponses(db),
+            prefix: (intent) => purgeFilePrefix(db, intent),
             finalize: (intent) =>
               intent.kind === 'workspace'
                 ? finalizeWorkspacePurge(db, intent)

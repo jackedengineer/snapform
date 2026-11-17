@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 const states = {
   'email.sent': 'accepted',
   'email.delivered': 'delivered',
@@ -18,7 +18,7 @@ const payload = z.object({
   ]),
   data: z.object({
     email_id: z.uuid(),
-    to: z.tuple([z.email().max(254)]),
+    to: z.tuple([z.email().check(z.maxLength(254))]),
     tags: z.object({ snapform_delivery: z.uuid() }),
   }),
 });

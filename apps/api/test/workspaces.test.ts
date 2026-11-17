@@ -1,5 +1,6 @@
 import { SELF } from 'cloudflare:test';
 import { expect, it } from 'vitest';
+import { sessionCookie } from './session-cookie.ts';
 const url = 'http://127.0.0.1:5173/api/v1/workspaces';
 it('requires a verified session for workspace listing and creation', async () => {
   for (const cookie of ['', 'snapform.session_token=forged']) {
@@ -24,13 +25,19 @@ it('bounds private JSON before database work', async () => {
     (
       await SELF.fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Cookie: sessionCookie },
         body: JSON.stringify({ name: 'x'.repeat(20000) }),
       })
     ).status,
   ).toBe(413);
   expect(
-    (await SELF.fetch(url, { method: 'POST', body: 'plain' })).status,
+    (
+      await SELF.fetch(url, {
+        method: 'POST',
+        headers: { Cookie: sessionCookie },
+        body: 'plain',
+      })
+    ).status,
   ).toBe(415);
 });
 it('blocks cross-origin private mutations for every unsafe method', async () => {

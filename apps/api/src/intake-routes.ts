@@ -13,6 +13,7 @@ import {
   intakeEnvelopeSchema,
 } from '@snapform/contracts/intake';
 import type { IntakeSession } from '@snapform/contracts/intake';
+import { discardUnreferencedUploads } from '@snapform/database/uploads';
 import { compileDefinition } from '@snapform/contracts/compile';
 import { requestScope } from './request-context.ts';
 import { intakeAuthorizationHash } from './intake-capability.ts';
@@ -38,9 +39,56 @@ export function matchIntakeRoute(path: string): Route | null {
       }
     : null;
 }
+// FORM_NOT_ACCEPTING: the workspace's monthly response allowance is used up.
+// The collector shows its closed state; nothing about the plan is disclosed.
+export const intakeConflicts = new Set([
+  'INTAKE_CONFLICT',
+  'INTAKE_OPERATION_CONFLICT',
+  'INTAKE_ALREADY_SUBMITTED',
+  'INTAKE_QUOTA_UNAVAILABLE',
+  'FORM_NOT_ACCEPTING',
+]);
 export const intakeRoutes = Router();
 const body = json({ limit: 16384, strict: true, inflate: false });
 const progressBody = json({ limit: 2097152, strict: true, inflate: false });
+const allowedMethods = (route: Route) =>
+  route.kind === 'session' ? ['GET', 'PATCH'] : ['POST'];
+const rateLimited = (res: Response) => {
+  res.setHeader('Retry-After', '60');
+  res.status(429).json({ error: { code: 'RATE_LIMITED' } });
+};
+// Limit keys use only the address, route and bearer digest, so they run
+// before bodies of up to 2 MiB are read.
+intakeRoutes.use(async (req, res, next) => {
+  const route = matchIntakeRoute(req.path);
+  if (!route || !allowedMethods(route).includes(req.method)) return next();
+  const scope = requestScope.getStore();
+  if (!scope) throw new Error('Request context is required.');
+  const settings = scope.environment;
+  const mutationRequest = route.kind === 'submit' || req.method === 'PATCH';
+  // Per-session limits are primary; address limits leave room for NAT.
+  const limiter =
+    route.kind === 'start'
+      ? settings.INTAKE_START_RATE_LIMIT
+      : mutationRequest
+        ? settings.INTAKE_IP_WRITE_RATE_LIMIT
+        : settings.PUBLIC_READ_RATE_LIMIT;
+  const address = req.get('cf-connecting-ip') || 'local';
+  if (!(await limiter.limit({ key: address })).success) return rateLimited(res);
+  const hash = mutationRequest
+    ? await intakeAuthorizationHash(req.get('authorization'))
+    : null;
+  if (
+    hash &&
+    !(
+      await settings.INTAKE_WRITE_RATE_LIMIT.limit({
+        key: 'session:' + route.publicId + ':' + hash,
+      })
+    ).success
+  )
+    return rateLimited(res);
+  next();
+});
 intakeRoutes.use((req, res, next) => {
   const route = matchIntakeRoute(req.path);
   if (
@@ -61,10 +109,7 @@ intakeRoutes.use((req, res, next) => {
 intakeRoutes.use(async (req, res, next) => {
   const route = matchIntakeRoute(req.path);
   if (!route) return next();
-  const methods =
-    route.kind === 'start' || route.kind === 'submit'
-      ? ['POST']
-      : ['GET', 'PATCH'];
+  const methods = allowedMethods(route);
   if (!methods.includes(req.method)) {
     res.setHeader('Allow', methods.join(', '));
     res.status(405).json({ error: { code: 'METHOD_NOT_ALLOWED' } });
@@ -93,12 +138,6 @@ intakeRoutes.use(async (req, res, next) => {
 function validateSession(session: IntakeSession) {
   if (!compileDefinition(session.definition).ok)
     throw new Error('INTAKE_UNAVAILABLE');
-  if (
-    session.definition.pages.some((page) =>
-      page.blocks.some((block) => block.type === 'file'),
-    )
-  )
-    throw new Error('FILE_COLLECTION_UNAVAILABLE');
   return session;
 }
 async function handleIntake(
@@ -109,37 +148,9 @@ async function handleIntake(
 ) {
   const settings = scope.environment;
   const mutationRequest = route.kind === 'submit' || req.method === 'PATCH';
-  const limiter =
-    route.kind === 'start'
-      ? settings.INTAKE_START_RATE_LIMIT
-      : mutationRequest
-        ? settings.INTAKE_WRITE_RATE_LIMIT
-        : settings.PUBLIC_READ_RATE_LIMIT;
-  if (
-    !(
-      await limiter.limit({
-        key:
-          (mutationRequest ? 'ip:' : '') +
-          (req.get('cf-connecting-ip') || 'local'),
-      })
-    ).success
-  ) {
-    res.setHeader('Retry-After', '60');
-    res.status(429).json({ error: { code: 'RATE_LIMITED' } });
-    return;
-  }
   const hash = await intakeAuthorizationHash(req.get('authorization'));
   if (!hash) {
     res.status(401).json({ error: { code: 'INTAKE_UNAVAILABLE' } });
-    return;
-  }
-  if (
-    mutationRequest &&
-    !(await limiter.limit({ key: 'session:' + route.publicId + ':' + hash }))
-      .success
-  ) {
-    res.setHeader('Retry-After', '60');
-    res.status(429).json({ error: { code: 'RATE_LIMITED' } });
     return;
   }
   const mutation = mutationRequest
@@ -190,6 +201,17 @@ async function handleIntake(
         mutation.data,
       );
       res.json({ receipt });
+      // Files the final answers left out go now, after the response; any that
+      // survive a failure here are deleted with the response by purge.
+      if (
+        route.kind === 'submit' &&
+        Object.values(mutation.data.answers).some(
+          (answer) => answer.state === 'value' && Array.isArray(answer.value),
+        )
+      )
+        scope.context.waitUntil(
+          discardFiles(settings, route.publicId, route.id, hash),
+        );
       return;
     }
     const session =
@@ -213,29 +235,35 @@ async function handleIntake(
         .json({ error: { code: error.message, issues: error.issues } });
       return;
     }
-    if (
-      error instanceof Error &&
-      [
-        'INTAKE_CONFLICT',
-        'INTAKE_OPERATION_CONFLICT',
-        'INTAKE_ALREADY_SUBMITTED',
-        'INTAKE_QUOTA_UNAVAILABLE',
-      ].includes(error.message)
-    ) {
+    if (error instanceof Error && intakeConflicts.has(error.message)) {
       res.status(409).json({ error: { code: error.message } });
       return;
     }
-    if (
-      error instanceof Error &&
-      ['INTAKE_UNAVAILABLE', 'FILE_COLLECTION_UNAVAILABLE'].includes(
-        error.message,
-      )
-    )
-      res
-        .status(error.message === 'INTAKE_UNAVAILABLE' ? 404 : 503)
-        .json({ error: { code: error.message } });
+    if (error instanceof Error && error.message === 'INTAKE_UNAVAILABLE')
+      res.status(404).json({ error: { code: error.message } });
     else throw error;
   } finally {
     await close();
+  }
+}
+async function discardFiles(
+  settings: { DATABASE_URL: string; UPLOADS?: R2Bucket },
+  publicId: string,
+  sessionId: string,
+  hash: string,
+) {
+  const bucket = settings.UPLOADS;
+  if (!bucket) return;
+  try {
+    const { db, close } = await openDatabase(settings.DATABASE_URL);
+    let keys: string[];
+    try {
+      keys = await discardUnreferencedUploads(db, publicId, sessionId, hash);
+    } finally {
+      await close();
+    }
+    if (keys.length) await bucket.delete(keys);
+  } catch {
+    console.error(JSON.stringify({ event: 'intake_file_discard_failed' }));
   }
 }

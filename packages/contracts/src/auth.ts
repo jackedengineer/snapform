@@ -1,30 +1,37 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { isStorableText } from './text.ts';
-export const email = z
-  .email()
-  .max(254)
-  .transform((value) => value.toLowerCase());
+const emailMessage = 'Enter a valid email address.';
+export const email = z.pipe(
+  z.email(emailMessage).check(z.maxLength(254, emailMessage)),
+  z.transform((value: string) => value.toLowerCase()),
+);
 export const password = z
   .string()
-  .min(12, 'Use at least 12 characters.')
-  .max(128, 'Use no more than 128 characters.');
+  .check(
+    z.minLength(12, 'Use at least 12 characters.'),
+    z.maxLength(128, 'Use no more than 128 characters.'),
+  );
 export const signupSchema = z.strictObject({
   name: z
     .string()
-    .trim()
-    .min(1, 'Enter your name.')
-    .max(96, 'Use no more than 96 characters.')
-    .refine(isStorableText, 'Use valid text characters.'),
+    .check(
+      z.trim(),
+      z.minLength(1, 'Enter your name.'),
+      z.maxLength(96, 'Use no more than 96 characters.'),
+      z.refine(isStorableText, 'Use valid text characters.'),
+    ),
   email,
   password,
-  callbackURL: z.literal('/login').optional(),
+  callbackURL: z.optional(z.literal('/login')),
 });
 export const loginSchema = z.strictObject({
   email,
   password: z
     .string()
-    .min(1, 'Enter your password.')
-    .max(128, 'Use no more than 128 characters.'),
+    .check(
+      z.minLength(1, 'Enter your password.'),
+      z.maxLength(128, 'Use no more than 128 characters.'),
+    ),
 });
 export const authBodies = {
   'sign-up/email': signupSchema,
@@ -39,7 +46,7 @@ export const authBodies = {
     redirectTo: z.literal('/reset-password'),
   }),
   'reset-password': z.strictObject({
-    token: z.string().min(1).max(1024),
+    token: z.string().check(z.minLength(1), z.maxLength(1024)),
     newPassword: password,
   }),
 };

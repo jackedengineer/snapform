@@ -44,6 +44,32 @@ export function claimOwnerDeletions(
     sql`select * from public.claim_owner_deletions(20,${workspaceId ?? null}::uuid)`,
   );
 }
+/**
+ * The upload key prefix to empty before finalizing an intent (migration 0046):
+ * workspace/ or workspace/form/session/. null when nothing can remain.
+ */
+export async function purgeFilePrefix(
+  db: Database | Transaction,
+  raw: PurgeIntent,
+): Promise<string | null> {
+  const intent = purgeIntentSchema.parse(raw);
+  const { rows } = await db.execute<{ prefix: string | null }>(
+    sql`select public.purge_file_prefix(${intent.id}::uuid) as prefix`,
+  );
+  const prefix = rows[0]?.prefix ?? null;
+  const expected =
+    intent.kind === 'workspace'
+      ? `${intent.workspaceId}/`
+      : new RegExp(`^${intent.workspaceId}/[0-9a-f-]{36}/${intent.targetId}/$`);
+  if (
+    prefix !== null &&
+    (typeof expected === 'string'
+      ? prefix !== expected
+      : !expected.test(prefix))
+  )
+    throw Error('Invalid purge file prefix');
+  return prefix;
+}
 // Only trusted Jobs code can execute this after the R2 ledger acknowledgment.
 export async function finalizeResponsePurge(
   db: Database | Transaction,

@@ -1,7 +1,11 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateForm } from '@snapform/contracts/draft';
+import {
+  formListResponseLimit,
+  type CreateForm,
+  type FormStatus,
+} from '@snapform/contracts/draft';
 import { can } from '@snapform/contracts/workspace';
 import { useAccountUser } from '../auth/AccountLayout';
 import { fetchForms, createFormRequest, FormRequestError } from './api';
@@ -14,7 +18,35 @@ import {
   useDeletionStatus,
 } from '../deletion/DeletionControl';
 import { WorkspaceDeleted } from '../deletion/WorkspaceDeleted';
+import { UsageMeter } from '../billing/UsageMeter';
 const dates = new Intl.DateTimeFormat('en', { dateStyle: 'medium' });
+const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+const counts = new Intl.NumberFormat('en');
+const units = [
+  ['year', 31536000],
+  ['month', 2592000],
+  ['week', 604800],
+  ['day', 86400],
+  ['hour', 3600],
+  ['minute', 60],
+] as const;
+export function updatedAgo(value: string, now = Date.now()) {
+  const seconds = (Date.parse(value) - now) / 1000;
+  for (const [unit, size] of units)
+    if (Math.abs(seconds) >= size)
+      return relative.format(Math.round(seconds / size), unit);
+  return 'just now';
+}
+const statusNames: Record<FormStatus, string> = {
+  draft: 'Draft',
+  live: 'Live',
+  stopped: 'Stopped',
+};
+function responseLabel(count: number) {
+  if (count >= formListResponseLimit)
+    return `${counts.format(formListResponseLimit)}+ responses`;
+  return `${counts.format(count)} ${count === 1 ? 'response' : 'responses'}`;
+}
 export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
   const user = useAccountUser(),
     navigate = useNavigate();
@@ -92,25 +124,43 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
         <>
           <div className="workspace-heading">
             <div>
-              <p className="eyebrow">{query.data.workspace.role} WORKSPACE</p>
-              <h1>{query.data.workspace.name}</h1>
+              <div className="workspace-title-row">
+                <h1>{query.data.workspace.name}</h1>
+                {query.data.workspace.role !== 'owner' && (
+                  <span className="role-badge">
+                    {query.data.workspace.role === 'editor'
+                      ? 'Editor'
+                      : 'Viewer'}
+                  </span>
+                )}
+              </div>
               <p className="intro-copy">
                 Start with a question. Turn the answers into your next step.
               </p>
             </div>
-            {can(query.data.workspace.role, 'forms.write') && (
-              <button
-                className="button primary compact-button"
-                disabled={
-                  mutation.isPending || mutation.isError || blocksWrites
-                }
-                onClick={() => void create()}
+            <div className="workspace-heading-actions">
+              <Link
+                className="button secondary compact-button"
+                to="/workspaces/$workspaceId/team"
+                params={{ workspaceId }}
               >
-                {mutation.isPending ? 'Creating…' : 'Blank form'}
-                <span aria-hidden="true">+</span>
-              </button>
-            )}
+                Team
+              </Link>
+              {can(query.data.workspace.role, 'forms.write') && (
+                <button
+                  className="button primary compact-button"
+                  disabled={
+                    mutation.isPending || mutation.isError || blocksWrites
+                  }
+                  onClick={() => void create()}
+                >
+                  {mutation.isPending ? 'Creating…' : 'Blank form'}
+                  <span aria-hidden="true">+</span>
+                </button>
+              )}
+            </div>
           </div>
+          <UsageMeter workspaceId={workspaceId} />
           {query.data.workspace.role === 'owner' &&
             deletion.isError &&
             !dataOpen && (
@@ -152,7 +202,7 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
                 <p>Useful questions. All yours to change.</p>
               </div>
               <div className="starter-list">
-                {starters.map((starter, index) => (
+                {starters.map((starter) => (
                   <button
                     type="button"
                     key={starter.id}
@@ -161,9 +211,6 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
                     }
                     onClick={() => void create(starter.id)}
                   >
-                    <span className="starter-number" aria-hidden="true">
-                      0{index + 1} ↗
-                    </span>
                     <strong>{starter.title}</strong>
                     <span>{starter.description}</span>
                   </button>
@@ -174,9 +221,6 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
           <h2 className="forms-section-title">Your forms</h2>
           {query.data.forms.length === 0 ? (
             <div className="workspace-empty">
-              <span className="empty-symbol" aria-hidden="true">
-                ↗
-              </span>
               <h2>Your next conversation starts here.</h2>
               <p>
                 {can(query.data.workspace.role, 'forms.write')
@@ -189,6 +233,7 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
               {query.data.forms.map((form) => (
                 <li key={form.id}>
                   <Link
+                    className="form-open"
                     to="/workspaces/$workspaceId/forms/$formId"
                     params={{ workspaceId, formId: form.id }}
                   >
@@ -197,11 +242,30 @@ export function WorkspaceForms({ workspaceId }: { workspaceId: string }) {
                     </span>
                     <div>
                       <h2>{form.title.trim() || 'Untitled form'}</h2>
-                      <p>Edited {dates.format(new Date(form.updatedAt))}</p>
+                      <p className="form-meta">
+                        <span className="status-chip" data-status={form.status}>
+                          {statusNames[form.status]}
+                        </span>
+                        <span>{responseLabel(form.responseCount)}</span>
+                        <time
+                          dateTime={form.updatedAt}
+                          title={dates.format(new Date(form.updatedAt))}
+                        >
+                          Updated {updatedAgo(form.updatedAt)}
+                        </time>
+                      </p>
                     </div>
-                    <span className="draft-badge">Edit form</span>
-                    <span aria-hidden="true">↗</span>
                   </Link>
+                  {form.status !== 'draft' && (
+                    <Link
+                      className="responses-link"
+                      to="/workspaces/$workspaceId/responses/$formId"
+                      params={{ workspaceId, formId: form.id }}
+                      aria-label={`Responses for ${form.title.trim() || 'Untitled form'}`}
+                    >
+                      Responses
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

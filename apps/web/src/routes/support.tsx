@@ -32,15 +32,14 @@ function Support() {
         <p>
           Email Snapform for help with account information or deletion. We
           verify that a request comes from the account holder or an authorized
-          business representative before changing private data. Self-service
-          deletion is still being completed during this preview.
+          business representative before changing private data. Workspace owners
+          can also delete responses and workspaces themselves.
         </p>
       </section>
       <section>
         <h2>What to expect</h2>
         <p>
-          This is an early private preview. We review support requests through
-          the email below; we do not promise a fixed response time or
+          We review support requests through the email below. We don’t offer
           round-the-clock support.
         </p>
       </section>

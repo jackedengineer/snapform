@@ -26,7 +26,7 @@ const sizes = await Promise.all(
 );
 let exceeded = false;
 for (const [extension, limit] of [
-  ['js', 230 * 1024],
+  ['js', 250 * 1024],
   ['css', 20 * 1024],
 ]) {
   const total = sizes

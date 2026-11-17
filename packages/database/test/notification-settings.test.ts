@@ -261,3 +261,40 @@ it('keeps email delivery claims and outcomes outside application authority', asy
     await close();
   }
 });
+it('gives Jobs only a bounded owner email summary for a delivery it holds', async () => {
+  if (!process.env.DATABASE_URL) throw Error('Runtime database required');
+  const { db, close } = await openDatabase(process.env.DATABASE_URL);
+  try {
+    await expect(
+      db.execute(
+        sql`select * from public.owner_email_summary(${crypto.randomUUID()}::uuid,${crypto.randomUUID()}::uuid)`,
+      ),
+    ).rejects.toMatchObject({ cause: { code: '42501' } });
+    expect(
+      (
+        await db.execute(sql`select
+          has_function_privilege('snapform_jobs','public.owner_email_summary(uuid,uuid)','EXECUTE') as jobs,
+          has_function_privilege(current_user,'public.owner_email_summary(uuid,uuid)','EXECUTE') as app,
+          has_table_privilege('snapform_jobs','public.response_session','SELECT') as jobs_answers,
+          has_table_privilege('snapform_jobs','public.form_version','SELECT') as jobs_definitions,
+          p.prosecdef as definer,p.provolatile as volatility,p.proconfig as config,
+          pg_get_function_result(p.oid) as result
+          from pg_proc p where p.oid='public.owner_email_summary(uuid,uuid)'::regprocedure`)
+      ).rows,
+    ).toEqual([
+      {
+        jobs: true,
+        app: false,
+        jobs_answers: false,
+        jobs_definitions: false,
+        definer: true,
+        volatility: 's',
+        config: ['search_path=pg_catalog'],
+        result:
+          'TABLE(form_title text, submitted_at timestamp with time zone, respondent_name text, respondent_email text)',
+      },
+    ]);
+  } finally {
+    await close();
+  }
+});

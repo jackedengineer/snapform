@@ -77,7 +77,6 @@ function SettingsDialog({
           dialog.current?.close();
         }}
       >
-        <p className="eyebrow">SHAPE THE ANSWER</p>
         <h2 id={`${id}-title`}>Answer settings</h2>
         <p className="field-help">
           Apply these settings to your draft. You can review any conflicting
@@ -235,10 +234,6 @@ function SettingsDialog({
                 </option>
               ))}
             </select>
-            <p className="field-help">
-              Files remain private. Upload checks and scanning are required
-              before publication.
-            </p>
           </div>
         )}
         {error && (

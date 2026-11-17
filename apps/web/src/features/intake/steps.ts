@@ -6,14 +6,21 @@ export type CollectionStep = {
   title: string;
   blocks: Block[];
 };
+// Older drafts were created with this placeholder; respondents never see it.
+const placeholderTitle = 'Your questions';
 export function collectionSteps(
   definition: FormDefinition,
   evaluation: Extract<FormEvaluation, { ok: true }>,
 ) {
   const steps: CollectionStep[] = [];
   for (const pageId of evaluation.pageIds) {
-    const page = definition.pages.find((page) => page.id === pageId);
-    if (!page) continue;
+    const found = definition.pages.find((page) => page.id === pageId);
+    if (!found) continue;
+    const written = found.title.trim();
+    const page = {
+      ...found,
+      title: written === placeholderTitle ? '' : written,
+    };
     const blocks = page.blocks.filter(
       (block) =>
         !('required' in block) ||

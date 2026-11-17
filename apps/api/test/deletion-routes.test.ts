@@ -1,5 +1,6 @@
 import { SELF } from 'cloudflare:test';
 import { expect, it } from 'vitest';
+import { sessionCookie } from './session-cookie.ts';
 const base = `http://127.0.0.1:5173/api/v1/workspaces/${crypto.randomUUID()}/deletions`;
 const receipt = `${base}/${crypto.randomUUID()}`;
 it('requires verified authentication for deletion scheduling, recovery and cancellation', async () => {
@@ -25,13 +26,22 @@ it('requires verified authentication for deletion scheduling, recovery and cance
 it('bounds deletion writes and rejects wrong media, cross-origin and compressed bodies', async () => {
   for (const url of [base, `${receipt}/cancel`]) {
     expect(
-      (await SELF.fetch(url, { method: 'POST', body: 'plain text' })).status,
+      (
+        await SELF.fetch(url, {
+          method: 'POST',
+          headers: { Cookie: sessionCookie },
+          body: 'plain text',
+        })
+      ).status,
     ).toBe(415);
     expect(
       (
         await SELF.fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: sessionCookie,
+          },
           body: JSON.stringify({ confirmation: 'x'.repeat(17000) }),
         })
       ).status,
@@ -55,6 +65,7 @@ it('bounds deletion writes and rejects wrong media, cross-origin and compressed 
           headers: {
             'Content-Type': 'application/json',
             'Content-Encoding': 'gzip',
+            Cookie: sessionCookie,
           },
           body: 'invalid',
         })

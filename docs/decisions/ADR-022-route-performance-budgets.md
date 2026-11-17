@@ -1,6 +1,6 @@
 # ADR-022: Route performance budgets
 
-Status: accepted by the user on 29 October 2026, before remaining V1 UI work.
+Status: accepted by the user on 29 October 2026, before remaining V1 UI work. The aggregate JavaScript ceiling is superseded by [ADR-023](ADR-023-launch-total-js-budget.md); per-route budgets stand.
 
 The first-slice rule capped all emitted JavaScript at 200 KiB gzip, including
 mutually exclusive lazy routes. The notification release already passes that

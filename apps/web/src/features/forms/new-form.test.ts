@@ -1,12 +1,78 @@
 import { expect, it } from 'vitest';
 import { blockSchema, formDefinitionSchema } from '@snapform/contracts/form';
 import type { Block } from '@snapform/contracts/form';
+import { compileDefinition } from '@snapform/contracts/compile';
 import {
   blockNames,
   newBlock,
   newBlankDefinition,
   duplicateBlock,
+  questionNumbers,
+  insertOption,
 } from './new-form';
+it('adds an empty option after the one being edited and stops at twenty', () => {
+  const block = newBlock('single-choice');
+  if (block.type !== 'single-choice') throw new Error('Expected choices');
+  const next = insertOption(block, block.options[0].id);
+  if (!next) throw new Error('Expected another option');
+  expect(next.block.options.map((option) => option.label)).toEqual([
+    'Option 1',
+    '',
+    'Option 2',
+  ]);
+  expect(next.block.options[1].id).toBe(next.optionId);
+  expect(block.options).toHaveLength(2);
+  const full = {
+    ...block,
+    options: Array.from({ length: 20 }, () => ({
+      id: crypto.randomUUID(),
+      label: 'Choice',
+    })),
+  };
+  expect(insertOption(full, full.options[0].id)).toBeNull();
+});
+it('starts new questions and the first page empty so authors write their own words', () => {
+  const definition = newBlankDefinition();
+  // The title field shows "Untitled form" as a placeholder; publishing asks
+  // for a real title instead of showing respondents that placeholder.
+  expect(definition.title).toBe('');
+  expect(definition.pages[0].title).toBe('');
+  for (const type of Object.keys(blockNames) as Block['type'][]) {
+    const block = newBlock(type);
+    if ('label' in block) expect(block.label).toBe('');
+  }
+  const question = newBlock('short-text');
+  definition.pages[0].blocks.push(question);
+  expect(formDefinitionSchema.safeParse(definition).success).toBe(true);
+  const compiled = compileDefinition(definition);
+  expect(compiled.ok).toBe(false);
+  if (!compiled.ok)
+    expect(compiled.issues).toContainEqual(
+      expect.objectContaining({ code: 'MISSING_LABEL', targetId: question.id }),
+    );
+});
+it('numbers questions across pages and leaves content blocks unnumbered', () => {
+  const definition = newBlankDefinition();
+  const [first, heading, second, third] = [
+    newBlock('email'),
+    newBlock('heading'),
+    newBlock('date'),
+    newBlock('number'),
+  ];
+  definition.pages[0].blocks = [first, heading];
+  definition.pages.push({
+    id: crypto.randomUUID(),
+    title: '',
+    blocks: [second, third],
+  });
+  expect(questionNumbers(definition)).toEqual(
+    new Map([
+      [first.id, 1],
+      [second.id, 2],
+      [third.id, 3],
+    ]),
+  );
+});
 it('creates bounded fresh definitions and every supported editable block', () => {
   const first = newBlankDefinition(),
     second = newBlankDefinition();

@@ -45,11 +45,10 @@ export function PublicInfo({
           snapform
         </Link>
         <Link to="/login" className="landing-signin">
-          Sign in ↗
+          Sign in
         </Link>
       </header>
       <main id="main" className="info-main">
-        <p className="eyebrow">SNAPFORM · PRIVATE PREVIEW</p>
         <h1>{title}</h1>
         <p className="info-intro">{intro}</p>
         <div className="info-content">{children}</div>

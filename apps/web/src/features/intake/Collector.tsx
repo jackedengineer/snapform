@@ -1,416 +1,528 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { evaluateForm } from '@snapform/contracts/evaluate';
-import type { Block } from '@snapform/contracts/form';
+import type { Block, Field } from '@snapform/contracts/form';
+import type { Answer } from '@snapform/contracts/answers';
+import { useQuery } from '@tanstack/react-query';
+import { hasFileQuestion } from '@snapform/contracts/uploads';
 import { useIntake } from './use-intake';
+import { listFiles } from './files';
 import { FieldControl } from './FieldControl';
 import { Turnstile } from './Turnstile';
 import { collectionSteps } from './steps';
-import { PublicLinks } from '../info/PublicInfo';
-export function Collector({ publicId }: { publicId: string }) {
+import type { CollectionStep } from './steps';
+import { resolvePosition } from './navigation';
+import type { CollectorSearch } from './navigation';
+import { reviewSections } from './summary';
+import type { ReviewRow } from './summary';
+import {
+  documentTitle,
+  EmbedUnavailable,
+  focusTarget,
+  Receipt,
+  RespondentFrame,
+  Review,
+  Unavailable,
+  Welcome,
+} from './screens';
+import { unavailableTitle } from './titles';
+// Only forms with a file question load the upload control.
+const FileField = lazy(() => import('./FileField'));
+const saveLabels = {
+  saved: 'Progress saved',
+  saving: 'Saving…',
+  waiting: 'Saving shortly…',
+  offline: 'Not confirmed saved',
+  conflict: 'Save conflict',
+  blocked: 'Saving unavailable',
+  submitted: 'Progress saved',
+};
+const isField = (block: Block): block is Field => 'required' in block;
+const fieldIds = (step: CollectionStep) =>
+  step.blocks.filter(isField).map((block) => block.id);
+export function Collector({
+  publicId,
+  search,
+  onNavigate,
+}: {
+  publicId: string;
+  search: CollectorSearch;
+  onNavigate: (search: CollectorSearch, replace?: boolean) => void;
+}) {
   const intake = useIntake(publicId),
     [token, setToken] = useState(''),
-    [stepId, setStepId] = useState(''),
-    [review, setReview] = useState(false),
+    [checkFailed, setCheckFailed] = useState(false),
+    [checkAttempt, setCheckAttempt] = useState(0),
     [touched, setTouched] = useState<Set<string>>(new Set()),
+    [sending, setSending] = useState(false),
+    [cleared, setCleared] = useState(''),
     [confirmation, setConfirmation] = useState<'forget' | 'reload' | null>(
       null,
     );
-  const heading = useRef<HTMLHeadingElement>(null),
-    dialog = useRef<HTMLDialogElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null),
+    entered = useRef(false),
+    corrected = useRef(''),
+    pendingFocus = useRef(''),
+    returnFocus = useRef('');
   const session = intake.progress?.record.session;
   const definition = session?.definition || intake.form?.definition;
+  const identity = intake.progress?.record.identity;
+  // Names for the review screen; shares its cache with the upload control.
+  const uploaded = useQuery({
+    queryKey: ['intake-files', publicId, identity?.id],
+    queryFn: () => (identity ? listFiles(publicId, identity) : []),
+    enabled: Boolean(session && definition && hasFileQuestion(definition)),
+  });
   const evaluation = definition
     ? evaluateForm(definition, session?.answers || {})
     : null;
   const steps =
     definition && evaluation?.ok ? collectionSteps(definition, evaluation) : [];
-  const index = Math.max(
-      0,
-      steps.findIndex((step) => step.id === stepId),
-    ),
-    step = steps[index];
-  const cardField = step?.blocks.find((block) => 'required' in block);
-  const cardQuestion = !review && definition?.presentation === 'card';
   const status = intake.progress?.status;
+  const pendingSubmit = intake.progress?.record.pending?.kind === 'submit';
   const frozen =
-    intake.progress?.record.pending?.kind === 'submit' ||
+    pendingSubmit ||
     ['blocked', 'conflict', 'submitted'].includes(status || '');
+  const position =
+    session && evaluation?.ok
+      ? resolvePosition(steps, evaluation, session.answers, search, frozen)
+      : { index: 0, review: false };
+  const review = pendingSubmit || position.review,
+    index = position.index,
+    step = steps[index],
+    editing = !review && search.edit === true;
+  const card = definition?.presentation === 'card';
+  const cardField = card ? step?.blocks.find(isField) : undefined;
+  const submitted = Boolean(session) && status === 'submitted';
+  const screen = intake.unavailable
+    ? 'unavailable'
+    : intake.loading
+      ? 'loading'
+      : !session
+        ? definition
+          ? 'welcome'
+          : 'error'
+        : submitted
+          ? 'receipt'
+          : review
+            ? 'review'
+            : 'step-' + index;
+  const address = review ? 'review' : index + 1;
   useEffect(() => {
-    if (session) {
-      heading.current?.focus();
-      window.scrollTo(0, 0);
+    // Keep the address on the step shown so Back, Forward and refresh agree.
+    const shown = session && !submitted && step ? String(address) : '';
+    if (!shown || search.step === address) corrected.current = '';
+    else if (corrected.current !== shown) {
+      corrected.current = shown;
+      onNavigate(
+        editing ? { step: index + 1, edit: true } : { step: address },
+        true,
+      );
     }
-  }, [stepId, review, session?.id]);
+  });
   useEffect(() => {
-    if (status === 'submitted') {
-      heading.current?.focus();
-      window.scrollTo(0, 0);
-    }
-  }, [status]);
+    if (screen === 'loading') return;
+    const initial = !entered.current;
+    entered.current = true;
+    if (screen === 'error' || (initial && screen === 'welcome')) return;
+    const target =
+      (pendingFocus.current && document.getElementById(pendingFocus.current)) ||
+      document.getElementById(focusTarget);
+    pendingFocus.current = '';
+    target?.focus();
+    if (target?.id === focusTarget) window.scrollTo(0, 0);
+  }, [screen, session?.id]);
   useEffect(() => {
     if (confirmation) dialog.current?.showModal();
     else dialog.current?.close();
   }, [confirmation]);
   useEffect(() => {
-    setReview(false);
-    setStepId('');
     setTouched(new Set());
   }, [session?.id]);
+  const business = intake.business?.name;
+  const pageTitle = intake.unavailable
+    ? unavailableTitle
+    : documentTitle(definition?.title, business);
+  useEffect(() => {
+    document.title = pageTitle;
+  }, [pageTitle]);
+  function firstUnfinished() {
+    if (!evaluation?.ok) return -1;
+    const ids = new Set(evaluation.issues.map((issue) => issue.targetId));
+    return steps.findIndex((item) => fieldIds(item).some((id) => ids.has(id)));
+  }
+  function continueToReview() {
+    const blocked = firstUnfinished();
+    if (blocked === -1 || !evaluation?.ok) {
+      pendingFocus.current = returnFocus.current;
+      onNavigate({ step: 'review' });
+      return;
+    }
+    const ids = new Set(fieldIds(steps[blocked]));
+    const issue = evaluation.issues.find(
+      (item) => item.targetId && ids.has(item.targetId),
+    );
+    setTouched((previous) => new Set([...previous, ...ids]));
+    pendingFocus.current = 'answer-' + issue?.targetId;
+    onNavigate({ step: blocked + 1, edit: true });
+  }
   function next(event: FormEvent) {
     event.preventDefault();
     if (!evaluation?.ok || !step) return;
-    const ids = new Set(
-      step.blocks
-        .filter((block) => 'required' in block)
-        .map((block) => block.id),
-    );
-    const issues = evaluation.issues.filter(
-      (issue) => issue.targetId && ids.has(issue.targetId),
+    const ids = new Set(fieldIds(step));
+    const issue = evaluation.issues.find(
+      (item) => item.targetId && ids.has(item.targetId),
     );
     setTouched((previous) => new Set([...previous, ...ids]));
-    if (issues.length) {
-      document.getElementById('answer-' + issues[0].targetId)?.focus();
+    if (issue) {
+      document.getElementById('answer-' + issue.targetId)?.focus();
       return;
     }
     void intake.controller?.flush();
-    if (index + 1 < steps.length) setStepId(steps[index + 1].id);
-    else setReview(true);
+    if (editing) continueToReview();
+    else
+      onNavigate(
+        index + 1 < steps.length ? { step: index + 2 } : { step: 'review' },
+      );
+  }
+  function edit(row: ReviewRow) {
+    pendingFocus.current = 'answer-' + row.id;
+    returnFocus.current = 'edit-' + row.id;
+    onNavigate({ step: row.stepIndex + 1, edit: true });
+  }
+  async function send() {
+    if (!evaluation?.ok || sending || frozen) return;
+    // The server repeats validation; this only routes to an unfinished question.
+    if (!evaluation.complete && firstUnfinished() !== -1) {
+      returnFocus.current = '';
+      continueToReview();
+      return;
+    }
+    setSending(true);
+    try {
+      await intake.controller?.submit();
+    } finally {
+      setSending(false);
+    }
+  }
+  function clear(message: string) {
+    if (intake.busy) return;
+    pendingFocus.current = focusTarget;
+    setCleared(message);
+    onNavigate({}, true);
+    void intake.forget();
   }
   function fields(blocks: Block[]) {
-    return blocks.map((block) => (
-      <FieldControl
-        key={block.id}
-        block={block}
-        answer={session?.answers[block.id]}
-        error={
-          touched.has(block.id) && evaluation?.ok
-            ? evaluation.issues.find((issue) => issue.targetId === block.id)
-                ?.message
-            : undefined
-        }
-        onChange={(answer) =>
-          intake.controller?.edit({
-            ...intake.controller.state.record.session?.answers,
-            [block.id]: answer,
-          })
-        }
-        onBlur={() =>
-          setTouched((previous) => new Set([...previous, block.id]))
-        }
-      />
-    ));
+    return blocks.map((block) => {
+      const answer = session?.answers[block.id];
+      const error =
+        touched.has(block.id) && evaluation?.ok
+          ? evaluation.issues.find((issue) => issue.targetId === block.id)
+              ?.message
+          : undefined;
+      const change = (next: Answer) =>
+        intake.controller?.edit({
+          ...intake.controller.state.record.session?.answers,
+          [block.id]: next,
+        });
+      const blur = () =>
+        setTouched((previous) => new Set([...previous, block.id]));
+      return (
+        <FieldControl
+          key={block.id}
+          block={block}
+          answer={answer}
+          error={error}
+          onChange={change}
+          onBlur={blur}
+          files={
+            block.type === 'file' && identity
+              ? (describedBy) => (
+                  <Suspense
+                    fallback={<p role="status">Loading file upload…</p>}
+                  >
+                    <FileField
+                      block={block}
+                      ids={
+                        answer?.state === 'value' && Array.isArray(answer.value)
+                          ? answer.value
+                          : []
+                      }
+                      publicId={publicId}
+                      identity={identity}
+                      describedBy={describedBy}
+                      invalid={Boolean(error)}
+                      onChange={change}
+                      onBlur={blur}
+                    />
+                  </Suspense>
+                )
+              : undefined
+          }
+        />
+      );
+    });
   }
+  const embed = search.embed === 1;
+  // Without plan flags (an older server or a failed read) nothing changes.
+  const badge = intake.plan?.badge !== false;
+  if (intake.unavailable)
+    return (
+      <RespondentFrame business={business} embed={embed} badge={badge}>
+        <Unavailable closed={intake.unavailable === 'closed'} />
+      </RespondentFrame>
+    );
+  if (embed && intake.plan?.embed === false)
+    return (
+      <RespondentFrame business={business} embed badge={badge}>
+        <EmbedUnavailable publicId={publicId} />
+      </RespondentFrame>
+    );
+  const messages = [
+    ...new Set([intake.error, intake.progress?.message].filter(Boolean)),
+  ];
   const ending =
     definition && evaluation?.ok
       ? definition.endings.find((ending) => ending.id === evaluation.endingId)
       : undefined;
+  const pageHeading = cardField ? cardField.label : step?.title;
+  // Untitled pages still need an H2 before any section headings (H3).
+  const StepLabel = review || pageHeading ? 'p' : 'h2';
   return (
-    <div className="intake-shell">
-      <header className="intake-header">
-        <a href="/" className="wordmark" aria-label="Snapform home">
-          <span className="brand-symbol">s</span>snapform
-        </a>
-        <span>Made for a better conversation</span>
-      </header>
-      <main
-        id="main"
-        className={
-          'intake-main ' +
-          (definition?.presentation === 'card' ? 'intake-card' : '')
-        }
-      >
-        {intake.loading ? (
-          <div className="intake-loading" role="status">
-            Opening your form…
-          </div>
-        ) : (
-          <>
-            {(intake.error || intake.progress?.message) && (
-              <div role="alert" className="intake-notice">
-                <p>{intake.error || intake.progress?.message}</p>
-                {!intake.form && (
+    <RespondentFrame
+      business={business}
+      title={session ? definition?.title : undefined}
+      card={card && !review}
+      embed={embed}
+      badge={badge}
+    >
+      <p role="status" className="intake-cleared">
+        {cleared}
+      </p>
+      {intake.loading ? (
+        <div className="intake-loading" role="status">
+          Opening your form…
+        </div>
+      ) : (
+        <>
+          {messages.length > 0 && (
+            <div role="alert" className="intake-notice">
+              {messages.map((message) => (
+                <p key={message}>{message}</p>
+              ))}
+              {!intake.form && (
+                <button
+                  type="button"
+                  className="intake-text-button"
+                  onClick={intake.retry}
+                >
+                  Retry loading
+                </button>
+              )}
+              {['conflict', 'blocked'].includes(status || '') && !review && (
+                <button
+                  type="button"
+                  className="intake-text-button"
+                  onClick={() => onNavigate({ step: 'review' })}
+                >
+                  Review my answers
+                </button>
+              )}
+              {status === 'offline' && (
+                <button
+                  type="button"
+                  className="intake-text-button"
+                  onClick={() => void intake.controller?.flush()}
+                >
+                  {pendingSubmit ? 'Retry sending' : 'Retry saving'}
+                </button>
+              )}
+              {status === 'conflict' && (
+                <button
+                  type="button"
+                  className="intake-text-button"
+                  onClick={() => setConfirmation('reload')}
+                >
+                  Reload saved response
+                </button>
+              )}
+              {status === 'blocked' && (
+                <>
                   <button
                     type="button"
                     className="intake-text-button"
                     onClick={intake.retry}
                   >
-                    Retry loading
+                    Reload
                   </button>
-                )}
-                {['conflict', 'blocked'].includes(status || '') && !review && (
                   <button
                     type="button"
                     className="intake-text-button"
-                    onClick={() => setReview(true)}
+                    onClick={() => setConfirmation('forget')}
                   >
-                    Review my answers
+                    Clear saved answers
                   </button>
-                )}
-                {['offline', 'conflict', 'blocked'].includes(status || '') && (
-                  <button
-                    type="button"
-                    className="intake-text-button"
-                    onClick={() =>
-                      status === 'offline'
-                        ? void intake.controller?.flush()
-                        : status === 'conflict'
-                          ? setConfirmation('reload')
-                          : intake.retry()
-                    }
-                  >
-                    {status === 'offline'
-                      ? 'Retry confirmation'
-                      : 'Reload saved response'}
-                  </button>
-                )}
-              </div>
-            )}
-            {(intake.storageError || intake.progress?.storageError) && (
-              <p role="alert" className="intake-notice">
-                Browser recovery is unavailable. Keep this tab open until your
-                answers are saved.
-              </p>
-            )}
-            {!session && definition && (
-              <section className="intake-welcome">
-                <p className="intake-eyebrow">A CLEAR START</p>
-                <h1 ref={heading} tabIndex={-1}>
-                  {definition.title}
-                </h1>
-                {definition.description && (
-                  <p className="intake-description">{definition.description}</p>
-                )}
-                <div className="intake-privacy">
-                  <span aria-hidden="true">↗</span>
-                  <p>
-                    Your answers go to the business that shared this form.
-                    Progress is saved before submission and can be recovered in
-                    this browser for up to seven days. Avoid shared devices for
-                    private information.
-                  </p>
-                </div>
-                {intake.siteKey && (
-                  <Turnstile
-                    key={intake.attempt}
-                    siteKey={intake.siteKey}
-                    onToken={setToken}
-                  />
-                )}
-                <button
-                  type="button"
-                  className="button primary"
-                  disabled={!token || intake.busy}
-                  onClick={() => {
-                    const current = token;
-                    setToken('');
-                    void intake.start(current);
-                  }}
-                >
-                  {intake.busy ? 'Opening…' : 'Let’s get started'}
-                  <span aria-hidden="true">↗</span>
-                </button>
-                <p className="intake-caption">
-                  You can review and edit everything before sending.
-                </p>
-              </section>
-            )}
-            {session && status === 'submitted' ? (
-              <section className="intake-completion">
-                <span className="intake-check" aria-hidden="true">
-                  ✓
-                </span>
-                <p className="intake-eyebrow">RESPONSE RECEIVED</p>
-                <h1 ref={heading} tabIndex={-1}>
-                  {ending?.title || 'Thank you.'}
-                </h1>
-                <p className="intake-description">{ending?.description}</p>
-                <p className="intake-reference">
-                  Your reference
-                  <br />
-                  <strong>{session.id}</strong>
-                </p>
-                <p className="intake-caption">
-                  Your response has been saved. Keep the reference if you need
-                  to follow up.
-                </p>
-              </section>
-            ) : (
-              session &&
-              definition &&
-              evaluation?.ok &&
-              step && (
-                <>
-                  <div className="intake-progress-line">
-                    <span>
-                      {review
-                        ? 'One last look'
-                        : definition.presentation === 'card'
-                          ? `Question ${index + 1} of ${steps.length}`
-                          : `Step ${index + 1} of ${steps.length}`}
-                    </span>
-                    <span role="status" aria-live="polite">
-                      {status === 'saved'
-                        ? 'Progress saved'
-                        : status === 'saving'
-                          ? 'Saving…'
-                          : status === 'waiting'
-                            ? 'Saving shortly…'
-                            : status === 'offline'
-                              ? 'Not confirmed saved'
-                              : status === 'conflict'
-                                ? 'Save conflict'
-                                : 'Saving unavailable'}
-                    </span>
-                  </div>
-                  <progress
-                    aria-label="Form progress"
-                    max={steps.length}
-                    value={review ? steps.length : index + 1}
-                  />
-                  <form
-                    noValidate
-                    onSubmit={next}
-                    className={
-                      'intake-answer-form' +
-                      (cardQuestion ? ' intake-card-question' : '')
-                    }
-                  >
-                    <p className="intake-eyebrow">{definition.title}</p>
-                    <h1 ref={heading} tabIndex={-1}>
-                      {review
-                        ? 'Review your answers'
-                        : cardQuestion && cardField && 'label' in cardField
-                          ? cardField.label
-                          : step.title}
-                    </h1>
-                    {cardQuestion && cardField && 'required' in cardField && (
-                      <p className="intake-card-requirement">
-                        {cardField.required ? 'Required' : 'Optional'}
-                      </p>
-                    )}
-                    {review && !frozen && (
-                      <p className="intake-description">
-                        Make any final changes below. Only answers relevant to
-                        your path will be sent.
-                      </p>
-                    )}
-                    <fieldset
-                      disabled={Boolean(frozen)}
-                      className="intake-controls"
-                    >
-                      {review
-                        ? steps.map((item) => (
-                            <section
-                              key={item.id}
-                              className="intake-review-section"
-                            >
-                              {definition.presentation === 'page' && (
-                                <h2>{item.title}</h2>
-                              )}
-                              {fields(item.blocks)}
-                            </section>
-                          ))
-                        : fields(step.blocks)}
-                    </fieldset>
-                    <div className="intake-actions">
-                      {(review || index > 0) && (
-                        <button
-                          type="button"
-                          className="button intake-secondary"
-                          onClick={() =>
-                            review
-                              ? setReview(false)
-                              : setStepId(steps[index - 1].id)
-                          }
-                          disabled={Boolean(frozen)}
-                        >
-                          ← Back
-                        </button>
-                      )}
-                      {review ? (
-                        <button
-                          type="button"
-                          className="button primary"
-                          disabled={Boolean(frozen) || status !== 'saved'}
-                          onClick={() => {
-                            if (!evaluation.complete) {
-                              setTouched(
-                                new Set(
-                                  evaluation.issues.flatMap((issue) =>
-                                    issue.targetId ? [issue.targetId] : [],
-                                  ),
-                                ),
-                              );
-                              document
-                                .getElementById(
-                                  'answer-' + evaluation.issues[0]?.targetId,
-                                )
-                                ?.focus();
-                              return;
-                            }
-                            void intake.controller?.submit();
-                          }}
-                        >
-                          {intake.progress?.record.pending?.kind === 'submit'
-                            ? 'Confirming…'
-                            : 'Send response'}
-                          <span aria-hidden="true">↗</span>
-                        </button>
-                      ) : (
-                        <button
-                          className="button primary"
-                          type="submit"
-                          disabled={Boolean(frozen)}
-                        >
-                          {index + 1 === steps.length
-                            ? 'Review answers'
-                            : 'Continue'}
-                          <span aria-hidden="true">→</span>
-                        </button>
-                      )}
-                    </div>
-                    {review && (
-                      <p className="intake-caption">
-                        Sending creates a saved response for the business. You
-                        won’t be able to edit it afterward.
-                      </p>
-                    )}
-                  </form>
                 </>
-              )
-            )}
-            {definition && (
-              <footer className="intake-footer">
-                <span>Your pace. Your words.</span>
-                <button
-                  type="button"
-                  className="intake-text-button"
-                  disabled={intake.busy || status === 'saving'}
-                  onClick={() => setConfirmation('forget')}
+              )}
+            </div>
+          )}
+          {(intake.storageError || intake.progress?.storageError) && (
+            <p role="alert" className="intake-notice">
+              Browser recovery is unavailable. Keep this tab open until your
+              answers are saved.
+            </p>
+          )}
+          {!session && definition && (
+            <Welcome
+              title={definition.title}
+              business={business}
+              description={definition.description}
+              check={
+                !intake.siteKey || checkFailed
+                  ? 'failed'
+                  : token
+                    ? 'ready'
+                    : 'checking'
+              }
+              busy={intake.busy}
+              onStart={() => {
+                const current = token;
+                setToken('');
+                setCleared('');
+                void intake.start(current);
+              }}
+              onRetryCheck={() => {
+                setCheckFailed(false);
+                setToken('');
+                if (intake.siteKey) setCheckAttempt((value) => value + 1);
+                else intake.retry();
+              }}
+              onClear={() =>
+                clear('Saved answers were cleared from this browser.')
+              }
+            >
+              {intake.siteKey && (
+                <Turnstile
+                  key={intake.attempt + ':' + checkAttempt}
+                  siteKey={intake.siteKey}
+                  onToken={(value) => {
+                    setToken(value);
+                    if (value) setCheckFailed(false);
+                  }}
+                  onError={() => setCheckFailed(true)}
+                />
+              )}
+            </Welcome>
+          )}
+          {session && submitted && (
+            <Receipt
+              sessionId={session.id}
+              ending={ending}
+              onAnother={() => clear('')}
+              onClear={() =>
+                clear('Saved answers were cleared from this browser.')
+              }
+            />
+          )}
+          {session && !submitted && evaluation?.ok && step && (
+            <>
+              <div className="intake-progress-line">
+                <StepLabel
+                  id={review || pageHeading ? undefined : focusTarget}
+                  tabIndex={-1}
                 >
-                  Forget this browser
-                </button>
-              </footer>
-            )}
-            {definition && <PublicLinks newTab />}
-          </>
-        )}
-      </main>
+                  {review
+                    ? 'One last look'
+                    : `${card ? 'Question' : 'Step'} ${index + 1} of ${steps.length}`}
+                </StepLabel>
+                <p role="status">{status && saveLabels[status]}</p>
+              </div>
+              <progress
+                aria-label="Form progress"
+                max={steps.length}
+                value={review ? steps.length : index}
+              />
+              {review ? (
+                <Review
+                  sections={reviewSections(steps, evaluation, uploaded.data)}
+                  status={status}
+                  frozen={frozen}
+                  pendingSubmit={pendingSubmit}
+                  sending={sending}
+                  onEdit={edit}
+                  onBack={() => onNavigate({ step: steps.length })}
+                  onSend={() => void send()}
+                />
+              ) : (
+                <form
+                  noValidate
+                  onSubmit={next}
+                  className={
+                    'intake-answer-form' +
+                    (cardField ? ' intake-card-question' : '')
+                  }
+                >
+                  {pageHeading && (
+                    <h2 id={focusTarget} tabIndex={-1}>
+                      {pageHeading}
+                    </h2>
+                  )}
+                  {cardField && (
+                    <p className="intake-card-requirement">
+                      {cardField.required ? 'Required' : 'Optional'}
+                    </p>
+                  )}
+                  <fieldset
+                    disabled={Boolean(frozen)}
+                    className="intake-controls"
+                  >
+                    {fields(step.blocks)}
+                  </fieldset>
+                  <div className="intake-actions">
+                    {!editing && index > 0 && (
+                      <button
+                        type="button"
+                        className="button intake-secondary"
+                        onClick={() => onNavigate({ step: index })}
+                        disabled={frozen}
+                      >
+                        ← Back
+                      </button>
+                    )}
+                    <button
+                      className="button primary"
+                      type="submit"
+                      disabled={frozen}
+                    >
+                      {editing
+                        ? 'Back to review'
+                        : index + 1 === steps.length
+                          ? 'Review answers'
+                          : 'Continue'}
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </>
+          )}
+        </>
+      )}
       <dialog
         ref={dialog}
         className="intake-dialog"
+        aria-labelledby="intake-dialog-title"
         onCancel={() => setConfirmation(null)}
       >
-        <h2>
+        <h2 id="intake-dialog-title">
           {confirmation === 'reload'
             ? 'Use the saved response?'
-            : 'Forget this browser’s copy?'}
+            : 'Clear saved answers?'}
         </h2>
         <p>
           {confirmation === 'reload'
             ? 'This replaces unsent answers in this browser with the saved response. Cancel to keep your browser’s answers.'
-            : 'This removes recovery from this browser. It does not delete answers already saved for this form.'}
+            : 'This removes the answers kept in this browser. Anything already saved with the business stays there.'}
         </p>
         <div className="intake-actions">
           <button
@@ -418,7 +530,7 @@ export function Collector({ publicId }: { publicId: string }) {
             className="button intake-secondary"
             onClick={() => setConfirmation(null)}
           >
-            {confirmation === 'reload' ? 'Keep my answers' : 'Keep it'}
+            {confirmation === 'reload' ? 'Keep my answers' : 'Keep them'}
           </button>
           <button
             type="button"
@@ -427,13 +539,13 @@ export function Collector({ publicId }: { publicId: string }) {
               const action = confirmation;
               setConfirmation(null);
               if (action === 'reload') intake.useSaved();
-              else void intake.forget();
+              else clear('Saved answers were cleared from this browser.');
             }}
           >
-            {confirmation === 'reload' ? 'Use saved response' : 'Forget copy'}
+            {confirmation === 'reload' ? 'Use saved response' : 'Clear answers'}
           </button>
         </div>
       </dialog>
-    </div>
+    </RespondentFrame>
   );
 }

@@ -1,7 +1,11 @@
 import { QueryClient } from '@tanstack/react-query';
 import type { DeletionRequest } from '@snapform/contracts/deletion';
 import { expect, it } from 'vitest';
-import { deletionKey, cacheConfirmedDeletion } from './deletion-cache';
+import {
+  deletionKey,
+  cacheConfirmedDeletion,
+  refreshAfterDeletion,
+} from './deletion-cache';
 const target = { kind: 'response' as const, targetId: crypto.randomUUID() },
   workspaceId = crypto.randomUUID();
 const scheduled: DeletionRequest = {
@@ -99,4 +103,29 @@ it('does not let an old unmounted control cancel a new same-target read', async 
     await fresh;
     client.clear();
   }
+});
+it('marks the workspace response lists stale after a response deletion changes', async () => {
+  const client = new QueryClient();
+  const userId = 'user_1';
+  const otherWorkspace = crypto.randomUUID();
+  const list = ['responses', userId, workspaceId, crypto.randomUUID(), null];
+  const elsewhere = [
+    'responses',
+    userId,
+    otherWorkspace,
+    crypto.randomUUID(),
+    null,
+  ];
+  client.setQueryData(list, { responses: [] });
+  client.setQueryData(elsewhere, { responses: [] });
+  await refreshAfterDeletion(client, userId, workspaceId, target);
+  expect(client.getQueryState(list)?.isInvalidated).toBe(true);
+  expect(client.getQueryState(elsewhere)?.isInvalidated).toBe(false);
+  const fresh = new QueryClient();
+  fresh.setQueryData(list, { responses: [] });
+  await refreshAfterDeletion(fresh, userId, workspaceId, {
+    kind: 'workspace',
+    targetId: workspaceId,
+  });
+  expect(fresh.getQueryState(list)?.isInvalidated).toBe(false);
 });

@@ -1,22 +1,27 @@
 import { intakeEnvelopeSchema, capabilitySchema } from './intake.ts';
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { answerInputSchema } from './answers.ts';
 import { evaluateForm } from './evaluate.ts';
 import type { Answer } from './answers.ts';
 import type { CompileIssue } from './compile.ts';
-const identity = z.uuid().transform((id) => id.toLowerCase());
+const identity = z.pipe(
+  z.uuid(),
+  z.transform((id: string) => id.toLowerCase()),
+);
+const revision = (min: number, max: number) =>
+  z.int().check(z.minimum(min), z.maximum(max));
 export const intakeProgressSchema = z
   .record(identity, answerInputSchema)
-  .refine((answers) => Object.keys(answers).length <= 50);
+  .check(z.refine((answers) => Object.keys(answers).length <= 50));
 export const intakeMutationSchema = z.strictObject({
   operationId: identity,
-  expectedRevision: z.int().min(1).max(2147483646),
+  expectedRevision: revision(1, 2147483646),
   answers: intakeProgressSchema,
 });
 export const intakeMutationReceiptSchema = z.strictObject({
   operationId: identity,
-  revision: z.int().min(2).max(2147483647),
-  currentRevision: z.int().min(2).max(2147483647),
+  revision: revision(2, 2147483647),
+  currentRevision: revision(2, 2147483647),
   status: z.enum(['collecting', 'submitted']),
 });
 export type IntakeMutation = z.infer<typeof intakeMutationSchema>;
@@ -55,22 +60,24 @@ export const intakeRecoverySchema = z
     version: z.literal(1),
     publicId: identity,
     identity: z.strictObject({ id: identity, capability: capabilitySchema }),
-    expiresAt: z.int().positive(),
-    session: intakeEnvelopeSchema.shape.session.nullable(),
-    pending: z
-      .strictObject({
+    expiresAt: z.int().check(z.positive()),
+    session: z.nullable(intakeEnvelopeSchema.shape.session),
+    pending: z.nullable(
+      z.strictObject({
         kind: z.enum(['save', 'submit']),
         input: intakeMutationSchema,
-      })
-      .nullable(),
+      }),
+    ),
   })
-  .refine((record) =>
-    !record.session
-      ? record.pending === null
-      : record.session.id === record.identity.id &&
-        record.session.publicId === record.publicId &&
-        Date.parse(record.session.expiresAt) === record.expiresAt &&
-        (!record.pending ||
-          record.pending.input.expectedRevision === record.session.revision),
+  .check(
+    z.refine((record) =>
+      !record.session
+        ? record.pending === null
+        : record.session.id === record.identity.id &&
+          record.session.publicId === record.publicId &&
+          Date.parse(record.session.expiresAt) === record.expiresAt &&
+          (!record.pending ||
+            record.pending.input.expectedRevision === record.session.revision),
+    ),
   );
 export type IntakeRecovery = z.infer<typeof intakeRecoverySchema>;

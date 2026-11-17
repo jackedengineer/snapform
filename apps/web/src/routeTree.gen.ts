@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/_account'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as InviteRouteImport } from './routes/invite'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ReportAbuseRouteImport } from './routes/report-abuse'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -23,6 +25,8 @@ import { Route as AccountAppRouteImport } from './routes/_account.app'
 import { Route as FPublicIdRouteImport } from './routes/f.$publicId'
 import { Route as AccountWorkspacesWorkspaceIdRouteImport } from './routes/_account.workspaces.$workspaceId'
 import { Route as AccountWorkspacesWorkspaceIdIndexRouteImport } from './routes/_account.workspaces.$workspaceId.index'
+import { Route as AccountWorkspacesWorkspaceIdBillingRouteImport } from './routes/_account.workspaces.$workspaceId.billing'
+import { Route as AccountWorkspacesWorkspaceIdTeamRouteImport } from './routes/_account.workspaces.$workspaceId.team'
 import { Route as AccountWorkspacesWorkspaceIdFormsFormIdRouteImport } from './routes/_account.workspaces.$workspaceId.forms.$formId'
 import { Route as AccountWorkspacesWorkspaceIdResponsesFormIdRouteImport } from './routes/_account.workspaces.$workspaceId.responses.$formId'
 
@@ -40,9 +44,19 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -97,6 +111,18 @@ const AccountWorkspacesWorkspaceIdIndexRoute =
     path: '/',
     getParentRoute: () => AccountWorkspacesWorkspaceIdRoute,
   } as any)
+const AccountWorkspacesWorkspaceIdBillingRoute =
+  AccountWorkspacesWorkspaceIdBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
+    getParentRoute: () => AccountWorkspacesWorkspaceIdRoute,
+  } as any)
+const AccountWorkspacesWorkspaceIdTeamRoute =
+  AccountWorkspacesWorkspaceIdTeamRouteImport.update({
+    id: '/team',
+    path: '/team',
+    getParentRoute: () => AccountWorkspacesWorkspaceIdRoute,
+  } as any)
 const AccountWorkspacesWorkspaceIdFormsFormIdRoute =
   AccountWorkspacesWorkspaceIdFormsFormIdRouteImport.update({
     id: '/forms/$formId',
@@ -113,7 +139,9 @@ const AccountWorkspacesWorkspaceIdResponsesFormIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/report-abuse': typeof ReportAbuseRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -123,6 +151,8 @@ export interface FileRoutesByFullPath {
   '/app': typeof AccountAppRoute
   '/f/$publicId': typeof FPublicIdRoute
   '/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdRouteWithChildren
+  '/workspaces/$workspaceId/billing': typeof AccountWorkspacesWorkspaceIdBillingRoute
+  '/workspaces/$workspaceId/team': typeof AccountWorkspacesWorkspaceIdTeamRoute
   '/workspaces/$workspaceId/': typeof AccountWorkspacesWorkspaceIdIndexRoute
   '/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
   '/workspaces/$workspaceId/responses/$formId': typeof AccountWorkspacesWorkspaceIdResponsesFormIdRoute
@@ -130,7 +160,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/report-abuse': typeof ReportAbuseRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -139,6 +171,8 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/app': typeof AccountAppRoute
   '/f/$publicId': typeof FPublicIdRoute
+  '/workspaces/$workspaceId/billing': typeof AccountWorkspacesWorkspaceIdBillingRoute
+  '/workspaces/$workspaceId/team': typeof AccountWorkspacesWorkspaceIdTeamRoute
   '/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdIndexRoute
   '/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
   '/workspaces/$workspaceId/responses/$formId': typeof AccountWorkspacesWorkspaceIdResponsesFormIdRoute
@@ -148,7 +182,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_account': typeof AccountRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/report-abuse': typeof ReportAbuseRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -158,6 +194,8 @@ export interface FileRoutesById {
   '/_account/app': typeof AccountAppRoute
   '/f/$publicId': typeof FPublicIdRoute
   '/_account/workspaces/$workspaceId': typeof AccountWorkspacesWorkspaceIdRouteWithChildren
+  '/_account/workspaces/$workspaceId/billing': typeof AccountWorkspacesWorkspaceIdBillingRoute
+  '/_account/workspaces/$workspaceId/team': typeof AccountWorkspacesWorkspaceIdTeamRoute
   '/_account/workspaces/$workspaceId/': typeof AccountWorkspacesWorkspaceIdIndexRoute
   '/_account/workspaces/$workspaceId/forms/$formId': typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
   '/_account/workspaces/$workspaceId/responses/$formId': typeof AccountWorkspacesWorkspaceIdResponsesFormIdRoute
@@ -167,7 +205,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/forgot-password'
+    | '/invite'
     | '/login'
+    | '/pricing'
     | '/privacy'
     | '/report-abuse'
     | '/reset-password'
@@ -177,6 +217,8 @@ export interface FileRouteTypes {
     | '/app'
     | '/f/$publicId'
     | '/workspaces/$workspaceId'
+    | '/workspaces/$workspaceId/billing'
+    | '/workspaces/$workspaceId/team'
     | '/workspaces/$workspaceId/'
     | '/workspaces/$workspaceId/forms/$formId'
     | '/workspaces/$workspaceId/responses/$formId'
@@ -184,7 +226,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/forgot-password'
+    | '/invite'
     | '/login'
+    | '/pricing'
     | '/privacy'
     | '/report-abuse'
     | '/reset-password'
@@ -193,6 +237,8 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/app'
     | '/f/$publicId'
+    | '/workspaces/$workspaceId/billing'
+    | '/workspaces/$workspaceId/team'
     | '/workspaces/$workspaceId'
     | '/workspaces/$workspaceId/forms/$formId'
     | '/workspaces/$workspaceId/responses/$formId'
@@ -201,7 +247,9 @@ export interface FileRouteTypes {
     | '/'
     | '/_account'
     | '/forgot-password'
+    | '/invite'
     | '/login'
+    | '/pricing'
     | '/privacy'
     | '/report-abuse'
     | '/reset-password'
@@ -211,6 +259,8 @@ export interface FileRouteTypes {
     | '/_account/app'
     | '/f/$publicId'
     | '/_account/workspaces/$workspaceId'
+    | '/_account/workspaces/$workspaceId/billing'
+    | '/_account/workspaces/$workspaceId/team'
     | '/_account/workspaces/$workspaceId/'
     | '/_account/workspaces/$workspaceId/forms/$formId'
     | '/_account/workspaces/$workspaceId/responses/$formId'
@@ -220,7 +270,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  InviteRoute: typeof InviteRoute
   LoginRoute: typeof LoginRoute
+  PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ReportAbuseRoute: typeof ReportAbuseRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -253,11 +305,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -330,6 +396,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountWorkspacesWorkspaceIdIndexRouteImport
       parentRoute: typeof AccountWorkspacesWorkspaceIdRoute
     }
+    '/_account/workspaces/$workspaceId/billing': {
+      id: '/_account/workspaces/$workspaceId/billing'
+      path: '/billing'
+      fullPath: '/workspaces/$workspaceId/billing'
+      preLoaderRoute: typeof AccountWorkspacesWorkspaceIdBillingRouteImport
+      parentRoute: typeof AccountWorkspacesWorkspaceIdRoute
+    }
+    '/_account/workspaces/$workspaceId/team': {
+      id: '/_account/workspaces/$workspaceId/team'
+      path: '/team'
+      fullPath: '/workspaces/$workspaceId/team'
+      preLoaderRoute: typeof AccountWorkspacesWorkspaceIdTeamRouteImport
+      parentRoute: typeof AccountWorkspacesWorkspaceIdRoute
+    }
     '/_account/workspaces/$workspaceId/forms/$formId': {
       id: '/_account/workspaces/$workspaceId/forms/$formId'
       path: '/forms/$formId'
@@ -348,6 +428,8 @@ declare module '@tanstack/react-router' {
 }
 
 interface AccountWorkspacesWorkspaceIdRouteChildren {
+  AccountWorkspacesWorkspaceIdBillingRoute: typeof AccountWorkspacesWorkspaceIdBillingRoute
+  AccountWorkspacesWorkspaceIdTeamRoute: typeof AccountWorkspacesWorkspaceIdTeamRoute
   AccountWorkspacesWorkspaceIdIndexRoute: typeof AccountWorkspacesWorkspaceIdIndexRoute
   AccountWorkspacesWorkspaceIdFormsFormIdRoute: typeof AccountWorkspacesWorkspaceIdFormsFormIdRoute
   AccountWorkspacesWorkspaceIdResponsesFormIdRoute: typeof AccountWorkspacesWorkspaceIdResponsesFormIdRoute
@@ -355,6 +437,10 @@ interface AccountWorkspacesWorkspaceIdRouteChildren {
 
 const AccountWorkspacesWorkspaceIdRouteChildren: AccountWorkspacesWorkspaceIdRouteChildren =
   {
+    AccountWorkspacesWorkspaceIdBillingRoute:
+      AccountWorkspacesWorkspaceIdBillingRoute,
+    AccountWorkspacesWorkspaceIdTeamRoute:
+      AccountWorkspacesWorkspaceIdTeamRoute,
     AccountWorkspacesWorkspaceIdIndexRoute:
       AccountWorkspacesWorkspaceIdIndexRoute,
     AccountWorkspacesWorkspaceIdFormsFormIdRoute:
@@ -386,7 +472,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  InviteRoute: InviteRoute,
   LoginRoute: LoginRoute,
+  PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ReportAbuseRoute: ReportAbuseRoute,
   ResetPasswordRoute: ResetPasswordRoute,

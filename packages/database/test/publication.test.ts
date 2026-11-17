@@ -5,7 +5,7 @@ import type { Transaction } from '../src/client.ts';
 import { user } from '../src/schema.ts';
 import { membership } from '../src/workspace-schema.ts';
 import { inWorkspace } from '../src/workspaces.ts';
-import { createForm, saveDraft } from '../src/forms.ts';
+import { createForm, saveDraft, listForms } from '../src/forms.ts';
 import { formVersion } from '../src/publication-schema.ts';
 import {
   getPublication,
@@ -13,7 +13,7 @@ import {
   unpublishForm,
 } from '../src/publication.ts';
 import { formFixture } from '../../contracts/test/form-fixture.ts';
-import { seedForm } from './fixtures/forms.ts';
+import { seedForm, seedResponses } from './fixtures/forms.ts';
 async function fixture(
   run: (
     tx: Transaction,
@@ -232,6 +232,36 @@ it(
 );
 
 it(
+  'refuses file questions on Free, where uploads are unavailable',
+  async () =>
+    fixture(async (tx, actor, workspaceId, formId) => {
+      const { definition } = formFixture();
+      definition.pages[0].blocks.push({
+        id: crypto.randomUUID(),
+        type: 'file',
+        label: 'Upload your brief',
+        description: '',
+        required: false,
+        aiEnabled: false,
+        maxFiles: 1,
+      });
+      await saveDraft(tx, actor, workspaceId, formId, {
+        operationId: crypto.randomUUID(),
+        expectedRevision: 1,
+        definition,
+      });
+      await expect(
+        publishForm(tx, actor, workspaceId, formId, {
+          versionId: crypto.randomUUID(),
+          expectedRevision: 2,
+        }),
+      ).rejects.toThrow('UPLOADS_REQUIRE_PRO');
+      expect(await getPublication(tx, actor, workspaceId, formId)).toBeNull();
+    }),
+  30000,
+);
+
+it(
   'denies missing forms and viewer publication writes',
   async () =>
     fixture(async (tx, actor, workspaceId, formId) => {
@@ -310,3 +340,55 @@ it(
     }),
   30000,
 );
+
+it('lists draft, live and stopped forms with only submitted responses counted', async () => {
+  if (!process.env.DATABASE_URL)
+    throw new Error('Runtime database configuration is required');
+  const { db, close } = await openDatabase(process.env.DATABASE_URL);
+  const rollback = new Error('Rollback form list fixtures');
+  try {
+    await expect(
+      db.transaction(async (tx) => {
+        // Two submitted responses and one unfinished session on a live form.
+        const { actor, workspaceId, formId } = await seedResponses(
+          tx,
+          'Form list QA',
+        );
+        const draftId = crypto.randomUUID();
+        await createForm(tx, actor, workspaceId, {
+          id: draftId,
+          definition: formFixture().definition,
+        });
+        const listed = async () =>
+          new Map(
+            (await listForms(tx, actor, workspaceId)).forms.map((item) => [
+              item.id,
+              item,
+            ]),
+          );
+        let forms = await listed();
+        expect(forms.get(formId)).toMatchObject({
+          status: 'live',
+          responseCount: 2,
+        });
+        expect(forms.get(draftId)).toMatchObject({
+          status: 'draft',
+          responseCount: 0,
+        });
+        const live = await getPublication(tx, actor, workspaceId, formId);
+        if (!live) throw new Error('Expected a live publication');
+        await unpublishForm(tx, actor, workspaceId, formId, {
+          expectedVersionId: live.versionId,
+        });
+        forms = await listed();
+        expect(forms.get(formId)).toMatchObject({
+          status: 'stopped',
+          responseCount: 2,
+        });
+        throw rollback;
+      }),
+    ).rejects.toBe(rollback);
+  } finally {
+    await close();
+  }
+}, 30000);

@@ -51,7 +51,11 @@ export function WebhookSettings(props: Props) {
         Signed webhooks{' '}
         {settings.data && (
           <span className="delivery-setting">
-            {settings.data.enabled ? 'On' : 'Off'}
+            {settings.data.attention
+              ? 'Needs attention'
+              : settings.data.enabled
+                ? 'On'
+                : 'Off'}
           </span>
         )}
       </summary>
@@ -101,7 +105,7 @@ type Reveal =
   | { status: 'idle' | 'pending' }
   | { status: 'shown'; value: string }
   | { status: 'error'; message: string };
-function WebhookEndpointForm({
+export function WebhookEndpointForm({
   workspaceId,
   formId,
   userId,
@@ -148,6 +152,12 @@ function WebhookEndpointForm({
             });
         }}
       >
+        {data.attention && (
+          // The stored address is never sent back, so the field starts empty.
+          <p id={inputId + 'attention'} className="request-error">
+            This webhook address can’t be used any more. Enter a new one.
+          </p>
+        )}
         <label htmlFor={inputId}>Webhook endpoint</label>
         <input
           id={inputId}
@@ -161,7 +171,10 @@ function WebhookEndpointForm({
           maxLength={2048}
           autoComplete="off"
           spellCheck={false}
-          aria-describedby={noteId}
+          aria-describedby={
+            data.attention ? `${inputId}attention ${noteId}` : noteId
+          }
+          aria-invalid={data.attention ? true : undefined}
           readOnly={busy}
         />
         <p id={noteId} className="notification-note">

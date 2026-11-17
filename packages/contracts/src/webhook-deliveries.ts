@@ -1,15 +1,17 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { webhookSecretInputSchema } from './webhook-settings.ts';
 import { MAX_WEBHOOK_BYTES } from './webhook-protocol.ts';
 const identity = webhookSecretInputSchema.shape.configurationId;
-export const webhookSendInputSchema = webhookSecretInputSchema.extend({
+const count = (min: number, max: number) =>
+  z.int().check(z.minimum(min), z.maximum(max));
+export const webhookSendInputSchema = z.extend(webhookSecretInputSchema, {
   deliveryId: identity,
-  expectedAttempts: z.int().min(0).max(7),
+  expectedAttempts: count(0, 7),
   acknowledgeDuplicateRisk: z.boolean(),
 });
 export const webhookSendReceiptSchema = z.strictObject({ id: identity });
-export const webhookToggleInputSchema = webhookSecretInputSchema.extend({
-  expectedRevision: z.int().min(1).max(2147483646),
+export const webhookToggleInputSchema = z.extend(webhookSecretInputSchema, {
+  expectedRevision: count(1, 2147483646),
   enabled: z.boolean(),
 });
 const status = z.enum([
@@ -25,11 +27,11 @@ export const webhookPreviewSchema = z.strictObject({
   id: identity,
   configurationId: identity,
   versionId: identity,
-  version: z.int().positive(),
+  version: z.int().check(z.positive()),
   createdAt: z.iso.datetime(),
   status,
-  payload: z.string().min(2).max(MAX_WEBHOOK_BYTES),
-  url: z.string().max(2048),
+  payload: z.string().check(z.minLength(2), z.maxLength(MAX_WEBHOOK_BYTES)),
+  url: z.string().check(z.maxLength(2048)),
 });
 export const webhookHistorySchema = z.strictObject({
   deliveries: z
@@ -40,8 +42,8 @@ export const webhookHistorySchema = z.strictObject({
         versionId: identity,
         kind: z.enum(['test', 'response.submitted']),
         status,
-        reason: z
-          .enum([
+        reason: z.nullable(
+          z.enum([
             'disabled',
             'configuration-changed',
             'receiver-unconfirmed',
@@ -54,17 +56,17 @@ export const webhookHistorySchema = z.strictObject({
             'authorization',
             'receiver-rejected',
             'retry-later',
-          ])
-          .nullable(),
-        attempts: z.int().min(0).max(8),
-        httpStatus: z.int().min(100).max(599).nullable(),
+          ]),
+        ),
+        attempts: count(0, 8),
+        httpStatus: z.nullable(count(100, 599)),
         createdAt: z.iso.datetime(),
         updatedAt: z.iso.datetime(),
         availableAt: z.iso.datetime(),
-        acknowledgedAt: z.iso.datetime().nullable(),
+        acknowledgedAt: z.nullable(z.iso.datetime()),
       }),
     )
-    .max(20),
+    .check(z.maxLength(20)),
 });
 export type WebhookSendInput = z.infer<typeof webhookSendInputSchema>;
 export type WebhookToggleInput = z.infer<typeof webhookToggleInputSchema>;

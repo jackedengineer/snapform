@@ -2,8 +2,13 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { openDatabase } from '@snapform/database';
 import { resolvePublicForm } from '@snapform/database/public-form';
-import { publicFormEnvelopeSchema } from '@snapform/contracts/public-form';
+import {
+  publicBusiness,
+  publicFormEnvelopeSchema,
+} from '@snapform/contracts/public-form';
 import { compileDefinition } from '@snapform/contracts/compile';
+import { publicPlanFlags } from '@snapform/contracts/plans';
+import type { FormDefinition } from '@snapform/contracts/form';
 import { requestScope } from './request-context.ts';
 const identity = publicFormEnvelopeSchema.shape.form.shape.publicId;
 const pattern = /^\/api\/v1\/public\/forms\/([A-Fa-f0-9-]{36})$/;
@@ -72,25 +77,26 @@ async function handlePublicForm(
       res.status(503).json({ error: { code: 'FORM_UNAVAILABLE' } });
       return;
     }
-    // File forms stay unavailable until the real quarantine/scanning slice ships.
-    if (
-      compiled.definition.pages.some((page) =>
-        page.blocks.some((block) => block.type === 'file'),
-      )
-    ) {
-      res.status(503).json({ error: { code: 'FILE_COLLECTION_UNAVAILABLE' } });
-      return;
-    }
-    res.json(
-      publicFormEnvelopeSchema.parse({
-        form: {
-          publicId: record.publicId,
-          versionId: record.versionId,
-          definition: compiled.definition,
-        },
-      }),
-    );
+    // File questions are served; uploads themselves need Pro (intake-files.ts).
+    res.json(publicFormBody(record, compiled.definition));
   } finally {
     await close();
   }
+}
+export function publicFormBody(
+  record: NonNullable<Awaited<ReturnType<typeof resolvePublicForm>>>,
+  definition: FormDefinition,
+) {
+  const business = publicBusiness(record.businessName),
+    plan = publicPlanFlags(record.plan);
+  return publicFormEnvelopeSchema.parse({
+    form: {
+      publicId: record.publicId,
+      versionId: record.versionId,
+      definition,
+      ...(business && { business }),
+      // Respondents get only the flags, never the plan name.
+      ...(plan && { plan }),
+    },
+  });
 }

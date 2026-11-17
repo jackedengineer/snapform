@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import type { Field } from './form.ts';
 import { isStorableText } from './text.ts';
 
@@ -9,10 +9,10 @@ export const answerInputSchema = z.discriminatedUnion('state', [
   z.strictObject({
     state: z.literal('value'),
     value: z.union([
-      z.string().max(10000).refine(isStorableText),
+      z.string().check(z.maxLength(10000), z.refine(isStorableText)),
       z.number(),
       z.boolean(),
-      z.array(z.string().max(100)).max(20),
+      z.array(z.string().check(z.maxLength(100))).check(z.maxLength(20)),
     ]),
   }),
 ]);
@@ -27,7 +27,7 @@ const valid = (value: string | number | boolean | string[]): DecodedAnswer => ({
 });
 const blank = (): DecodedAnswer => ({ ok: true, answer: { state: 'blank' } });
 const invalid = (error: string): DecodedAnswer => ({ ok: false, error });
-const emailSchema = z.email().max(254);
+const emailSchema = z.email().check(z.maxLength(254));
 const dateSchema = z.iso.date();
 const uuidSchema = z.uuid();
 

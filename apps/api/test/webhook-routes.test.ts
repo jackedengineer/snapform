@@ -1,5 +1,6 @@
 import { SELF } from 'cloudflare:test';
 import { expect, it } from 'vitest';
+import { sessionCookie } from './session-cookie.ts';
 const path = `http://127.0.0.1:5173/api/v1/workspaces/${crypto.randomUUID()}/forms/${crypto.randomUUID()}/webhook`;
 it('requires verified authentication and no-store for endpoint settings and key reveal', async () => {
   for (const [url, method] of [
@@ -30,12 +31,23 @@ it('keeps delivery controls behind the same bounded JSON and origin boundary', a
     [path + '/preview', 'POST'],
     [path + '/send', 'POST'],
   ]) {
-    expect((await SELF.fetch(url, { method, body: 'text' })).status).toBe(415);
     expect(
       (
         await SELF.fetch(url, {
           method,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { Cookie: sessionCookie },
+          body: 'text',
+        })
+      ).status,
+    ).toBe(415);
+    expect(
+      (
+        await SELF.fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: sessionCookie,
+          },
           body: JSON.stringify({ payload: 'x'.repeat(17000) }),
         })
       ).status,
@@ -63,14 +75,20 @@ it('keeps delivery controls behind the same bounded JSON and origin boundary', a
   ).toBe(404);
 });
 it('bounds webhook configuration bodies and rejects cross-origin or non-JSON writes', async () => {
-  expect((await SELF.fetch(path, { method: 'PUT', body: 'text' })).status).toBe(
-    415,
-  );
   expect(
     (
       await SELF.fetch(path, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { Cookie: sessionCookie },
+        body: 'text',
+      })
+    ).status,
+  ).toBe(415);
+  expect(
+    (
+      await SELF.fetch(path, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: sessionCookie },
         body: JSON.stringify({ url: 'x'.repeat(17000) }),
       })
     ).status,

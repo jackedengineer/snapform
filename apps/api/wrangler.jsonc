@@ -8,11 +8,22 @@
   "workers_dev": false,
   "preview_urls": false,
   "services": [{ "binding": "JOBS", "service": "snapform-jobs" }],
+  // Private respondent uploads: no public access, no custom domain, no r2.dev.
+  // Objects are keyed workspace/form/session/<random> and downloaded only
+  // through authenticated API routes as attachments.
+  "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "snapform-uploads" }],
   "vars": {
     "SNAPFORM_ENV": "production",
     "BETTER_AUTH_URL": "https://snapform.jacked.dev",
     "EMAIL_FROM": "Snapform <no-reply@jacked.dev>",
     "TURNSTILE_SITE_KEY": "0x4AAAAAAFq-UmrCxZJJpkUN",
+    // Live Razorpay billing (docs/runbooks/billing.md). Plan IDs are not
+    // secrets; keys and the webhook secret are Wrangler secrets. Live mode is
+    // refused unless SNAPFORM_ENV is production; local .dev.vars sets test mode.
+    // No USD plans exist, so checkout offers INR only.
+    "RAZORPAY_MODE": "live",
+    "RAZORPAY_LIVE_PLAN_PRO_MONTHLY_INR": "plan_Tzv3aPxiqwY0NV",
+    "RAZORPAY_LIVE_PLAN_PRO_ANNUAL_INR": "plan_Tzv4ZTrM9Fyak0",
   },
   "ratelimits": [
     {
@@ -36,14 +47,34 @@
       "simple": { "limit": 60, "period": 60 },
     },
     {
+      // Per address; Turnstile and quota reservations still gate each start.
       "name": "INTAKE_START_RATE_LIMIT",
       "namespace_id": "1004",
-      "simple": { "limit": 20, "period": 60 },
+      "simple": { "limit": 60, "period": 60 },
     },
     {
+      // Per respondent session (route + bearer digest).
       "name": "INTAKE_WRITE_RATE_LIMIT",
       "namespace_id": "1005",
       "simple": { "limit": 60, "period": 60 },
+    },
+    {
+      // Per address across sessions; sized for shared and carrier NAT.
+      "name": "INTAKE_IP_WRITE_RATE_LIMIT",
+      "namespace_id": "1008",
+      "simple": { "limit": 300, "period": 60 },
+    },
+    {
+      // Per address, before any private-path database connection.
+      "name": "PRIVATE_IP_RATE_LIMIT",
+      "namespace_id": "1007",
+      "simple": { "limit": 600, "period": 60 },
+    },
+    {
+      // Per owner, for team invitations.
+      "name": "INVITE_RATE_LIMIT",
+      "namespace_id": "1009",
+      "simple": { "limit": 10, "period": 60 },
     },
   ],
   "observability": { "enabled": true, "logs": { "invocation_logs": false } },

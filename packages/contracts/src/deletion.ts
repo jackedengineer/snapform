@@ -1,5 +1,8 @@
-import { z } from 'zod';
-const identity = z.uuid().transform((value) => value.toLowerCase());
+import { z } from './zod.ts';
+const identity = z.pipe(
+  z.uuid(),
+  z.transform((value: string) => value.toLowerCase()),
+);
 export const deletionTargetSchema = z.strictObject({
   kind: z.enum(['response', 'workspace']),
   targetId: identity,
@@ -7,13 +10,14 @@ export const deletionTargetSchema = z.strictObject({
 export type DeletionTarget = z.infer<typeof deletionTargetSchema>;
 export const deletionInputSchema = z.strictObject({
   requestId: identity,
-  confirmation: z.string().min(1).max(160),
+  confirmation: z.string().check(z.minLength(1), z.maxLength(160)),
   acknowledgeDeletion: z.literal(true),
 });
 export const cancelDeletionSchema = z.strictObject({
-  expectedRevision: z.int().min(1).max(2147483646),
+  expectedRevision: z.int().check(z.minimum(1), z.maximum(2147483646)),
 });
-export const scheduleDeletionSchema = deletionInputSchema.extend(
+export const scheduleDeletionSchema = z.extend(
+  deletionInputSchema,
   deletionTargetSchema.shape,
 );
 export const deletionRequestSchema = z
@@ -24,35 +28,39 @@ export const deletionRequestSchema = z
     targetId: identity,
     requestedAt: z.iso.datetime(),
     notBefore: z.iso.datetime(),
-    cancelledAt: z.iso.datetime().nullable(),
-    deletedAt: z.iso.datetime().nullable(),
+    cancelledAt: z.nullable(z.iso.datetime()),
+    deletedAt: z.nullable(z.iso.datetime()),
     state: z.enum(['scheduled', 'cancelled', 'purging', 'deleted']),
-    revision: z.int().min(1),
+    revision: z.int().check(z.minimum(1)),
   })
-  .refine((item) => {
-    const requested = Date.parse(item.requestedAt),
-      deadline = Date.parse(item.notBefore);
-    if (
-      deadline - requested !== 86400000 ||
-      (item.kind === 'workspace' && item.targetId !== item.workspaceId)
-    )
-      return false;
-    if (item.state === 'cancelled')
-      return (
-        item.cancelledAt !== null &&
-        item.deletedAt === null &&
-        Date.parse(item.cancelledAt) >= requested &&
-        Date.parse(item.cancelledAt) < deadline
-      );
-    if (item.cancelledAt !== null) return false;
-    if (item.state === 'deleted')
-      return item.deletedAt !== null && Date.parse(item.deletedAt) >= deadline;
-    return item.deletedAt === null;
-  }, 'Inconsistent deletion receipt');
+  .check(
+    z.refine((item) => {
+      const requested = Date.parse(item.requestedAt),
+        deadline = Date.parse(item.notBefore);
+      if (
+        deadline - requested !== 86400000 ||
+        (item.kind === 'workspace' && item.targetId !== item.workspaceId)
+      )
+        return false;
+      if (item.state === 'cancelled')
+        return (
+          item.cancelledAt !== null &&
+          item.deletedAt === null &&
+          Date.parse(item.cancelledAt) >= requested &&
+          Date.parse(item.cancelledAt) < deadline
+        );
+      if (item.cancelledAt !== null) return false;
+      if (item.state === 'deleted')
+        return (
+          item.deletedAt !== null && Date.parse(item.deletedAt) >= deadline
+        );
+      return item.deletedAt === null;
+    }, 'Inconsistent deletion receipt'),
+  );
 export type DeletionInput = z.infer<typeof deletionInputSchema>;
 export type DeletionRequest = z.infer<typeof deletionRequestSchema>;
 export const deletionEnvelopeSchema = z.strictObject({
-  deletion: deletionRequestSchema.nullable(),
+  deletion: z.nullable(deletionRequestSchema),
 });
 export function deletionConfirmationMatches(
   kind: DeletionRequest['kind'],

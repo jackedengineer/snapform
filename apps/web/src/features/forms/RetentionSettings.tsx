@@ -63,8 +63,8 @@ export function RetentionSettings({
           </p>
           <p className="retention-warning">
             Shortening this period also applies to existing responses. Expired
-            content is permanently deleted; exports you download remain your
-            responsibility.
+            responses are queued for permanent deletion. Exports you download
+            remain your responsibility.
           </p>
           {query.isPending ? (
             <p role="status">Loading retention settings…</p>
@@ -159,8 +159,8 @@ function RetentionForm({
         </select>
         <label className="retention-acknowledgement">
           <input type="checkbox" name="acknowledge" value="yes" required />I
-          understand that responses older than this period will be permanently
-          deleted.
+          understand that responses older than this period will be queued for
+          permanent deletion.
         </label>
         <button
           className="button primary compact-button"

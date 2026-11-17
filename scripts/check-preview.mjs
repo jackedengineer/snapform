@@ -5,7 +5,7 @@ const response = await fetch(base);
 assert.equal(response.status, 200);
 assert.match(response.headers.get('cache-control') || '', /no-transform/);
 const html = await response.text();
-assert.match(html, /A better<br\s*\/?>first <em>hello\.<\/em>/);
+assert.match(html, /Get <em>the brief<\/em> before the call\./);
 assert.match(html, /aria-label="Interactive example form"/);
 assert.match(html, /An interactive example\. Nothing is collected\./);
 for (const [path, title] of [
@@ -56,12 +56,26 @@ assert.ok(
     .includes('challenges.cloudflare.com'),
   'private/marketing pages must not authorize the challenge provider',
 );
+assert.match(
+  response.headers.get('content-security-policy'),
+  /frame-ancestors 'none'/,
+  'pages other than public forms must refuse framing',
+);
 const collector = await fetch(base + '/f/11111111-1111-4111-8111-111111111111');
 assert.equal(collector.status, 200);
 assert.match(
   collector.headers.get('content-security-policy'),
   /frame-src 'self' https:\/\/challenges\.cloudflare\.com/,
 );
+assert.match(
+  collector.headers.get('content-security-policy'),
+  /frame-ancestors \*;/,
+  'public forms must be embeddable on any site',
+);
+const embedScript = await fetch(base + '/embed.js');
+assert.equal(embedScript.status, 200);
+assert.match(embedScript.headers.get('content-type') || '', /javascript/);
+assert.ok((await embedScript.text()).length < 2048);
 assert.match(await collector.text(), /Opening your form/);
 const second = await fetch(base);
 assert.notEqual(

@@ -33,8 +33,7 @@ function ReportAbuse() {
         <p>
           For an account or application security issue, email the same contact
           with “Security” in the subject. Describe the affected page and the
-          steps that led to the issue. We do not operate a paid bug-bounty
-          program in this preview.
+          steps that led to the issue. We don’t run a paid bug-bounty program.
         </p>
       </section>
     </PublicInfo>

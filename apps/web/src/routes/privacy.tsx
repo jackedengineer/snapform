@@ -8,7 +8,7 @@ function Privacy() {
   return (
     <PublicInfo
       title="Your information, explained."
-      intro="How Snapform handles information in this private preview. Updated 30 October 2026."
+      intro="How Snapform handles information. Updated 13 November 2026."
     >
       <section>
         <h2>Who manages your information</h2>
@@ -32,12 +32,12 @@ function Privacy() {
       <section>
         <h2>Progress in your browser</h2>
         <p>
-          A conversation saves progress before final submission. Browser
-          recovery is available for up to seven days. Expired recovery data is
-          cleaned when collection is next opened; browser site-data controls can
-          also remove it. “Forget this browser” clears that local recovery copy;
-          it does not delete an already saved server response. Editors may also
-          keep local draft recovery copies, which they can remove in the editor.
+          A form saves progress before final submission. Browser recovery is
+          available for up to seven days. Expired recovery data is cleaned when
+          collection is next opened; browser site-data controls can also remove
+          it. “Clear saved answers” removes that local recovery copy; it does
+          not delete an already saved server response. Editors may also keep
+          local draft recovery copies, which they can remove in the editor.
         </p>
       </section>
       <section>
@@ -48,18 +48,20 @@ function Privacy() {
           stores the PostgreSQL database. Resend handles account and enabled
           notification emails. An enabled business webhook sends response data
           to the destination configured by that business. No AI provider
-          processes responses in the current preview.
+          processes responses.
         </p>
       </section>
       <section>
         <h2>Retention and deletion</h2>
         <p>
-          Automatic response retention and self-service deletion are still being
-          completed. Contact Snapform for a deletion request; this preview does
-          not promise immediate erasure. R2 backup objects are configured to
-          expire after 30 days, and recovery tooling rejects older signed
-          copies. Private operator copies require controlled cleanup. A deletion
-          request must also be applied before recovered data is made accessible.
+          Workspace owners choose how long responses are kept and can delete a
+          response or a whole workspace. A deletion can be cancelled for 24
+          hours; after that it is queued for permanent removal, which runs in
+          scheduled batches rather than instantly. R2 backup objects are
+          configured to expire after 30 days, and recovery tooling rejects older
+          signed copies. Private operator copies require controlled cleanup. A
+          deletion request must also be applied before recovered data is made
+          accessible.
         </p>
       </section>
       <section>

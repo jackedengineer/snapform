@@ -2,37 +2,105 @@ import { expect, it } from 'vitest';
 import { compileDefinition } from '@snapform/contracts/compile';
 import { newBlankDefinition, newBlock } from './new-form';
 import {
-  addRule,
+  appendRule,
+  draftRule,
+  emptyRuleDraft,
+  showTargets,
   moveRule,
   removeRule,
   operatorsFor,
   predicateFor,
 } from './rule-editing';
-it('creates a valid visibility rule with stable identities and stops at thirty', () => {
-  const original = newBlankDefinition();
-  original.pages[0].blocks.push(newBlock('email'), newBlock('long-text'));
-  const next = addRule(original)!;
-  expect(original.rules).toEqual([]);
-  expect(next.rules[0].condition).toEqual({
-    op: 'answered',
-    fieldId: original.pages[0].blocks[0].id,
+// New questions start unlabeled; give fixtures a label so they can compile.
+function question(type: Parameters<typeof newBlock>[0]) {
+  const block = newBlock(type);
+  return 'label' in block ? { ...block, label: `About ${type}` } : block;
+}
+function threeQuestions() {
+  const definition = { ...newBlankDefinition(), title: 'Synthetic enquiry' };
+  const [a, b, c] = [
+    question('email'),
+    question('long-text'),
+    question('number'),
+  ];
+  definition.pages[0].blocks.push(a, b, c);
+  return { definition, a, b, c };
+}
+it('keeps a new rule inert until every part is chosen', () => {
+  const { definition, a, b } = threeQuestions();
+  const complete = {
+    ...emptyRuleDraft,
+    fieldId: a.id,
+    op: 'answered' as const,
+    action: 'show' as const,
+    targetId: b.id,
+  };
+  for (const partial of [
+    emptyRuleDraft,
+    { ...emptyRuleDraft, fieldId: a.id },
+    { ...complete, op: '' as const },
+    { ...complete, action: '' as const },
+    { ...complete, targetId: '' },
+    { ...complete, targetId: a.id },
+    { ...complete, op: 'eq' as const, value: '' },
+  ])
+    expect(draftRule(definition, partial)).toBeNull();
+  const rule = draftRule(definition, complete);
+  expect(rule).toMatchObject({
+    condition: { op: 'answered', fieldId: a.id },
+    action: { type: 'show', fieldId: b.id },
   });
-  expect(next.rules[0].action).toEqual({
-    type: 'show',
-    fieldId: original.pages[0].blocks[1].id,
-  });
-  expect(compileDefinition(next).ok).toBe(true);
-  let current = next;
-  while (current.rules.length < 30) current = addRule(current)!;
-  expect(addRule(current)).toBeNull();
-  expect(new Set(current.rules.map((rule) => rule.id)).size).toBe(30);
+  expect(
+    draftRule(definition, { ...complete, op: 'eq', value: 'qa@example.com' }),
+  ).toMatchObject({ condition: { op: 'eq', value: 'qa@example.com' } });
+  let current = definition;
+  for (let count = 0; count < 30; count++) {
+    const next = draftRule(current, complete);
+    if (!next) throw new Error('Expected a complete rule');
+    current = appendRule(current, {
+      ...next,
+      action: {
+        type: 'end',
+        fromPageId: current.pages[0].id,
+        endingId: current.defaultEndingId,
+      },
+    })!;
+  }
+  expect(current.rules.map((item) => item.priority)).toEqual(
+    Array.from({ length: 30 }, (_, index) => index),
+  );
   expect(compileDefinition(current).ok).toBe(true);
-  expect(addRule(newBlankDefinition())).toBeNull();
+  expect(appendRule(current, rule!)).toBeNull();
+});
+it('offers only later questions that no other rule already shows', () => {
+  const { definition, a, b, c } = threeQuestions();
+  const ids = (fields: { id: string }[]) => fields.map((field) => field.id);
+  expect(ids(showTargets(definition, [a.id]))).toEqual([b.id, c.id]);
+  expect(ids(showTargets(definition, [b.id]))).toEqual([c.id]);
+  expect(ids(showTargets(definition, [c.id]))).toEqual([]);
+  const rule = draftRule(definition, {
+    ...emptyRuleDraft,
+    fieldId: a.id,
+    op: 'answered',
+    action: 'show',
+    targetId: c.id,
+  })!;
+  const next = appendRule(definition, rule)!;
+  expect(ids(showTargets(next, [a.id]))).toEqual([b.id]);
+  expect(ids(showTargets(next, [a.id], rule.id))).toEqual([b.id, c.id]);
 });
 it('keeps ordered priorities contiguous when moving or removing rules', () => {
-  const original = newBlankDefinition();
-  original.pages[0].blocks.push(newBlock('email'));
-  let current = addRule(addRule(addRule(original)!)!)!;
+  const { definition, a } = threeQuestions();
+  const end = draftRule(definition, {
+    ...emptyRuleDraft,
+    fieldId: a.id,
+    op: 'answered',
+    action: 'end',
+    targetId: definition.defaultEndingId,
+  })!;
+  let current = definition;
+  for (let count = 0; count < 3; count++)
+    current = appendRule(current, { ...end, id: crypto.randomUUID() })!;
   const ids = current.rules.map((rule) => rule.id);
   current = moveRule(current, ids[2], -1)!;
   expect(current.rules.map((rule) => rule.id)).toEqual([
@@ -100,9 +168,9 @@ it('generates compiler-compatible comparisons for all nine answer types', () => 
     'file',
   ] as const;
   for (const type of types) {
-    const field = newBlock(type);
+    const field = question(type);
     if (!('required' in field)) throw new Error('Expected answer field');
-    const definition = newBlankDefinition();
+    const definition = { ...newBlankDefinition(), title: 'Synthetic enquiry' };
     definition.pages[0].blocks.push(field);
     for (const op of operatorsFor(field)) {
       definition.rules = [

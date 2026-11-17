@@ -8,6 +8,8 @@ import type { Database, Transaction } from './client.ts';
 import { inWorkspace } from './workspaces.ts';
 import { formVersion } from './publication-schema.ts';
 import { responseSession } from './intake-schema.ts';
+import { readResponseFiles } from './uploads.ts';
+import { hasFileQuestion } from '@snapform/contracts/uploads';
 const identity = formCursorSchema.shape.id;
 export async function getResponseExport(
   db: Database | Transaction,
@@ -39,6 +41,8 @@ export async function getResponseExport(
       eq(responseSession.formId, formId),
       eq(responseSession.versionId, versionId),
       eq(responseSession.status, 'submitted'),
+      // Migration 0045: never export a response awaiting deletion.
+      sql`not public.response_deletion_pending(${responseSession.workspaceId},${responseSession.id})`,
     );
     // Read bounded metadata first so large answer sets never enter Worker memory.
     const metadata = await tx
@@ -75,6 +79,17 @@ export async function getResponseExport(
       )
       .orderBy(desc(responseSession.submittedAt), desc(responseSession.id));
     if (rows.length !== metadata.length) throw Error('EXPORT_CHANGED');
-    return { ...version, rows };
+    if (!hasFileQuestion(version.definition)) return { ...version, rows };
+    // File cells show names; keys and links never leave the database here.
+    const files = await readResponseFiles(
+      tx,
+      workspaceId,
+      formId,
+      rows.map((row) => row.id),
+    );
+    return {
+      ...version,
+      rows: rows.map((row) => ({ ...row, files: files.get(row.id) ?? [] })),
+    };
   });
 }

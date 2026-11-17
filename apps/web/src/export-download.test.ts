@@ -4,11 +4,13 @@ const formId = crypto.randomUUID(),
   workspaceId = crypto.randomUUID();
 const path = `https://snapform.jacked.dev/api/v1/workspaces/${workspaceId}/forms/${formId}/response-export?versionId=${crypto.randomUUID()}`;
 const request = new Request(path, { headers: { Accept: 'text/html' } });
-const csv = '\uFEFF"Reference","Version"\r\n"synthetic",1\r\n';
+const csv =
+  '\uFEFF"Submitted (UTC)","Name"\r\n"2026-11-13 17:35","Synthetic"\r\n';
 const headers = {
   'Content-Type': 'text/csv; charset=utf-8',
   'Content-Length': String(new TextEncoder().encode(csv).length),
-  'Content-Disposition': `attachment; filename="snapform-${formId}-v1.csv"`,
+  'Content-Disposition':
+    'attachment; filename="project-enquiry-2026-11-13.csv"',
 };
 it('passes only a complete bounded CSV attachment through the native download boundary', async () => {
   const response = new Response(csv, { headers });
@@ -66,6 +68,17 @@ it('rejects unexpected HTML, empty files, oversized files, partial files and red
       headers: { ...headers, 'Content-Length': '2097153' },
     }),
     new Response(csv, { status: 206, headers }),
+    ...[
+      'attachment; filename="../project.csv"',
+      'attachment; filename="project.csv"; filename*=UTF-8\'\'x.html',
+      'inline; filename="project.csv"',
+      'attachment; filename="Project.csv"',
+    ].map(
+      (disposition) =>
+        new Response(csv, {
+          headers: { ...headers, 'Content-Disposition': disposition },
+        }),
+    ),
     new Response(null, {
       status: 302,
       headers: { Location: 'https://unrelated.invalid' },

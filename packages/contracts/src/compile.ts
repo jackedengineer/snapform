@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './zod.ts';
 import { formDefinitionSchema } from './form.ts';
 import type { Field, FormDefinition } from './form.ts';
 import type { Condition } from './rules.ts';

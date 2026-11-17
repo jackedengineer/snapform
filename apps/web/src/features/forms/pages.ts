@@ -56,13 +56,22 @@ export function moveBlockToPage(
   const block = source?.blocks.find((block) => block.id === blockId);
   if (!source || !target || !block) return null;
   if (source.id === target.id) return definition;
+  // Moving forward lands first on the later page and moving back lands last,
+  // so the question keeps its place in form order and rules stay valid.
+  const forward =
+    definition.pages.indexOf(target) > definition.pages.indexOf(source);
   return {
     ...definition,
     pages: definition.pages.map((page) =>
       page.id === source.id
         ? { ...page, blocks: page.blocks.filter((item) => item.id !== blockId) }
         : page.id === target.id
-          ? { ...page, blocks: [...page.blocks, block] }
+          ? {
+              ...page,
+              blocks: forward
+                ? [block, ...page.blocks]
+                : [...page.blocks, block],
+            }
           : page,
     ),
   };

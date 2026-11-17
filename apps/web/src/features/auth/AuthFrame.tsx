@@ -22,14 +22,12 @@ export function AuthFrame({
         <nav aria-label="Account">
           <span>{signup ? 'Already here?' : 'New around here?'}</span>
           <Link to={signup ? '/login' : '/signup'}>
-            {signup ? 'Sign in' : 'Create account'}{' '}
-            <span aria-hidden="true">↗</span>
+            {signup ? 'Sign in' : 'Create account'}
           </Link>
         </nav>
       </header>
       <main id="main" className="auth-layout">
         <aside className="auth-intro">
-          <p className="eyebrow">THOUGHTFUL FORMS. BETTER CONVERSATIONS.</p>
           <h1>
             {title}
             <span className="accent-dot">.</span>
@@ -40,16 +38,11 @@ export function AuthFrame({
             More getting somewhere.
           </p>
           <div className="auth-specimen" aria-hidden="true">
-            <span className="eyebrow">A GOOD BEGINNING</span>
             <p>
               “What would a great
               <br />
               outcome look like?”
             </p>
-            <div>
-              <span>01 — YOUR NEXT CHAPTER</span>
-              <span className="specimen-arrow">↗</span>
-            </div>
           </div>
           <p className="auth-caption">
             For agencies, consultants, coaches
@@ -62,9 +55,7 @@ export function AuthFrame({
       <footer className="site-footer">
         <span>A better beginning.</span>
         <PublicLinks />
-        <Link to="/">
-          Explore Snapform <span aria-hidden="true">↗</span>
-        </Link>
+        <Link to="/">Explore Snapform</Link>
       </footer>
     </div>
   );

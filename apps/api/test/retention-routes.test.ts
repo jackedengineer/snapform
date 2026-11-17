@@ -1,5 +1,6 @@
 import { SELF } from 'cloudflare:test';
 import { expect, it } from 'vitest';
+import { sessionCookie } from './session-cookie.ts';
 const path = `https://snapform.jacked.dev/api/v1/workspaces/${crypto.randomUUID()}/retention`;
 it('requires verified authentication before reading or changing retention', async () => {
   for (const method of ['GET', 'PUT']) {
@@ -26,13 +27,19 @@ it('requires verified authentication before reading or changing retention', asyn
 });
 it('bounds retention bodies and blocks cross-origin writes before database work', async () => {
   expect(
-    (await SELF.fetch(path, { method: 'PUT', body: 'plain' })).status,
+    (
+      await SELF.fetch(path, {
+        method: 'PUT',
+        headers: { Cookie: sessionCookie },
+        body: 'plain',
+      })
+    ).status,
   ).toBe(415);
   expect(
     (
       await SELF.fetch(path, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Cookie: sessionCookie },
         body: JSON.stringify({ days: 'x'.repeat(20000) }),
       })
     ).status,

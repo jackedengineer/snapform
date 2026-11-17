@@ -1,12 +1,17 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { formCursorSchema } from '@snapform/contracts/draft';
+import {
+  MAX_LISTED_VERSIONS,
+  summarizeResponse,
+} from '@snapform/contracts/responses';
 import type { FormCursor } from '@snapform/contracts/draft';
 import type { Database, Transaction } from './client.ts';
 import { inWorkspace } from './workspaces.ts';
 import { responseSession } from './intake-schema.ts';
 import { formVersion } from './publication-schema.ts';
-import { form } from './form-schema.ts';
+import { form, formDraft } from './form-schema.ts';
 const identity = formCursorSchema.shape.id;
+type AnsweredText = Record<string, string>;
 const projection = {
   id: responseSession.id,
   versionId: responseSession.versionId,
@@ -41,13 +46,39 @@ export async function listResponses(
     workspaceId,
     'responses.read',
     async (tx, role) => {
-      const [exists] = await tx
-        .select({ id: form.id })
+      const published = await tx
+        .select({
+          title: sql<string>`${formDraft.definition}->>'title'`,
+          id: formVersion.id,
+          number: formVersion.number,
+        })
         .from(form)
-        .where(and(eq(form.workspaceId, workspaceId), eq(form.id, formId)));
-      if (!exists) throw Error('FORM_NOT_FOUND');
+        .innerJoin(
+          formDraft,
+          and(
+            eq(formDraft.workspaceId, form.workspaceId),
+            eq(formDraft.formId, form.id),
+          ),
+        )
+        .leftJoin(
+          formVersion,
+          and(
+            eq(formVersion.workspaceId, form.workspaceId),
+            eq(formVersion.formId, form.id),
+          ),
+        )
+        .where(and(eq(form.workspaceId, workspaceId), eq(form.id, formId)))
+        .orderBy(desc(formVersion.number))
+        .limit(MAX_LISTED_VERSIONS);
+      if (!published.length) throw Error('FORM_NOT_FOUND');
       const rows = await tx
-        .select(projection)
+        .select({
+          ...projection,
+          // Migration 0045. Owners still list these so they can cancel.
+          deletionPending: sql<boolean>`public.response_deletion_pending(${responseSession.workspaceId},${responseSession.id})`,
+          // Only string answers, cut in SQL so large answers stay in the database.
+          texts: sql<AnsweredText | null>`(select jsonb_object_agg(e.key,left(e.value->>'value',240)) from jsonb_each(${responseSession.answers}) e where e.value->>'state'='value' and jsonb_typeof(e.value->'value')='string')`,
+        })
         .from(responseSession)
         .innerJoin(formVersion, versionKey)
         .where(
@@ -60,10 +91,38 @@ export async function listResponses(
         )
         .orderBy(desc(responseSession.submittedAt), desc(responseSession.id))
         .limit(21);
-      const responses = rows.slice(0, 20),
-        last = responses.at(-1);
+      const page = rows.slice(0, 20),
+        last = page.at(-1);
+      const versionIds = [...new Set(page.map((row) => row.versionId))];
+      const definitions = new Map(
+        versionIds.length
+          ? (
+              await tx
+                .select({ id: formVersion.id, value: formVersion.definition })
+                .from(formVersion)
+                .where(
+                  and(
+                    eq(formVersion.workspaceId, workspaceId),
+                    eq(formVersion.formId, formId),
+                    inArray(formVersion.id, versionIds),
+                  ),
+                )
+            ).map((version) => [version.id, version.value])
+          : [],
+      );
+      const responses = page.map(({ texts, ...row }) => {
+        const definition = definitions.get(row.versionId);
+        if (!definition) throw Error('VERSION_NOT_FOUND');
+        return { ...row, ...summarizeResponse(definition, texts ?? {}) };
+      });
       return {
+        title: published[0].title,
         responses,
+        versions: published.flatMap((version) =>
+          version.id && version.number
+            ? [{ id: version.id, number: version.number }]
+            : [],
+        ),
         role,
         nextCursor:
           rows.length > 20 && last

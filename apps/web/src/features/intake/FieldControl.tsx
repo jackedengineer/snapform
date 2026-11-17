@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Block } from '@snapform/contracts/form';
 import type { Answer } from '@snapform/contracts/answers';
 export function FieldControl({
@@ -6,12 +7,15 @@ export function FieldControl({
   error,
   onChange,
   onBlur,
+  files,
 }: {
   block: Block;
   answer?: Answer;
   error?: string;
   onChange: (answer: Answer) => void;
   onBlur: () => void;
+  /** The live collector's upload control; previews have none. */
+  files?: (describedBy?: string) => ReactNode;
 }) {
   if (block.type === 'heading')
     return <h3 className="intake-section-heading">{block.text}</h3>;
@@ -177,8 +181,8 @@ export function FieldControl({
       );
       break;
     case 'file':
-      control = (
-        <p>File collection is unavailable. Contact the business for help.</p>
+      control = files?.(common['aria-describedby']) ?? (
+        <p>Files can be added on the live form.</p>
       );
       break;
   }

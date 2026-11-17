@@ -281,6 +281,55 @@
       "when": 1793544872032,
       "tag": "0039_deletion-metadata-expiry",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793556273403,
+      "tag": "0040_jobs-heartbeat",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794572800000,
+      "tag": "0041_billing-plans",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794573000000,
+      "tag": "0042_team-invitations",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794573390979,
+      "tag": "0043_owner-email-summary",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794580807363,
+      "tag": "0044_public-form-business",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1794650400000,
+      "tag": "0045_plan-flags-deletion-reads",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1794650500000,
+      "tag": "0046_response-uploads",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,7 @@ import {
   timestamp,
   primaryKey,
   index,
+  uniqueIndex,
   check,
 } from 'drizzle-orm/pg-core';
 import { user } from './schema.ts';
@@ -100,5 +101,53 @@ export const membership = pgTable(
       to: runtime,
       using: sql`${table.workspaceId}::text = ${tenant} and ${owner}`,
     }),
+  ],
+).enableRLS();
+// Reached only through the team functions in migration 0042: no table grants.
+export const workspaceInvitation = pgTable(
+  'workspace_invitation',
+  {
+    id: uuid('id').primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspace.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    role: workspaceRole('role').notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    invitedBy: text('invited_by')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .default(sql`statement_timestamp()`),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (table) => [
+    check(
+      'workspace_invitation_email',
+      sql`${table.email}=lower(${table.email}) and length(${table.email}) between 3 and 254 and ${table.email} ~ '^[^[:space:]@]+@[^[:space:]@]+$'`,
+    ),
+    check(
+      'workspace_invitation_role',
+      sql`${table.role} in ('editor','viewer')`,
+    ),
+    check(
+      'workspace_invitation_hash',
+      sql`${table.tokenHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check(
+      'workspace_invitation_expiry',
+      sql`${table.expiresAt}=${table.createdAt}+interval '7 days'`,
+    ),
+    check(
+      'workspace_invitation_outcome',
+      sql`${table.acceptedAt} is null or ${table.revokedAt} is null`,
+    ),
+    uniqueIndex('workspace_invitation_pending')
+      .on(table.workspaceId, table.email)
+      .where(sql`${table.acceptedAt} is null and ${table.revokedAt} is null`),
+    index('workspace_invitation_recent').on(table.workspaceId, table.createdAt),
   ],
 ).enableRLS();

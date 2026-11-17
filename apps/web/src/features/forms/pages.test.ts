@@ -79,3 +79,23 @@ it('moves a question atomically with its identity and limits intact', () => {
   ).toBeNull();
   expect(moveBlockToPage(next, block.id, crypto.randomUUID())).toBeNull();
 });
+it('keeps a moved question next to its old neighbours in form order', () => {
+  const definition = addPage(newBlankDefinition())!;
+  const [a, b, c, d] = ['email', 'date', 'number', 'long-text'].map((type) =>
+    newBlock(type as 'email'),
+  );
+  definition.pages[0].blocks = [a, b];
+  definition.pages[1].blocks = [c, d];
+  const later = moveBlockToPage(definition, b.id, definition.pages[1].id)!;
+  expect(later.pages[1].blocks.map((block) => block.id)).toEqual([
+    b.id,
+    c.id,
+    d.id,
+  ]);
+  const earlier = moveBlockToPage(definition, c.id, definition.pages[0].id)!;
+  expect(earlier.pages[0].blocks.map((block) => block.id)).toEqual([
+    a.id,
+    b.id,
+    c.id,
+  ]);
+});

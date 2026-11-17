@@ -1,21 +1,110 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { can } from '@snapform/contracts/workspace';
-import { formatResponseAnswer } from '@snapform/contracts/response-display';
+import {
+  formatRelativeTime,
+  formatResponseAnswer,
+} from '@snapform/contracts/response-display';
+import { summarizeResponse } from '@snapform/contracts/responses';
+import type {
+  ResponseDetail,
+  ResponsePage,
+} from '@snapform/contracts/responses';
 import { useAccountUser } from '../auth/AccountLayout';
 import { fetchResponses, fetchResponse, responseExportPath } from './api';
 import './responses.css';
 import { WebhookSettings } from './WebhookSettings';
 import { EmailNotifications } from './EmailNotifications';
-import {
-  DeletionControl,
-  useDeletionStatus,
-} from '../deletion/DeletionControl';
+import { DeletionControl } from '../deletion/DeletionControl';
+import { responseReference } from '../intake/reference';
+import { hasFileQuestion } from '@snapform/contracts/uploads';
+import { ResponseFiles, useResponseFiles } from './ResponseFiles';
 const dates = new Intl.DateTimeFormat('en', {
   dateStyle: 'medium',
   timeStyle: 'short',
 });
+const anonymous = 'Anonymous response';
+function respondentOf(detail: ResponseDetail) {
+  const text = Object.fromEntries(
+    Object.entries(detail.answers).flatMap(([id, answer]) =>
+      answer.state === 'value' && typeof answer.value === 'string'
+        ? [[id, answer.value]]
+        : [],
+    ),
+  );
+  return summarizeResponse(detail.definition, text).respondent ?? anonymous;
+}
+// Per-browser read state: response IDs only, never answers. null means
+// storage is unavailable, so no row is marked new rather than every row.
+function useOpenedResponses(key: string, openedId?: string) {
+  const [opened, setOpened] = useState<ReadonlySet<string> | null>(null);
+  useEffect(() => {
+    let ids: string[];
+    try {
+      const stored: unknown = JSON.parse(localStorage.getItem(key) ?? '[]');
+      ids = Array.isArray(stored)
+        ? stored.filter((id): id is string => typeof id === 'string')
+        : [];
+      if (openedId && !ids.includes(openedId)) {
+        ids = [openedId, ...ids].slice(0, 500);
+        localStorage.setItem(key, JSON.stringify(ids));
+      }
+    } catch {
+      setOpened(null);
+      return;
+    }
+    setOpened(new Set(ids));
+  }, [key, openedId]);
+  return opened;
+}
+function ExportCsv({
+  workspaceId,
+  formId,
+  versions,
+}: {
+  workspaceId: string;
+  formId: string;
+  versions: ResponsePage['versions'];
+}) {
+  const [chosen, setChosen] = useState<string>();
+  const selectId = useId();
+  const version = versions.find((item) => item.id === chosen) ?? versions[0];
+  return (
+    <div className="response-export">
+      {versions.length > 1 && (
+        <div className="response-export-version">
+          <label htmlFor={selectId}>Version to export</label>
+          <select
+            id={selectId}
+            value={version.id}
+            onChange={(event) => setChosen(event.target.value)}
+          >
+            {versions.map((item, index) => (
+              <option key={item.id} value={item.id}>
+                Version {item.number}
+                {index === 0 ? ' (latest)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <a
+        className="button secondary compact-button"
+        href={responseExportPath(workspaceId, formId, version.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={
+          versions.length > 1
+            ? `Export CSV for version ${version.number} (opens in a new tab)`
+            : 'Export CSV (opens in a new tab)'
+        }
+      >
+        Export CSV
+      </a>
+    </div>
+  );
+}
 export function ResponseInbox({
   workspaceId,
   formId,
@@ -43,21 +132,30 @@ export function ResponseInbox({
     queryFn: ({ signal }) =>
       fetchResponse(workspaceId, formId, selected || '', signal),
   });
-  const deletion = useDeletionStatus(
+  const files = useResponseFiles(
     user.id,
     workspaceId,
-    { kind: 'response', targetId: selected || '' },
-    Boolean(selected) && page.data?.role === 'owner',
+    formId,
+    detail.data?.id,
+    Boolean(detail.data && hasFileQuestion(detail.data.definition)),
   );
-  const deletionBlocksExport =
-    (page.data?.role === 'owner' && !deletion.isSuccess) ||
-    deletion.data?.state === 'scheduled' ||
-    deletion.data?.state === 'purging' ||
-    deletion.data?.state === 'deleted';
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (detail.data) heading.current?.focus();
   }, [detail.data]);
+  const opened = useOpenedResponses(
+    `snapform:opened-responses:${user.id}:${workspaceId}:${formId}`,
+    detail.data?.id,
+  );
+  // Keep the heading stable while another page of responses loads.
+  const [title, setTitle] = useState<string>();
+  useEffect(() => {
+    if (page.data) setTitle(page.data.title || 'Untitled form');
+  }, [page.data]);
+  const versioned = (page.data?.versions.length ?? 0) > 1;
+  const hasResponses =
+    cursors.length > 1 || Boolean(page.data?.responses.length);
+  const now = Date.now();
   return (
     <div className="workspace-home response-home">
       <Link
@@ -67,24 +165,37 @@ export function ResponseInbox({
       >
         ← Back to form
       </Link>
-      <div className="workspace-heading">
+      <div className="workspace-heading response-heading">
         <div>
-          <p className="eyebrow">YOUR RESPONSE INBOX</p>
-          <h1>Responses</h1>
+          <h1>{title ?? 'Responses'}</h1>
           <p className="intro-copy">
-            Completed submissions, with the questions each person saw.
+            Completed responses, newest first, with the questions each person
+            saw.
           </p>
         </div>
-        <button
-          className="text-button"
-          disabled={page.isFetching || detail.isFetching}
-          onClick={() => {
-            void page.refetch();
-            if (selected) void detail.refetch();
-          }}
-        >
-          Refresh
-        </button>
+        <div className="response-actions">
+          {page.data &&
+            hasResponses &&
+            page.data.versions.length > 0 &&
+            can(page.data.role, 'responses.export') && (
+              <ExportCsv
+                key={page.data.versions[0].id}
+                workspaceId={workspaceId}
+                formId={formId}
+                versions={page.data.versions}
+              />
+            )}
+          <button
+            className="text-button"
+            disabled={page.isFetching || detail.isFetching}
+            onClick={() => {
+              void page.refetch();
+              if (selected) void detail.refetch();
+            }}
+          >
+            Refresh
+          </button>
+        </div>
       </div>
       <nav className="editor-navigation" aria-label="Response views">
         <button
@@ -138,11 +249,15 @@ export function ResponseInbox({
             <section aria-label="Submitted responses">
               {page.data.responses.length === 0 ? (
                 <div className="workspace-empty">
-                  <h2>Your first response will land here.</h2>
-                  <p>
-                    Share your published form to start collecting. Incomplete
-                    answers stay private to the respondent.
-                  </p>
+                  <h2>No responses yet.</h2>
+                  <p>Share your form link to start collecting.</p>
+                  <Link
+                    className="button primary compact-button response-share"
+                    to="/workspaces/$workspaceId/forms/$formId"
+                    params={{ workspaceId, formId }}
+                  >
+                    Open form to share
+                  </Link>
                 </div>
               ) : (
                 <ul className="response-list">
@@ -156,14 +271,34 @@ export function ResponseInbox({
                           selected === response.id ? 'page' : undefined
                         }
                       >
-                        <span className="response-reference">
-                          Response {response.id.slice(0, 8)}
+                        <span className="response-title">
+                          <span className="response-respondent">
+                            {response.respondent ?? anonymous}
+                          </span>
+                          {response.deletionPending ? (
+                            <span className="response-new response-deleting">
+                              Scheduled for deletion
+                            </span>
+                          ) : (
+                            opened &&
+                            !opened.has(response.id) && (
+                              <span className="response-new">New</span>
+                            )
+                          )}
                         </span>
-                        <time dateTime={response.submittedAt}>
-                          {dates.format(new Date(response.submittedAt))}
-                        </time>
-                        <span className="draft-badge">
-                          Version {response.version}
+                        {response.preview && (
+                          <span className="response-preview">
+                            {response.preview}
+                          </span>
+                        )}
+                        <span className="response-meta">
+                          <time
+                            dateTime={response.submittedAt}
+                            title={dates.format(new Date(response.submittedAt))}
+                          >
+                            {formatRelativeTime(response.submittedAt, now)}
+                          </time>
+                          {versioned && <span>Version {response.version}</span>}
                         </span>
                       </Link>
                     </li>
@@ -203,7 +338,6 @@ export function ResponseInbox({
             >
               {!selected ? (
                 <div className="response-placeholder">
-                  <p className="eyebrow">THE WHOLE PICTURE</p>
                   <h2>Select a response.</h2>
                   <p>Read the answers alongside their original questions.</p>
                 </div>
@@ -223,42 +357,22 @@ export function ResponseInbox({
               ) : (
                 detail.data && (
                   <>
-                    <p className="eyebrow">
-                      RECEIVED · VERSION {detail.data.version}
-                    </p>
                     <h2 ref={heading} tabIndex={-1}>
-                      {detail.data.definition.title}
+                      {respondentOf(detail.data)}
                     </h2>
-                    <p>
+                    <p className="response-received">
+                      Received{' '}
                       <time dateTime={detail.data.submittedAt}>
                         {dates.format(new Date(detail.data.submittedAt))}
                       </time>
+                      {versioned && `, from version ${detail.data.version}`}
                     </p>
-                    <p className="response-full-reference">
-                      Reference {detail.data.id}
+                    <p
+                      className="response-full-reference"
+                      title={detail.data.id}
+                    >
+                      Reference {responseReference(detail.data.id)}
                     </p>
-                    {can(page.data.role, 'responses.export') &&
-                      !deletionBlocksExport && (
-                        <div className="response-export">
-                          <a
-                            className="text-button"
-                            href={responseExportPath(
-                              workspaceId,
-                              formId,
-                              detail.data.versionId,
-                            )}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label={`Download version ${detail.data.version} CSV (opens in a new tab)`}
-                          >
-                            Download version {detail.data.version} CSV
-                          </a>
-                          <p>
-                            All completed responses for this published version.
-                            Potential formulas are exported as text.
-                          </p>
-                        </div>
-                      )}
                     <dl className="response-answers">
                       {detail.data.definition.pages
                         .flatMap((page) => page.blocks)
@@ -267,9 +381,22 @@ export function ResponseInbox({
                             <div key={block.id}>
                               <dt>{block.label}</dt>
                               <dd>
-                                {formatResponseAnswer(
-                                  block,
-                                  detail.data.answers[block.id],
+                                {block.type === 'file' ? (
+                                  <ResponseFiles
+                                    answer={detail.data.answers[block.id]}
+                                    files={files.data}
+                                    failed={files.isError}
+                                    path={{
+                                      workspaceId,
+                                      formId,
+                                      responseId: detail.data.id,
+                                    }}
+                                  />
+                                ) : (
+                                  formatResponseAnswer(
+                                    block,
+                                    detail.data.answers[block.id],
+                                  )
                                 )}
                               </dd>
                             </div>
