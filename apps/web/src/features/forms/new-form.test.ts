@@ -9,6 +9,7 @@ import {
   duplicateBlock,
   questionNumbers,
   insertOption,
+  removeOption,
 } from './new-form';
 it('adds an empty option after the one being edited and stops at twenty', () => {
   const block = newBlock('single-choice');
@@ -106,4 +107,29 @@ it('bounds outline captions without changing full text or splitting emoji graphe
 
 it('starts every new form one question at a time', () => {
   expect(newBlankDefinition().presentation).toBe('card');
+});
+
+it('removes an option and hands focus to the one before it', () => {
+  const block = newBlock('multiple-choice');
+  if (block.type !== 'multiple-choice') throw new Error('Expected choices');
+  const third = insertOption(block, block.options[1].id);
+  if (!third) throw new Error('Expected a third option');
+  const [first, second, last] = third.block.options;
+  const removed = removeOption(third.block, second.id);
+  expect(removed?.block.options.map((option) => option.id)).toEqual([
+    first.id,
+    last.id,
+  ]);
+  expect(removed?.focusId).toBe(first.id);
+  // Removing the first hands focus to the new first option.
+  expect(removeOption(third.block, first.id)?.focusId).toBe(second.id);
+});
+
+it('keeps at least one option to type into', () => {
+  const block = newBlock('single-choice');
+  if (block.type !== 'single-choice') throw new Error('Expected choices');
+  const one = removeOption(block, block.options[0].id);
+  if (!one) throw new Error('Expected one option left');
+  expect(removeOption(one.block, one.block.options[0].id)).toBeNull();
+  expect(removeOption(block, 'unknown-option')).toBeNull();
 });

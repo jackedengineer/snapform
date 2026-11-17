@@ -333,9 +333,9 @@
   background: #e2efab;
 }
 .editor-canvas {
-  background: var(--surface-panel);
-  border: 1px solid var(--border-default);
-  border-radius: 12px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-workspace);
+  border-radius: 16px;
   min-height: 440px;
   padding: 32px;
   min-width: 0;
@@ -355,11 +355,262 @@
 .editor-empty p {
   font-size: 14px;
 }
-.block-inspector h2 {
-  font-size: 28px;
+/* The question is edited on a card that looks like the client's. */
+.block-inspector,
+.block-actions {
+  max-width: 640px;
+  margin-inline: auto;
+}
+.inspector-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.app-shell .block-inspector .inspector-bar h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+.inspector-required {
+  position: relative;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.inspector-required input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.switch {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--border-control);
+  transition: background-color var(--motion-fast) ease;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 2px rgb(19 21 26 / 20%);
+  transition: transform var(--motion-normal) var(--ease-standard);
+}
+.inspector-required:has(input:checked) .switch {
+  background: var(--action-primary);
+}
+.inspector-required:has(input:checked) .switch::after {
+  transform: translateX(12px);
+}
+.inspector-required:has(input:focus-visible) .switch {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.question-card {
+  display: grid;
+  gap: 6px;
+  padding: 32px 36px 32px;
+  border: 1px solid var(--border-workspace);
+  border-radius: 20px;
+  background: var(--surface-panel);
+  box-shadow:
+    0 1px 2px rgb(19 21 26 / 4%),
+    0 16px 40px -28px rgb(19 21 26 / 28%);
+}
+/* Text you type looks like the text the client reads; a soft wash shows
+   where it can be edited and a cobalt ring where the cursor is. */
+.question-card textarea,
+.card-option input {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  min-height: 0;
+  font: inherit;
+  resize: none;
+  overflow: hidden;
+  transition:
+    background-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+.question-card textarea {
+  padding: 4px 8px;
+  margin-inline: -8px;
+  width: calc(100% + 16px);
+}
+.question-card textarea:hover {
+  background: var(--surface-workspace);
+}
+.question-card textarea:focus,
+.card-option input:focus {
+  outline: none;
+}
+.question-card textarea:focus-visible,
+.question-card textarea:focus {
+  background: transparent;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 40%, transparent);
+}
+.question-card textarea::placeholder,
+.card-option input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+.question-card .card-label {
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+.question-card[data-kind='help'] .card-label {
+  font-size: 17px;
+  font-weight: 450;
+  line-height: 1.55;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+.question-card .card-description {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.card-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+.card-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 6px 6px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  background: var(--surface-panel);
+  transition:
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+.card-option:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent);
+}
+.card-option input {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 16.5px;
   font-weight: 500;
-  letter-spacing: -0.8px;
-  margin: 12px 0 28px;
+}
+.card-option-remove {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0;
+  transition:
+    opacity var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+.card-option:hover .card-option-remove,
+.card-option:focus-within .card-option-remove,
+.card-option-remove:focus-visible {
+  opacity: 1;
+}
+.card-option-remove:hover:not(:disabled) {
+  background: var(--surface-workspace);
+  color: var(--status-danger);
+}
+.card-option-remove:disabled {
+  visibility: hidden;
+}
+.card-option-add {
+  width: 100%;
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.card-option-add:hover:not(:disabled) {
+  border-color: var(--action-primary);
+  color: var(--action-primary);
+}
+.card-option-add .intake-key {
+  border-style: dashed;
+  font-size: 15px;
+}
+.card-answer {
+  margin: 18px 0 0;
+  padding: 16px;
+  min-height: 56px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+.card-answer[data-type='long-text'] {
+  min-height: 120px;
+}
+.card-answer[data-type='file'] {
+  border-style: dashed;
+  text-align: center;
+}
+.inspector-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  margin-top: 12px;
+}
+.inspector-foot:empty {
+  display: none;
+}
+@media (hover: none) {
+  .card-option-remove {
+    opacity: 1;
+  }
+}
+@media (max-width: 600px) {
+  .app-shell .editor-canvas {
+    padding: 12px;
+  }
+  .question-card {
+    padding: 22px 20px;
+    border-radius: 16px;
+  }
+  .inspector-bar,
+  .inspector-foot {
+    padding-inline: 4px;
+  }
 }
 .check-control {
   display: flex;
@@ -373,36 +624,14 @@
   height: 18px;
   accent-color: var(--action-primary);
 }
-.choice-editor {
-  margin-top: 28px;
-}
-.choice-editor h3 {
-  font-size: 14px;
-  font-weight: 550;
-  margin-bottom: 12px;
-}
-.choice-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin: 8px 0;
-}
-.choice-row input {
-  flex: 1;
-  min-width: 0;
-}
-.choice-row button {
-  min-width: 44px;
-  font-size: 22px;
-}
 .block-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 20px;
-  border-top: 1px solid var(--border-default);
-  margin-top: 32px;
-  padding-top: 16px;
+  border-top: 1px solid var(--border-workspace);
+  margin-top: 24px;
+  padding-top: 14px;
 }
 .block-actions button {
   font-size: 12px;
@@ -678,8 +907,24 @@
   color: var(--action-primary);
 }
 .move-page-field {
-  flex-basis: 100%;
-  max-width: 320px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto 0 0;
+}
+.app-shell .move-page-field label {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.app-shell .move-page-field select {
+  width: auto;
+  max-width: 220px;
+  min-height: 34px;
+  padding: 6px 30px 6px 10px;
+  font-size: 13px;
 }
 @media (max-width: 600px) {
   .page-control-fields {

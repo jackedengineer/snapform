@@ -176,18 +176,6 @@
   padding: clamp(24px, 4vw, 56px);
   min-height: 520px;
 }
-.app-shell .block-inspector h2 {
-  font-size: 18px;
-  margin: 0 0 24px;
-  letter-spacing: -0.3px;
-  color: var(--text-secondary);
-}
-.app-shell .block-inspector .field:first-of-type input,
-.app-shell .block-inspector .field:first-of-type textarea {
-  font-size: 22px;
-  font-weight: 500;
-  padding: 14px;
-}
 .app-shell .field input,
 .app-shell .field select,
 .app-shell .field textarea {
