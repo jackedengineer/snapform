@@ -52,7 +52,7 @@
   min-width: 0;
 }
 .landing-example {
-  background: var(--brand-lime);
+  background: var(--brand-highlight);
   border-radius: var(--radius-panel);
   padding: 24px 28px;
 }
@@ -95,41 +95,25 @@
   padding: 0;
   border: 0;
 }
-.landing-example-option {
-  display: flex;
-  align-items: center;
+.landing-example {
+  --form-accent: var(--brand-cobalt);
+  --form-on-accent: #ffffff;
+}
+/* The demo uses the real option rows, sized for the smaller card. */
+.landing-example .intake-option {
+  min-height: 46px;
+  padding: 9px 40px 9px 10px;
   gap: 12px;
-  min-height: 48px;
-  margin: 0;
-  padding: 12px 16px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-control);
-  background: var(--surface-panel);
-  font-size: 14px;
-  font-weight: 450;
-  cursor: pointer;
+  font-size: 14.5px;
 }
-.landing-example-option input {
-  width: 18px;
-  height: 18px;
-  min-height: 0;
-  margin: 0;
-  flex: none;
-  accent-color: var(--action-primary);
+.landing-example .intake-key {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 11px;
 }
-.landing-example-option:hover,
-.landing-example-option:has(input:checked) {
-  border-color: var(--action-primary);
-}
-.landing-example-option:has(input:checked) {
-  background: var(--surface-action-tint);
-}
-.landing-example-option:has(input:focus-visible) {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-}
-.landing-example-option input:focus-visible {
-  outline: none;
+.landing-example .intake-tick {
+  right: 14px;
 }
 .sample-step > p:not(.sample-progress) {
   margin: 0 0 12px;
@@ -344,12 +328,5 @@
   }
   .landing-brief {
     padding: 16px;
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .landing-example-option {
-    transition:
-      background-color var(--motion-fast),
-      border-color var(--motion-fast);
   }
 }

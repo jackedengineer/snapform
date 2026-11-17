@@ -14,11 +14,7 @@
   border: 0;
 }
 .app-shell .wordmark {
-  font-size: 21px;
-  letter-spacing: -0.8px;
-}
-.app-shell .brand-symbol {
-  border-radius: 50% 50% 6px 50%;
+  font-size: 20px;
 }
 .app-shell .account-home,
 .app-shell .workspace-home,
@@ -180,18 +176,6 @@
   padding: clamp(24px, 4vw, 56px);
   min-height: 520px;
 }
-.app-shell .block-inspector h2 {
-  font-size: 18px;
-  margin: 0 0 24px;
-  letter-spacing: -0.3px;
-  color: var(--text-secondary);
-}
-.app-shell .block-inspector .field:first-of-type input,
-.app-shell .block-inspector .field:first-of-type textarea {
-  font-size: 22px;
-  font-weight: 500;
-  padding: 14px;
-}
 .app-shell .field input,
 .app-shell .field select,
 .app-shell .field textarea {
@@ -261,12 +245,13 @@
   transition:
     background-color 140ms ease,
     color 140ms ease,
-    border-color 140ms ease;
+    border-color 140ms ease,
+    transform var(--motion-press) var(--ease-standard);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .app-shell .button:active,
-  .question-palette button:active {
-    transform: translateY(1px);
+  .app-shell .button:active:not(:disabled),
+  .question-palette button:active:not(:disabled) {
+    transform: scale(0.97);
   }
 }
 @media (max-width: 900px) {

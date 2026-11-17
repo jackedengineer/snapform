@@ -128,7 +128,7 @@ input[type="checkbox"], input[type="radio"] { width: 20px; min-height: 20px; mar
 .stage-description > p { color: var(--text-inverse-muted); font-size: 15px; line-height: 24px; margin: 0 0 24px; max-width: 365px; }
 .step-tabs { display: flex; gap: 8px; padding: 0; margin-top: auto; flex-wrap: wrap; }
 .step-tabs button { min-height: 44px; border-radius: var(--radius-pill); background: transparent; border: 1px solid var(--border-inverse); color: var(--text-inverse-secondary); padding: 10px 16px; font-size: 13px; transition: background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard); }
-.step-tabs button[aria-pressed="true"] { background: var(--brand-lime); color: var(--surface-dark); border-color: var(--brand-lime); }
+.step-tabs button[aria-pressed="true"] { background: var(--brand-highlight); color: var(--surface-dark); border-color: var(--brand-highlight); }
 .step-index { font-size: 11px; opacity: .8; padding-right: 6px; }
 .stage-controls { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-top: 24px; }
 .stage-note { color: var(--text-inverse-muted); font-size: 12px; }
@@ -154,11 +154,11 @@ input[type="checkbox"], input[type="radio"] { width: 20px; min-height: 20px; mar
 .demo-record > div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-default); font-size: 13px; }
 .demo-record dt { color: var(--text-secondary); }
 .demo-record dd { font-weight: 500; margin: 0; }
-.demo-success { width: 44px; height: 44px; border-radius: 50%; background: var(--brand-lime); display: grid; place-items: center; margin-bottom: 20px; }
+.demo-success { width: 44px; height: 44px; border-radius: 50%; background: var(--brand-highlight); display: grid; place-items: center; margin-bottom: 20px; }
 .demo-success svg { width: 20px; height: 20px; fill: none; stroke: var(--surface-dark); stroke-width: 1.5; }
 .demo-receipt { padding: 12px 0; display: flex; align-items: center; justify-content: space-between; font-size: 13px; border-bottom: 1px solid var(--border-default); gap: 16px; }
 .receipt-state { color: var(--status-success); font-size: 12px; }
-.floating-note { position: absolute; top: -16px; right: -12px; padding: 10px 14px; background: var(--brand-peach); color: var(--surface-dark); border-radius: 10px; font-size: 12px; font-weight: 500; transform: rotate(4deg); }
+.floating-note { position: absolute; top: -16px; right: -12px; padding: 10px 14px; background: var(--brand-highlight); color: var(--surface-dark); border-radius: 10px; font-size: 12px; font-weight: 500; transform: rotate(4deg); }
 .experience-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; padding: 48px 0 8px; }
 .experience-bottom h2 { margin: 0 0 12px; font-weight: 550; font-size: 28px; line-height: 34px; letter-spacing: -.04em; }
 .experience-bottom p { color: var(--text-secondary); max-width: 500px; font-size: 15px; margin: 0; }

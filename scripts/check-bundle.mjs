@@ -81,8 +81,7 @@ for (const [route, selected] of routeAssets) {
   );
   if (bytes > limit * 1024) exceeded = true;
 }
-const fontBytes = (await stat('design/fonts/dm-sans-latin-variable.woff2'))
-  .size;
+const fontBytes = (await stat('design/fonts/geist-latin-variable.woff2')).size;
 console.log(`Primary font: ${(fontBytes / 1024).toFixed(2)} KiB / 40 KiB`);
 if (fontBytes > 40 * 1024) exceeded = true;
 for (const file of sizes.sort((a, b) => b.bytes - a.bytes).slice(0, 5))

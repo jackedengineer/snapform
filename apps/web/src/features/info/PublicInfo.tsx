@@ -39,10 +39,8 @@ export function PublicInfo({
     <div className="info-shell">
       <header className="intake-header">
         <Link to="/" className="wordmark" aria-label="Snapform home">
-          <span className="brand-symbol" aria-hidden="true">
-            s
-          </span>
           snapform
+          <span className="wordmark-caret" aria-hidden="true" />
         </Link>
         <Link to="/login" className="landing-signin">
           Sign in

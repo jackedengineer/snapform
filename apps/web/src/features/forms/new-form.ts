@@ -18,7 +18,7 @@ export function newBlankDefinition(): FormDefinition {
     contractVersion: 1,
     title: '',
     description: '',
-    presentation: 'page',
+    presentation: 'card',
     rules: [],
     pages: [{ id: crypto.randomUUID(), title: '', blocks: [] }],
     endings: [
@@ -98,6 +98,20 @@ export function insertOption<T extends ChoiceField>(block: T, afterId: string) {
     label: '',
   });
   return { block: { ...block, options }, optionId };
+}
+// Removing keeps one option to type into, and says which option takes focus:
+// the one before, or the new first one.
+export function removeOption<T extends ChoiceField>(
+  block: T,
+  optionId: string,
+) {
+  const index = block.options.findIndex((option) => option.id === optionId);
+  if (index < 0 || block.options.length <= 1) return null;
+  const options = block.options.filter((option) => option.id !== optionId);
+  return {
+    block: { ...block, options },
+    focusId: options[Math.max(0, index - 1)].id,
+  };
 }
 
 // One numbering for the outline, rules and readiness: answer questions in

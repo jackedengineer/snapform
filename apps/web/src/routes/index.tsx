@@ -41,10 +41,8 @@ function Home() {
     <div className="landing-shell">
       <header className="intake-header">
         <Link to="/" className="wordmark" aria-label="Snapform home">
-          <span className="brand-symbol" aria-hidden="true">
-            s
-          </span>
           snapform
+          <span className="wordmark-caret" aria-hidden="true" />
         </Link>
         <nav className="landing-nav" aria-label="Main">
           <Link to="/pricing" className="landing-signin">
@@ -65,7 +63,7 @@ function Home() {
             budget and timing. Clients check their answers before sending, and a
             clear brief lands with your team.
           </p>
-          <Link to="/signup" className="button primary landing-cta">
+          <Link to="/start" className="button primary landing-cta">
             Build your enquiry form <span aria-hidden="true">→</span>
           </Link>
           <p className="intake-caption">

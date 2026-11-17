@@ -44,7 +44,7 @@ export function Pricing() {
           <li>Share forms by link</li>
           <li>Forms show a “Powered by Snapform” badge</li>
         </ul>
-        <Link to="/signup">Start free</Link>
+        <Link to="/start">Start free</Link>
       </section>
       <section aria-labelledby="pro-plan">
         <h2 id="pro-plan">Pro</h2>

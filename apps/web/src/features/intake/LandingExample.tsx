@@ -1,5 +1,7 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState } from 'react';
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
+import { optionIndexForKey } from './choice-keys';
 
 const services = ['A new website', 'A redesign', 'Brand identity'];
 const budgets = ['Under USD 5,000', 'USD 5,000 to 15,000', 'Over USD 15,000'];
@@ -11,9 +13,30 @@ export function LandingExample() {
   const [step, setStep] = useState<Step>('service');
   const [service, setService] = useState('');
   const [budget, setBudget] = useState('');
+  const advance = useRef(0);
   function go(next: Step) {
+    window.clearTimeout(advance.current);
     setStep(next);
     requestAnimationFrame(() => document.getElementById(id + next)?.focus());
+  }
+  // Like the real form: a choice lands, then the next question follows.
+  function pick(set: (value: string) => void, option: string, next: Step) {
+    set(option);
+    window.clearTimeout(advance.current);
+    advance.current = window.setTimeout(() => go(next), 360);
+  }
+  const questions = {
+    service: [services, setService, 'budget'],
+    budget: [budgets, setBudget, 'review'],
+  } as const;
+  function onKey(event: KeyboardEvent) {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (step !== 'service' && step !== 'budget') return;
+    const [options, set, next] = questions[step];
+    const index = optionIndexForKey(event.key, options.length);
+    if (index === -1) return;
+    event.preventDefault();
+    pick(set, options[index], next);
   }
   function panel(name: Step, progress: string, title: string, body: ReactNode) {
     return (
@@ -38,16 +61,34 @@ export function LandingExample() {
   ) {
     return (
       <>
-        <fieldset className="sample-options" aria-labelledby={id + name}>
-          {options.map((option) => (
-            <label key={option} className="landing-example-option">
+        <fieldset
+          className="sample-options intake-options"
+          data-kind="single"
+          aria-labelledby={id + name}
+        >
+          {options.map((option, index) => (
+            <label
+              key={option}
+              className="intake-option"
+              style={{ '--i': index } as CSSProperties}
+            >
               <input
                 type="radio"
                 name={id + name + '-answer'}
                 checked={value === option}
-                onChange={() => set(option)}
+                onChange={() => pick(set, option, next)}
               />
-              {option}
+              <span className="intake-key" aria-hidden="true">
+                {String.fromCharCode(65 + index)}
+              </span>
+              <span className="intake-option-label">{option}</span>
+              <svg
+                className="intake-tick"
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+              >
+                <path d="M3.5 8.5l3 3 6-7" />
+              </svg>
             </label>
           ))}
         </fieldset>
@@ -66,7 +107,7 @@ export function LandingExample() {
     <>
       <p>{text}</p>
       <p className="sample-hint">{hint}</p>
-      <Link className="button primary sample-next" to="/signup">
+      <Link className="button primary sample-next" to="/start">
         Build your enquiry form <span aria-hidden="true">→</span>
       </Link>
       <button
@@ -85,7 +126,7 @@ export function LandingExample() {
   return (
     <aside className="landing-example" aria-label="Interactive example form">
       <p className="landing-example-label">Try it as a client</p>
-      <div className="landing-example-card">
+      <div className="landing-example-card" onKeyDown={onKey}>
         {panel(
           'service',
           '1 of 3',

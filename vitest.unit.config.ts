@@ -12,6 +12,7 @@ export default defineConfig({
       'apps/web/src/features/team/*.test.ts',
       'apps/web/src/features/intake/*.test.ts',
       'apps/web/src/features/billing/*.test.ts',
+      'apps/web/src/features/start/*.test.ts',
     ],
     allowOnly: false,
     coverage: {

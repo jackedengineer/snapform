@@ -1,4 +1,8 @@
 .intake-shell {
+  /* The owner's colours lead on their form; Snapform's cobalt until a form
+     carries its own. */
+  --form-accent: var(--brand-cobalt);
+  --form-on-accent: #ffffff;
   min-height: 100svh;
   padding-top: 32px;
   background: var(--surface-canvas);
@@ -192,23 +196,19 @@
   letter-spacing: normal;
   outline-offset: 4px;
 }
-.intake-main progress {
+.intake-progress {
+  height: 3px;
+  margin: 12px 0 40px;
+  border-radius: 3px;
+  background: var(--surface-subtle);
+  overflow: hidden;
+}
+.intake-progress span {
   display: block;
-  width: 100%;
-  height: 4px;
-  margin: 12px 0 32px;
-  border: 0;
-  border-radius: 4px;
-  accent-color: var(--brand-cobalt);
-  background: var(--surface-subtle);
-}
-.intake-main progress::-webkit-progress-bar {
-  background: var(--surface-subtle);
-  border-radius: 4px;
-}
-.intake-main progress::-webkit-progress-value {
-  background: var(--brand-cobalt);
-  border-radius: 4px;
+  height: 100%;
+  background: var(--form-accent);
+  transform-origin: left;
+  transition: transform 420ms var(--ease-standard);
 }
 .intake-controls,
 .intake-field {
@@ -232,12 +232,18 @@
   overflow-wrap: anywhere;
   max-width: 100%;
 }
-.intake-required {
-  font-size: 12px;
+.intake-optional {
+  font-size: 13px;
   font-weight: 450;
+  letter-spacing: 0;
   color: var(--text-muted);
-  margin-left: 8px;
+  margin-left: 6px;
   white-space: nowrap;
+}
+.intake-hint {
+  margin: -4px 0 14px;
+  font-size: 14px;
+  color: var(--text-muted);
 }
 .intake-help {
   white-space: pre-wrap;
@@ -258,6 +264,15 @@
   padding: 14px 16px;
   resize: vertical;
   line-height: 1.5;
+  transition:
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+.intake-field input:not([type='radio'], [type='checkbox']):focus,
+.intake-field textarea:focus {
+  border-color: var(--form-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--form-accent) 18%, transparent);
+  outline: none;
 }
 .intake-field input[aria-invalid='true'],
 .intake-field textarea[aria-invalid='true'] {
@@ -269,31 +284,109 @@
   height: 20px;
   margin: 0;
   flex: none;
-  accent-color: var(--action-primary);
+  accent-color: var(--form-accent);
 }
 .intake-options {
   display: grid;
   gap: 10px;
 }
+/* An option is one pressable row: its letter (or an empty mark on pages of
+   several questions), the label and a check that lands when it is chosen.
+   The native input covers the row, so clicks, keys and screen readers all
+   use the real radio or checkbox. */
 .intake-option {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
-  min-height: 60px;
-  padding: 16px 20px;
+  min-height: 56px;
+  padding: 12px 48px 12px 14px;
   border: 1px solid var(--border-default);
   border-radius: 12px;
   background: var(--surface-panel);
+  font-size: 16.5px;
+  font-weight: 500;
+  line-height: 1.35;
   cursor: pointer;
   overflow-wrap: anywhere;
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    transform var(--motion-step) var(--ease-spring);
+}
+:is(.intake-field, .sample-options) .intake-option input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.intake-option:active {
+  transform: scale(0.985);
+  transition-duration: var(--motion-fast);
+}
+.intake-key {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-control);
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: inherit;
+}
+.intake-options[data-kind='single'] .intake-key:empty {
+  border-radius: 50%;
+}
+.intake-option-label {
+  flex: 1;
+  min-width: 0;
+}
+.intake-tick {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity var(--motion-fast) ease,
+    transform var(--motion-step) var(--ease-spring);
 }
 .intake-option:has(input:checked) {
-  border-color: var(--action-primary);
-  background: var(--surface-action-tint);
+  border-color: var(--form-accent);
+  background: var(--form-accent);
+  color: var(--form-on-accent);
+}
+.intake-option:has(input:checked) .intake-key {
+  border-color: color-mix(in srgb, var(--form-on-accent) 55%, transparent);
+  color: var(--form-on-accent);
+}
+.intake-option:has(input:checked) .intake-tick {
+  opacity: 1;
+  transform: none;
 }
 .intake-option:has(input:focus-visible) {
-  outline: 3px solid var(--focus);
+  outline: 2px solid var(--focus);
   outline-offset: 3px;
+}
+@media (hover: hover) {
+  .intake-option:hover:not(:has(input:checked, input:disabled)) {
+    border-color: var(--border-control);
+  }
 }
 .intake-field-error {
   display: block;
@@ -383,6 +476,15 @@
   border-color: var(--border-default);
   color: var(--text-primary);
 }
+/* A secondary action is still a button: an outline, not floating text. */
+.button.intake-secondary {
+  border: 1px solid var(--border-default);
+}
+@media (hover: hover) {
+  .button.intake-secondary:hover:not(:disabled) {
+    border-color: var(--border-control);
+  }
+}
 .intake-notice {
   background: var(--bg-warning);
   border: 1px solid var(--border-default);
@@ -442,15 +544,43 @@
   letter-spacing: -0.035em;
   margin-top: 40px;
 }
+/* The one celebratory moment: the mark pops in with the Bright spring and
+   its check draws itself once. */
 .intake-check {
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
-  background: var(--brand-lime);
+  width: 56px;
+  height: 56px;
+  margin-bottom: 28px;
   border-radius: 50%;
-  font-size: 30px;
-  margin-bottom: 32px;
+  background: var(--form-accent);
+  color: var(--form-on-accent);
+  animation: intake-check-pop var(--motion-hero) var(--ease-spring) backwards;
+}
+.intake-check svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.intake-check path {
+  stroke-dasharray: 1;
+  animation: intake-check-draw var(--motion-hero) var(--ease-standard) 160ms
+    backwards;
+}
+@keyframes intake-check-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes intake-check-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
 }
 .intake-reference {
   margin: 32px 0;
@@ -497,18 +627,37 @@
   padding: 14px;
 }
 .intake-welcome,
-.intake-answer-form,
 .intake-completion {
-  animation: intake-enter var(--motion-step) var(--ease-entrance);
+  animation: intake-enter var(--motion-hero) var(--ease-entrance) backwards;
+}
+/* Client forms land with a little give (ADR-025). Only the entrance is
+   animated, and only transform and opacity, so it never holds a style. */
+.intake-answer-form {
+  animation: intake-enter var(--motion-step) var(--ease-spring) backwards;
+}
+.intake-answer-form[data-direction='back'] {
+  animation-name: intake-enter-back;
+}
+.intake-card-question .intake-option {
+  animation: intake-option-in var(--motion-step) var(--ease-spring) backwards;
+  animation-delay: calc(var(--i, 0) * var(--motion-stagger) + 60ms);
 }
 @keyframes intake-enter {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(24px);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+}
+@keyframes intake-enter-back {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+@keyframes intake-option-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
 }
 @media (max-width: 600px) {
@@ -579,9 +728,85 @@
   border: 0;
 }
 .intake-card-requirement {
-  font-size: 12px;
+  margin: -4px 0 0;
+  font-size: 14px;
   color: var(--text-muted);
-  margin-top: -8px;
+}
+.intake-card-question h2 {
+  margin-bottom: 12px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.intake-card-question .intake-field {
+  margin: 20px 0 0;
+}
+.intake-card-question .intake-field > .intake-help {
+  margin: 0 0 20px;
+  font-size: 16px;
+}
+/* Headings take focus only so screen readers announce the new question;
+   they are not controls, so they draw no focus box. */
+.intake-main [tabindex='-1']:focus-visible {
+  outline: none;
+}
+/* The business name and footer line up with a one-question card. */
+.intake-shell:has(.intake-card) :is(.intake-bar, .intake-footer) {
+  max-width: 640px;
+}
+.intake-card-question .intake-actions,
+.intake-review-actions {
+  align-items: center;
+  margin-top: 28px;
+}
+.intake-review-actions .button,
+.intake-card-question .intake-actions .button {
+  flex: none;
+  width: auto;
+  min-width: 148px;
+  justify-content: center;
+  gap: 12px;
+}
+.intake-actions .intake-back {
+  min-width: 0;
+  margin-left: auto;
+  padding-inline: 12px;
+  border: 0;
+  color: var(--text-secondary);
+}
+.intake-enter-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.intake-enter-hint kbd {
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+@media (hover: none) {
+  .intake-enter-hint {
+    display: none;
+  }
+}
+/* On a phone: Back on the left, Continue filling the rest under the thumb. */
+@media (max-width: 520px) {
+  .intake-card-question .intake-actions,
+  .intake-review-actions {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .intake-card-question .intake-actions .button.primary,
+  .intake-review-actions .button.primary {
+    flex: 1;
+    width: auto;
+  }
+  .intake-actions .intake-back {
+    order: -1;
+    flex: none;
+    width: auto;
+    margin-left: 0;
+    padding-inline: 12px;
+  }
 }
 .intake-option input:focus-visible {
   outline: none;
