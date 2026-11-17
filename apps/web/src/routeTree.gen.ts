@@ -19,6 +19,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ReportAbuseRouteImport } from './routes/report-abuse'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as StartRouteImport } from './routes/start'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AccountAppRouteImport } from './routes/_account.app'
@@ -77,6 +78,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StartRoute = StartRouteImport.update({
+  id: '/start',
+  path: '/start',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SupportRoute = SupportRouteImport.update({
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/report-abuse': typeof ReportAbuseRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/start': typeof StartRoute
   '/support': typeof SupportRoute
   '/verify-email': typeof VerifyEmailRoute
   '/app': typeof AccountAppRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/report-abuse': typeof ReportAbuseRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/start': typeof StartRoute
   '/support': typeof SupportRoute
   '/verify-email': typeof VerifyEmailRoute
   '/app': typeof AccountAppRoute
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/report-abuse': typeof ReportAbuseRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/start': typeof StartRoute
   '/support': typeof SupportRoute
   '/verify-email': typeof VerifyEmailRoute
   '/_account/app': typeof AccountAppRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/report-abuse'
     | '/reset-password'
     | '/signup'
+    | '/start'
     | '/support'
     | '/verify-email'
     | '/app'
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/report-abuse'
     | '/reset-password'
     | '/signup'
+    | '/start'
     | '/support'
     | '/verify-email'
     | '/app'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/report-abuse'
     | '/reset-password'
     | '/signup'
+    | '/start'
     | '/support'
     | '/verify-email'
     | '/_account/app'
@@ -277,6 +289,7 @@ export interface RootRouteChildren {
   ReportAbuseRoute: typeof ReportAbuseRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  StartRoute: typeof StartRoute
   SupportRoute: typeof SupportRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   FPublicIdRoute: typeof FPublicIdRoute
@@ -352,6 +365,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/start': {
+      id: '/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof StartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/support': {
@@ -479,6 +499,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportAbuseRoute: ReportAbuseRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  StartRoute: StartRoute,
   SupportRoute: SupportRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   FPublicIdRoute: FPublicIdRoute,

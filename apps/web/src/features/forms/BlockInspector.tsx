@@ -54,7 +54,8 @@ export function BlockInspector({
 }: {
   block: Block;
   onChange: (block: Block) => void;
-  workspaceId: string;
+  /** Absent before sign-up, when there is no plan to describe. */
+  workspaceId?: string;
 }) {
   const content = block.type === 'heading' || block.type === 'help';
   const text = content ? block.text : block.label;
@@ -234,7 +235,7 @@ export function BlockInspector({
       </div>
       <div className="inspector-foot">
         <AnswerSettings key={block.id} block={block} onChange={onChange} />
-        {block.type === 'file' && (
+        {block.type === 'file' && workspaceId && (
           <FileQuestionNote workspaceId={workspaceId} />
         )}
       </div>
