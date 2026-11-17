@@ -476,6 +476,15 @@
   border-color: var(--border-default);
   color: var(--text-primary);
 }
+/* A secondary action is still a button: an outline, not floating text. */
+.button.intake-secondary {
+  border: 1px solid var(--border-default);
+}
+@media (hover: hover) {
+  .button.intake-secondary:hover:not(:disabled) {
+    border-color: var(--border-control);
+  }
+}
 .intake-notice {
   background: var(--bg-warning);
   border: 1px solid var(--border-default);
