@@ -107,7 +107,7 @@ export function LandingExample() {
     <>
       <p>{text}</p>
       <p className="sample-hint">{hint}</p>
-      <Link className="button primary sample-next" to="/signup">
+      <Link className="button primary sample-next" to="/start">
         Build your enquiry form <span aria-hidden="true">→</span>
       </Link>
       <button

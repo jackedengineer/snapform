@@ -1,6 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { AuthFrame } from './AuthFrame';
 import { AuthFields } from './AuthFields';
+import { GuestNote } from '../start/GuestNote';
 import { useAccountForm } from './useAccountForm';
 import { signInDestination } from './sign-in-destination';
 import type { AuthMode } from './useAccountForm';
@@ -79,6 +80,9 @@ export function AuthPage({
                 : `If eligible, a ${mode === 'forgot' ? 'reset' : 'verification'} link will arrive at ${sentTo}. Check spam too. The link expires after 15 minutes.`
               : text.description}
         </p>
+        {!complete && (mode === 'signup' || mode === 'login') && (
+          <GuestNote signup={mode === 'signup'} />
+        )}
         {invalidLink && mode === 'login' && (
           <p role="alert" className="request-error">
             That verification link is invalid or expired. Request a fresh one

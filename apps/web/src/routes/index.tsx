@@ -63,7 +63,7 @@ function Home() {
             budget and timing. Clients check their answers before sending, and a
             clear brief lands with your team.
           </p>
-          <Link to="/signup" className="button primary landing-cta">
+          <Link to="/start" className="button primary landing-cta">
             Build your enquiry form <span aria-hidden="true">→</span>
           </Link>
           <p className="intake-caption">

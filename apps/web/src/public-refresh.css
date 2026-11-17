@@ -22,6 +22,20 @@
   border-radius: 16px;
   background: white;
 }
+/* A form built before signing up waits on this device. */
+.guest-note {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface-action-tint);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.guest-note strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
 .auth-shell .auth-panel h2 {
   font-size: 28px;
   letter-spacing: -0.8px;

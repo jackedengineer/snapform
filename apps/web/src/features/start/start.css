@@ -287,3 +287,40 @@
     min-height: 0;
   }
 }
+
+/* On the workspaces page after signing in: the form built before. */
+.guest-import {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin: 24px 0;
+  padding: 20px 24px;
+  border: 1px solid var(--border-selected);
+  border-radius: 16px;
+  background: var(--surface-action-tint);
+}
+.guest-import h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.guest-import p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.guest-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.guest-import-actions .button {
+  width: auto;
+}
+.guest-import-actions p {
+  margin: 0;
+}
