@@ -447,7 +447,7 @@
   place-items: center;
   width: 64px;
   height: 64px;
-  background: var(--brand-lime);
+  background: var(--brand-highlight);
   border-radius: 50%;
   font-size: 30px;
   margin-bottom: 32px;

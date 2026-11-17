@@ -76,10 +76,8 @@ export function AccountLayout() {
     <div className="app-shell">
       <header className="topbar">
         <Link className="wordmark" to="/app" aria-label="Snapform workspaces">
-          <span className="brand-symbol" aria-hidden="true">
-            s
-          </span>
           snapform
+          <span className="wordmark-caret" aria-hidden="true" />
         </Link>
         {profile.data && (
           <button

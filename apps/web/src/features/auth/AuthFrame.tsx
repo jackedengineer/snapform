@@ -14,10 +14,8 @@ export function AuthFrame({
     <div className="auth-shell">
       <header className="topbar">
         <Link className="wordmark" to="/" aria-label="Snapform home">
-          <span className="brand-symbol" aria-hidden="true">
-            s
-          </span>
           snapform
+          <span className="wordmark-caret" aria-hidden="true" />
         </Link>
         <nav aria-label="Account">
           <span>{signup ? 'Already here?' : 'New around here?'}</span>

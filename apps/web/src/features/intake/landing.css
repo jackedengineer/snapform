@@ -52,7 +52,7 @@
   min-width: 0;
 }
 .landing-example {
-  background: var(--brand-lime);
+  background: var(--brand-highlight);
   border-radius: var(--radius-panel);
   padding: 24px 28px;
 }

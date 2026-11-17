@@ -125,7 +125,7 @@
 .form-icon {
   display: grid;
   place-items: center;
-  background: var(--brand-lime);
+  background: var(--brand-highlight);
   border-radius: 10px;
   width: 44px;
   height: 48px;
@@ -254,7 +254,7 @@
 }
 .outline-heading > span {
   font-size: 12px;
-  background: var(--brand-lime);
+  background: var(--brand-highlight);
   padding: 3px 7px;
   border-radius: 4px;
 }
@@ -326,7 +326,7 @@
   margin-bottom: 12px;
 }
 .secondary {
-  background: var(--brand-lime);
+  background: var(--brand-highlight);
   color: var(--text-primary);
 }
 .secondary:hover {

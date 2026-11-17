@@ -41,10 +41,8 @@ function Home() {
     <div className="landing-shell">
       <header className="intake-header">
         <Link to="/" className="wordmark" aria-label="Snapform home">
-          <span className="brand-symbol" aria-hidden="true">
-            s
-          </span>
           snapform
+          <span className="wordmark-caret" aria-hidden="true" />
         </Link>
         <nav className="landing-nav" aria-label="Main">
           <Link to="/pricing" className="landing-signin">

@@ -1,46 +1,38 @@
 [
   {
-    "pair": "Primary/ivory",
-    "ratio": 16.12
+    "pair": "Primary/porcelain",
+    "ratio": 17.04
   },
   {
-    "pair": "Secondary/ivory",
-    "ratio": 6.59
+    "pair": "Secondary/porcelain",
+    "ratio": 6.97
   },
   {
-    "pair": "Muted/ivory",
-    "ratio": 5.01
+    "pair": "Muted/porcelain",
+    "ratio": 5.06
+  },
+  {
+    "pair": "Muted/white",
+    "ratio": 5.43
   },
   {
     "pair": "White/cobalt",
-    "ratio": 5.67
+    "ratio": 5.87
   },
   {
-    "pair": "Cobalt/ivory",
-    "ratio": 5.24
+    "pair": "Cobalt/porcelain",
+    "ratio": 5.47
+  },
+  {
+    "pair": "Cobalt/highlight",
+    "ratio": 4.99
   },
   {
     "pair": "Control/white",
-    "ratio": 3.6
+    "ratio": 3.33
   },
   {
     "pair": "Inverse muted/ink",
-    "ratio": 9.66
-  },
-  {
-    "pair": "Inverse border/ink",
-    "ratio": 3.16
-  },
-  {
-    "pair": "Ink/lime",
-    "ratio": 14.79
-  },
-  {
-    "pair": "Ink/peach",
-    "ratio": 13.1
-  },
-  {
-    "pair": "Cobalt/selection",
-    "ratio": 5.0
+    "ratio": 10.44
   }
 ]

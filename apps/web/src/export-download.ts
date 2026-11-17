@@ -88,7 +88,7 @@ export async function formatExportDownload(
     "default-src 'none'; style-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
   );
   return new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>${title} · Snapform</title><link rel="stylesheet" href="${safeStylesheet}"></head><body><a class="skip-link" href="#main">Skip to content</a><header class="topbar"><a class="wordmark" href="/"><span class="brand-symbol" aria-hidden="true">s</span>snapform</a></header><main id="main" class="workspace-home"><div class="workspace-empty export-error"><h1>${title}</h1><p role="alert">${message}</p><a class="button primary compact-button" href="${href}">${status === 401 ? 'Sign in' : 'Back to inbox'}</a></div></main></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>${title} · Snapform</title><link rel="stylesheet" href="${safeStylesheet}"></head><body><a class="skip-link" href="#main">Skip to content</a><header class="topbar"><a class="wordmark" href="/">snapform<span class="wordmark-caret" aria-hidden="true"></span></a></header><main id="main" class="workspace-home"><div class="workspace-empty export-error"><h1>${title}</h1><p role="alert">${message}</p><a class="button primary compact-button" href="${href}">${status === 401 ? 'Sign in' : 'Back to inbox'}</a></div></main></body></html>`,
     { status, headers },
   );
 }
