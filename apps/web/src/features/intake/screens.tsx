@@ -211,7 +211,9 @@ export function Receipt({
   return (
     <section className="intake-completion">
       <span className="intake-check" aria-hidden="true">
-        ✓
+        <svg viewBox="0 0 24 24">
+          <path d="M6 12.5l4 4 8-9" pathLength={1} />
+        </svg>
       </span>
       <h2 id={focusTarget} tabIndex={-1}>
         {ending?.title || 'Thank you'}
@@ -263,8 +265,7 @@ export function Review({
         Review your answers
       </h2>
       <p className="intake-help">
-        Check your answers, then send them to the business. You can’t change
-        them after sending.
+        Check everything, then send. Answers can’t be changed after sending.
       </p>
       {sections.map((section) => (
         <section key={section.pageId} className="intake-summary-section">
@@ -297,15 +298,6 @@ export function Review({
         </section>
       ))}
       <div className="intake-actions intake-review-actions">
-        {!frozen && (
-          <button
-            type="button"
-            className="button intake-secondary"
-            onClick={onBack}
-          >
-            ← Back
-          </button>
-        )}
         <button
           type="button"
           className="button primary"
@@ -320,6 +312,15 @@ export function Review({
               ? 'Saving your answers…'
               : 'Send response'}
         </button>
+        {!frozen && (
+          <button
+            type="button"
+            className="button intake-secondary intake-back"
+            onClick={onBack}
+          >
+            ← Back
+          </button>
+        )}
       </div>
     </div>
   );

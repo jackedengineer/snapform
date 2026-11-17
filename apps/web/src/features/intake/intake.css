@@ -315,7 +315,7 @@
     color var(--motion-fast) ease,
     transform var(--motion-step) var(--ease-spring);
 }
-.intake-field .intake-option input {
+:is(.intake-field, .sample-options) .intake-option input {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -535,15 +535,43 @@
   letter-spacing: -0.035em;
   margin-top: 40px;
 }
+/* The one celebratory moment: the mark pops in with the Bright spring and
+   its check draws itself once. */
 .intake-check {
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
-  background: var(--brand-highlight);
+  width: 56px;
+  height: 56px;
+  margin-bottom: 28px;
   border-radius: 50%;
-  font-size: 30px;
-  margin-bottom: 32px;
+  background: var(--form-accent);
+  color: var(--form-on-accent);
+  animation: intake-check-pop var(--motion-hero) var(--ease-spring) backwards;
+}
+.intake-check svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.intake-check path {
+  stroke-dasharray: 1;
+  animation: intake-check-draw var(--motion-hero) var(--ease-standard) 160ms
+    backwards;
+}
+@keyframes intake-check-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes intake-check-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
 }
 .intake-reference {
   margin: 32px 0;
@@ -717,10 +745,12 @@
 .intake-shell:has(.intake-card) :is(.intake-bar, .intake-footer) {
   max-width: 640px;
 }
-.intake-card-question .intake-actions {
+.intake-card-question .intake-actions,
+.intake-review-actions {
   align-items: center;
   margin-top: 28px;
 }
+.intake-review-actions .button,
 .intake-card-question .intake-actions .button {
   flex: none;
   width: auto;
@@ -728,7 +758,7 @@
   justify-content: center;
   gap: 12px;
 }
-.intake-card-question .intake-actions .intake-back {
+.intake-actions .intake-back {
   min-width: 0;
   margin-left: auto;
   padding-inline: 12px;
@@ -751,15 +781,17 @@
 }
 /* On a phone: Back on the left, Continue filling the rest under the thumb. */
 @media (max-width: 520px) {
-  .intake-card-question .intake-actions {
+  .intake-card-question .intake-actions,
+  .intake-review-actions {
     flex-direction: row;
     gap: 8px;
   }
-  .intake-card-question .intake-actions .button.primary {
+  .intake-card-question .intake-actions .button.primary,
+  .intake-review-actions .button.primary {
     flex: 1;
     width: auto;
   }
-  .intake-card-question .intake-actions .intake-back {
+  .intake-actions .intake-back {
     order: -1;
     flex: none;
     width: auto;
