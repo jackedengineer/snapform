@@ -20,6 +20,7 @@ import { DeletionControl } from '../deletion/DeletionControl';
 import { responseReference } from '../intake/reference';
 import { hasFileQuestion } from '@snapform/contracts/uploads';
 import { ResponseFiles, useResponseFiles } from './ResponseFiles';
+import { briefOf } from './brief';
 const dates = new Intl.DateTimeFormat('en', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -153,6 +154,9 @@ export function ResponseInbox({
     if (page.data) setTitle(page.data.title || 'Untitled form');
   }, [page.data]);
   const versioned = (page.data?.versions.length ?? 0) > 1;
+  const brief = detail.data
+    ? briefOf(detail.data.definition, detail.data.answers)
+    : null;
   const hasResponses =
     cursors.length > 1 || Boolean(page.data?.responses.length);
   const now = Date.now();
@@ -373,6 +377,33 @@ export function ResponseInbox({
                     >
                       Reference {responseReference(detail.data.id)}
                     </p>
+                    {brief && (brief.fields.length > 0 || brief.outcome) && (
+                      <section
+                        className="response-brief"
+                        aria-labelledby="response-brief-title"
+                      >
+                        <h3 id="response-brief-title">Brief</h3>
+                        {brief.outcome && (
+                          <p className="response-outcome">
+                            Ending shown: <strong>{brief.outcome}</strong>
+                          </p>
+                        )}
+                        <dl>
+                          {brief.fields.map((field) => (
+                            <div key={field.id}>
+                              <dt>{field.label}</dt>
+                              <dd>
+                                {formatResponseAnswer(
+                                  field,
+                                  detail.data.answers[field.id],
+                                )}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </section>
+                    )}
+                    <h3 className="response-answers-title">All answers</h3>
                     <dl className="response-answers">
                       {detail.data.definition.pages
                         .flatMap((page) => page.blocks)
