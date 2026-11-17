@@ -252,3 +252,8 @@ describe('editable starter forms', () => {
     expect(second.pages[0].blocks.length).toBeGreaterThan(0);
   });
 });
+
+it('opens every starter one question at a time', () => {
+  for (const starter of starters)
+    expect(newStarterDefinition(starter.id).presentation).toBe('card');
+});

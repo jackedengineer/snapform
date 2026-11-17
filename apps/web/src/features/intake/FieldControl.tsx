@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { Block } from '@snapform/contracts/form';
 import type { Answer } from '@snapform/contracts/answers';
 export function FieldControl({
@@ -8,6 +8,7 @@ export function FieldControl({
   onChange,
   onBlur,
   files,
+  keys = false,
 }: {
   block: Block;
   answer?: Answer;
@@ -16,6 +17,8 @@ export function FieldControl({
   onBlur: () => void;
   /** The live collector's upload control; previews have none. */
   files?: (describedBy?: string) => ReactNode;
+  /** Letter keys answer this question, so each option shows its letter. */
+  keys?: boolean;
 }) {
   if (block.type === 'heading')
     return <h3 className="intake-section-heading">{block.text}</h3>;
@@ -54,10 +57,18 @@ export function FieldControl({
     'aria-required': block.required,
     onBlur,
   };
+  const choices =
+    block.type === 'single-choice' || block.type === 'multiple-choice';
+  // Only optional questions say so. Required text inputs already announce
+  // aria-required; a group of options has no such attribute, so it says it.
   const title = (
     <>
       {block.label}
-      {block.required && <span className="intake-required"> Required</span>}
+      {!block.required ? (
+        <span className="intake-optional"> Optional</span>
+      ) : (
+        choices && <span className="visually-hidden"> (required)</span>
+      )}
     </>
   );
   let control;
@@ -131,12 +142,21 @@ export function FieldControl({
     case 'single-choice':
     case 'multiple-choice': {
       const selected = Array.isArray(value) ? value : [];
+      const single = block.type === 'single-choice';
       control = (
-        <div className="intake-options">
-          {block.options.map((option) => (
-            <label className="intake-option" key={option.id}>
+        <div
+          className="intake-options"
+          data-kind={single ? 'single' : 'multiple'}
+        >
+          {block.options.map((option, index) => (
+            <label
+              className="intake-option"
+              key={option.id}
+              style={{ '--i': index } as CSSProperties}
+            >
               <input
-                type={block.type === 'single-choice' ? 'radio' : 'checkbox'}
+                id={id + '-' + index}
+                type={single ? 'radio' : 'checkbox'}
                 name={id}
                 value={option.id}
                 checked={
@@ -158,7 +178,17 @@ export function FieldControl({
                   })
                 }
               />
-              <span>{option.label}</span>
+              <span className="intake-key" aria-hidden="true">
+                {keys ? String.fromCharCode(65 + index) : ''}
+              </span>
+              <span className="intake-option-label">{option.label}</span>
+              <svg
+                className="intake-tick"
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+              >
+                <path d="M3.5 8.5l3 3 6-7" />
+              </svg>
             </label>
           ))}
         </div>
@@ -186,14 +216,15 @@ export function FieldControl({
       );
       break;
   }
-  const choices =
-    block.type === 'single-choice' || block.type === 'multiple-choice';
   const body = (
     <>
       {block.description && (
         <p id={help} className="intake-help">
           {block.description}
         </p>
+      )}
+      {block.type === 'multiple-choice' && (
+        <p className="intake-hint">Choose any that apply</p>
       )}
       {control}
       {error && (

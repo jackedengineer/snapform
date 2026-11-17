@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import type { FormDefinition } from '@snapform/contracts/form';
 import { previewState } from './preview-state';
 import { newBlankDefinition, newBlock } from './new-form';
 
@@ -14,7 +15,12 @@ function question(
   return { ...block, label, required };
 }
 function contactForm() {
-  const definition = { ...newBlankDefinition(), title: 'Synthetic enquiry' };
+  // Pages of several questions; the card test below switches explicitly.
+  const definition: FormDefinition = {
+    ...newBlankDefinition(),
+    title: 'Synthetic enquiry',
+    presentation: 'page',
+  };
   definition.pages[0].blocks = [
     question('short-text', 'Your name'),
     question('email', 'Work email', true),

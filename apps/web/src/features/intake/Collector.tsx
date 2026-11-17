@@ -10,6 +10,7 @@ import { listFiles } from './files';
 import { FieldControl } from './FieldControl';
 import { Turnstile } from './Turnstile';
 import { collectionSteps } from './steps';
+import { choiceAdvances, optionIndexForKey } from './choice-keys';
 import type { CollectionStep } from './steps';
 import { resolvePosition } from './navigation';
 import type { CollectorSearch } from './navigation';
@@ -29,13 +30,13 @@ import { unavailableTitle } from './titles';
 // Only forms with a file question load the upload control.
 const FileField = lazy(() => import('./FileField'));
 const saveLabels = {
-  saved: 'Progress saved',
+  saved: 'Saved',
   saving: 'Saving…',
   waiting: 'Saving shortly…',
   offline: 'Not confirmed saved',
   conflict: 'Save conflict',
   blocked: 'Saving unavailable',
-  submitted: 'Progress saved',
+  submitted: 'Saved',
 };
 const isField = (block: Block): block is Field => 'required' in block;
 const fieldIds = (step: CollectionStep) =>
@@ -63,7 +64,10 @@ export function Collector({
     entered = useRef(false),
     corrected = useRef(''),
     pendingFocus = useRef(''),
-    returnFocus = useRef('');
+    returnFocus = useRef(''),
+    answerForm = useRef<HTMLFormElement>(null),
+    advanceTimer = useRef(0),
+    motion = useRef({ index: 0, direction: 'forward' });
   const session = intake.progress?.record.session;
   const definition = session?.definition || intake.form?.definition;
   const identity = intake.progress?.record.identity;
@@ -93,6 +97,21 @@ export function Collector({
     editing = !review && search.edit === true;
   const card = definition?.presentation === 'card';
   const cardField = card ? step?.blocks.find(isField) : undefined;
+  // A single choice on its own card moves on once it is answered.
+  const advances = Boolean(
+    definition &&
+    step &&
+    !review &&
+    choiceAdvances(step.blocks, definition.presentation),
+  );
+  // New questions rise into place; going back, they drop in from above.
+  // Decided once per move, so later renders never restart the entrance.
+  if (motion.current.index !== index)
+    motion.current = {
+      index,
+      direction: index < motion.current.index ? 'back' : 'forward',
+    };
+  const direction = motion.current.direction;
   const submitted = Boolean(session) && status === 'submitted';
   const screen = intake.unavailable
     ? 'unavailable'
@@ -132,6 +151,39 @@ export function Collector({
     target?.focus();
     if (target?.id === focusTarget) window.scrollTo(0, 0);
   }, [screen, session?.id]);
+  // A pending move never outlives the screen it was scheduled on.
+  useEffect(() => () => window.clearTimeout(advanceTimer.current), [screen]);
+  useEffect(() => {
+    if (screen !== 'step-' + index || frozen) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.isComposing) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target instanceof Element ? event.target : null;
+      const choosing = target?.matches(
+        'input[type=radio], input[type=checkbox]',
+      );
+      const typing = target?.closest(
+        'input, textarea, select, button, a, [contenteditable="true"], dialog[open]',
+      );
+      if (typing && !choosing) return;
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        answerForm.current?.requestSubmit();
+        return;
+      }
+      if (!cardField || !('options' in cardField)) return;
+      const option = optionIndexForKey(event.key, cardField.options.length);
+      if (option === -1) return;
+      event.preventDefault();
+      const input = document.getElementById(
+        'answer-' + cardField.id + '-' + option,
+      );
+      input?.focus();
+      input?.click();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [screen, index, frozen, cardField]);
   useEffect(() => {
     if (confirmation) dialog.current?.showModal();
     else dialog.current?.close();
@@ -220,11 +272,19 @@ export function Collector({
           ? evaluation.issues.find((issue) => issue.targetId === block.id)
               ?.message
           : undefined;
-      const change = (next: Answer) =>
+      const change = (next: Answer) => {
         intake.controller?.edit({
           ...intake.controller.state.record.session?.answers,
           [block.id]: next,
         });
+        if (!advances || next.state !== 'value') return;
+        // Long enough to see the choice land; a second choice restarts it.
+        window.clearTimeout(advanceTimer.current);
+        advanceTimer.current = window.setTimeout(
+          () => answerForm.current?.requestSubmit(),
+          360,
+        );
+      };
       const blur = () =>
         setTouched((previous) => new Set([...previous, block.id]));
       return (
@@ -235,6 +295,7 @@ export function Collector({
           error={error}
           onChange={change}
           onBlur={blur}
+          keys={Boolean(cardField)}
           files={
             block.type === 'file' && identity
               ? (describedBy) => (
@@ -286,6 +347,16 @@ export function Collector({
       ? definition.endings.find((ending) => ending.id === evaluation.endingId)
       : undefined;
   const pageHeading = cardField ? cardField.label : step?.title;
+  const back = !editing && index > 0 && (
+    <button
+      type="button"
+      className="button intake-secondary intake-back"
+      onClick={() => onNavigate({ step: index })}
+      disabled={frozen}
+    >
+      ← Back
+    </button>
+  );
   // Untitled pages still need an H2 before any section headings (H3).
   const StepLabel = review || pageHeading ? 'p' : 'h2';
   return (
@@ -431,17 +502,33 @@ export function Collector({
                   id={review || pageHeading ? undefined : focusTarget}
                   tabIndex={-1}
                 >
-                  {review
-                    ? 'One last look'
-                    : `${card ? 'Question' : 'Step'} ${index + 1} of ${steps.length}`}
+                  {review ? (
+                    'One last look'
+                  ) : (
+                    <>
+                      <span className="visually-hidden">
+                        {card ? 'Question ' : 'Step '}
+                      </span>
+                      {index + 1} of {steps.length}
+                    </>
+                  )}
                 </StepLabel>
                 <p role="status">{status && saveLabels[status]}</p>
               </div>
-              <progress
+              <div
+                className="intake-progress"
+                role="progressbar"
                 aria-label="Form progress"
-                max={steps.length}
-                value={review ? steps.length : index}
-              />
+                aria-valuemin={0}
+                aria-valuemax={steps.length}
+                aria-valuenow={review ? steps.length : index}
+              >
+                <span
+                  style={{
+                    transform: `scaleX(${review ? 1 : Math.max(index / steps.length, 0.04)})`,
+                  }}
+                />
+              </div>
               {review ? (
                 <Review
                   sections={reviewSections(steps, evaluation, uploaded.data)}
@@ -455,6 +542,9 @@ export function Collector({
                 />
               ) : (
                 <form
+                  key={step.id}
+                  ref={answerForm}
+                  data-direction={direction}
                   noValidate
                   onSubmit={next}
                   className={
@@ -467,10 +557,8 @@ export function Collector({
                       {pageHeading}
                     </h2>
                   )}
-                  {cardField && (
-                    <p className="intake-card-requirement">
-                      {cardField.required ? 'Required' : 'Optional'}
-                    </p>
+                  {cardField && !cardField.required && (
+                    <p className="intake-card-requirement">Optional</p>
                   )}
                   <fieldset
                     disabled={Boolean(frozen)}
@@ -479,16 +567,7 @@ export function Collector({
                     {fields(step.blocks)}
                   </fieldset>
                   <div className="intake-actions">
-                    {!editing && index > 0 && (
-                      <button
-                        type="button"
-                        className="button intake-secondary"
-                        onClick={() => onNavigate({ step: index })}
-                        disabled={frozen}
-                      >
-                        ← Back
-                      </button>
-                    )}
+                    {!cardField && back}
                     <button
                       className="button primary"
                       type="submit"
@@ -501,6 +580,14 @@ export function Collector({
                           : 'Continue'}
                       <span aria-hidden="true">→</span>
                     </button>
+                    {cardField && (
+                      <>
+                        <span className="intake-enter-hint" aria-hidden="true">
+                          or press <kbd>Enter ↵</kbd>
+                        </span>
+                        {back}
+                      </>
+                    )}
                   </div>
                 </form>
               )}

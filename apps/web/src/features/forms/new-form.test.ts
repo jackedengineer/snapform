@@ -103,3 +103,7 @@ it('bounds outline captions without changing full text or splitting emoji graphe
   );
   expect(blockCaption({ ...block, text: '' })).toBe('Untitled question');
 });
+
+it('starts every new form one question at a time', () => {
+  expect(newBlankDefinition().presentation).toBe('card');
+});

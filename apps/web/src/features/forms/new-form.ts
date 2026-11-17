@@ -18,7 +18,7 @@ export function newBlankDefinition(): FormDefinition {
     contractVersion: 1,
     title: '',
     description: '',
-    presentation: 'page',
+    presentation: 'card',
     rules: [],
     pages: [{ id: crypto.randomUUID(), title: '', blocks: [] }],
     endings: [

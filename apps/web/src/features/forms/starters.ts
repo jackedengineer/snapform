@@ -386,7 +386,7 @@ export function newStarterDefinition(id: StarterId): FormDefinition {
     contractVersion: 1,
     title: spec.title,
     description: spec.description,
-    presentation: 'page',
+    presentation: 'card',
     pages,
     endings,
     defaultEndingId: endings[0].id,

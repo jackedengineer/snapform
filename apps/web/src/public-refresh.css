@@ -41,8 +41,15 @@
 .intake-shell .intake-main {
   background: white;
   border: 1px solid var(--border-workspace);
-  border-radius: 16px;
-  padding: 40px;
+  border-radius: 20px;
+  padding: 44px 48px 40px;
+  box-shadow:
+    0 1px 2px rgb(19 21 26 / 4%),
+    0 16px 40px -28px rgb(19 21 26 / 28%);
+}
+/* One question at a time keeps the same height, so the page never jumps. */
+.intake-shell .intake-main.intake-card {
+  min-height: min(560px, 72svh);
 }
 .intake-shell .intake-main h1 {
   font-size: clamp(30px, 5vw, 44px);
@@ -72,8 +79,18 @@
     margin-block: 16px 32px;
     gap: 16px;
   }
+  /* On a phone the form is the whole screen: no card inside a card. */
+  .intake-shell:not(.intake-embed) {
+    background: white;
+  }
   .intake-shell .intake-main {
-    padding: 24px 20px;
+    padding: 8px 8px 24px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .intake-shell .intake-main.intake-card {
+    min-height: 0;
   }
   .info-shell .info-main {
     padding: 24px 20px;
