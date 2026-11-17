@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react';
-import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { optionIndexForKey } from './choice-keys';
 
@@ -67,11 +67,7 @@ export function LandingExample() {
           aria-labelledby={id + name}
         >
           {options.map((option, index) => (
-            <label
-              key={option}
-              className="intake-option"
-              style={{ '--i': index } as CSSProperties}
-            >
+            <label key={option} className="intake-option">
               <input
                 type="radio"
                 name={id + name + '-answer'}

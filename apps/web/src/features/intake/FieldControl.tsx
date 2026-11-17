@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { Block } from '@snapform/contracts/form';
 import type { Answer } from '@snapform/contracts/answers';
 export function FieldControl({
@@ -149,11 +149,7 @@ export function FieldControl({
           data-kind={single ? 'single' : 'multiple'}
         >
           {block.options.map((option, index) => (
-            <label
-              className="intake-option"
-              key={option.id}
-              style={{ '--i': index } as CSSProperties}
-            >
+            <label className="intake-option" key={option.id}>
               <input
                 id={id + '-' + index}
                 type={single ? 'radio' : 'checkbox'}
