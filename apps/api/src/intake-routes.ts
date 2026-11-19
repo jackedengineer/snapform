@@ -18,6 +18,7 @@ import { compileDefinition } from '@snapform/contracts/compile';
 import { requestScope } from './request-context.ts';
 import { intakeAuthorizationHash } from './intake-capability.ts';
 import { verifyIntakeChallenge } from './intake-challenge.ts';
+import { wakeResponseDelivery } from './response-wake.ts';
 type Route =
   | { kind: 'start'; publicId: string }
   | { kind: 'session' | 'submit'; publicId: string; id: string };
@@ -201,6 +202,8 @@ async function handleIntake(
         mutation.data,
       );
       res.json({ receipt });
+      if (route.kind === 'submit')
+        scope.context.waitUntil(wakeResponseDelivery(scope.environment.JOBS));
       // Files the final answers left out go now, after the response; any that
       // survive a failure here are deleted with the response by purge.
       if (

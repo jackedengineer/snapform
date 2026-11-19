@@ -16,7 +16,10 @@
     // Respondent files, deleted by prefix before a purge is finalized.
     { "binding": "UPLOADS", "bucket_name": "snapform-uploads" },
   ],
-  "triggers": { "crons": ["* * * * *"] },
+  // Every 30 minutes: retries, deletions and anything a submit's instant wake
+  // missed. Running every minute kept the database from ever sleeping and used
+  // Neon's free compute allowance in about 17 days.
+  "triggers": { "crons": ["*/30 * * * *"] },
   "queues": {
     "producers": [{ "binding": "EVENTS", "queue": "snapform-response-events" }],
     "consumers": [

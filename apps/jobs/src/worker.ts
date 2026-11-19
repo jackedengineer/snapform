@@ -24,6 +24,7 @@ import {
 import { dispatchWebhooks } from './webhook-dispatch';
 import { sendWebhook } from './webhook-send';
 import { handleWebhookWake } from './webhook-wake';
+import { handleResponseWake } from './response-wake';
 import { runScheduledPurge } from './purge-ledger';
 import {
   claimOwnerDeletions,
@@ -75,8 +76,47 @@ async function deliverWebhooks(
     console.log(JSON.stringify({ event: 'webhook_attempts', ...result }));
   return result;
 }
+// Queue new response events, send owner emails and deliver webhooks. A submit
+// wakes this at once; the sweep repeats it for retries and anything missed.
+async function deliverResponses(db: Database, environment: JobEnvironment) {
+  const result = await relayResponseEvents(environment.EVENTS, {
+    claim: () => claimResponseEvents(db),
+    record: (lease, queued) => recordResponseDispatch(db, lease, queued),
+  });
+  if (result.claimed)
+    console.log(JSON.stringify({ event: 'response_events_queued', ...result }));
+  const mail = await dispatchOwnerEmails({
+    claim: () => claimOwnerEmails(db),
+    prepare: (claim) => prepareOwnerEmail(db, claim),
+    send: (claim) =>
+      sendOwnerEmail(claim, {
+        apiKey: environment.RESEND_API_KEY || '',
+        from: environment.EMAIL_FROM || '',
+        allowedRecipient: environment.EMAIL_ALLOWED_RECIPIENT,
+      }),
+    record: (claim, outcome) => recordOwnerEmail(db, claim, outcome),
+  });
+  if (mail.claimed)
+    console.log(JSON.stringify({ event: 'owner_email_attempts', ...mail }));
+  const webhooks = await deliverWebhooks(db, environment);
+  return {
+    events: result.claimed,
+    emails: mail.claimed,
+    webhooks: webhooks.claimed,
+    failed: webhooks.failed,
+  };
+}
 export default {
   async fetch(request, environment) {
+    if (new URL(request.url).pathname === '/dispatch/responses')
+      return handleResponseWake(request, async () => {
+        const { db, close } = await connect(environment);
+        try {
+          return await deliverResponses(db, environment);
+        } finally {
+          await close();
+        }
+      });
     if (new URL(request.url).pathname === '/dispatch/webhooks')
       return handleWebhookWake(request, async (id) => {
         const { db, close } = await connect(environment);
@@ -140,31 +180,8 @@ export default {
               }),
             );
         }
-        const result = await relayResponseEvents(environment.EVENTS, {
-          claim: () => claimResponseEvents(db),
-          record: (lease, queued) => recordResponseDispatch(db, lease, queued),
-        });
-        if (result.claimed)
-          console.log(
-            JSON.stringify({ event: 'response_events_queued', ...result }),
-          );
-        const mail = await dispatchOwnerEmails({
-          claim: () => claimOwnerEmails(db),
-          prepare: (claim) => prepareOwnerEmail(db, claim),
-          send: (claim) =>
-            sendOwnerEmail(claim, {
-              apiKey: environment.RESEND_API_KEY || '',
-              from: environment.EMAIL_FROM || '',
-              allowedRecipient: environment.EMAIL_ALLOWED_RECIPIENT,
-            }),
-          record: (claim, outcome) => recordOwnerEmail(db, claim, outcome),
-        });
-        if (mail.claimed)
-          console.log(
-            JSON.stringify({ event: 'owner_email_attempts', ...mail }),
-          );
-        const webhooks = await deliverWebhooks(db, environment);
-        if (webhooks.failed || purge.failed)
+        const delivery = await deliverResponses(db, environment);
+        if (delivery.failed || purge.failed)
           throw Error('Job persistence unavailable');
       } finally {
         await close();
