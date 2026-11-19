@@ -12,6 +12,8 @@ for (const [path, title] of [
   ['/support', 'A little help, a clear next step.'],
   ['/privacy', 'Your information, explained.'],
   ['/report-abuse', 'Report a concern.'],
+  ['/terms', 'The terms for using Snapform.'],
+  ['/refunds', 'Cancelling and refunds.'],
 ]) {
   const page = await fetch(base + path);
   assert.equal(page.status, 200, `${path} must render without authentication`);
@@ -62,7 +64,15 @@ assert.match(
   response.headers.get('content-security-policy'),
   /style-src 'self'(;|$)/,
 );
-for (const path of ['/', '/start', '/pricing', '/login', '/signup']) {
+for (const path of [
+  '/',
+  '/start',
+  '/pricing',
+  '/login',
+  '/signup',
+  '/terms',
+  '/refunds',
+]) {
   const body = path === '/' ? html : await (await fetch(base + path)).text();
   assert.ok(
     !/<[^>]+\sstyle="/.test(body),

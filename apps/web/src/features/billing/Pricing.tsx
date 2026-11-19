@@ -65,7 +65,9 @@ export function Pricing() {
           Conditional questions, email notifications, webhooks and CSV export.
           Responses reset at 00:00 UTC on the 1st of each month. Payments go
           through Razorpay. After you cancel, Pro lasts until the paid period
-          ends.
+          ends. See the{' '}
+          <Link to="/refunds">cancellation and refund policy</Link> and{' '}
+          <Link to="/terms">terms of service</Link>.
         </p>
       </section>
     </PublicInfo>
