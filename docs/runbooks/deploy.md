@@ -71,7 +71,12 @@ Owner notifications also require the sending-only `RESEND_API_KEY` and dedicated
 `RESEND_WEBHOOK_SECRET`. `EMAIL_FROM` is public configuration; the private
 `EMAIL_ALLOWED_RECIPIENT` currently restricts sends to approved QA. Do not remove
 that restriction without reviewing pending deliveries and the release scope.
-Cron and Queue configuration live in Wrangler. Confirm an owned
+Cron and Queue configuration live in Wrangler. Cron runs every 30 minutes for
+retries, deletions and anything missed; a submit wakes Jobs at once through the
+private `/dispatch/responses` binding, so owner emails and webhooks still go out
+within seconds. Do not shorten the Cron below the database's 5-minute sleep
+delay: a minute-by-minute Cron kept the Free-plan database awake around the
+clock and exhausted its monthly compute in about 17 days. Confirm an owned
 synthetic event reaches a durable transport receipt, then inspect queue backlog,
 retries and the `snapform-response-dead` queue. Cron propagation can take up to
 15 minutes. A transport receipt does not prove provider notification delivery.
