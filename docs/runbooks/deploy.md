@@ -19,8 +19,7 @@ preview URLs. Do not add a second public API origin.
 - GitHub Actions has the explicitly approved `SNAPFORM_DATABASE_URL` and a
   separate CI-only `BETTER_AUTH_SECRET`. It supplies fake email configuration;
   database fixtures roll back in the one existing Neon database.
-- Local `.env.production`, `.env.ci` and `.env.qa` are private, ignored and mode
-  0600. Never print them or include them in a support bundle.
+- Local `.env.production`, `.env.ci` and `.env.qa` are private, ignored and mode 0600. Never print them or include them in a support bundle.
 
 ## Reviewed deployment
 
@@ -68,9 +67,12 @@ Sources: [Vite auxiliary Workers](https://developers.cloudflare.com/workers/vite
 Deploy `apps/jobs/wrangler.jsonc` separately. Its `DATABASE_URL` uses the restricted
 `snapform_jobs` identity; never copy API auth secrets or the migration owner.
 Owner notifications also require the sending-only `RESEND_API_KEY` and dedicated
-`RESEND_WEBHOOK_SECRET`. `EMAIL_FROM` is public configuration; the private
-`EMAIL_ALLOWED_RECIPIENT` currently restricts sends to approved QA. Do not remove
-that restriction without reviewing pending deliveries and the release scope.
+`RESEND_WEBHOOK_SECRET`. `EMAIL_FROM` is public configuration. Owner emails are
+opt-in per form and go to every owner who turns them on: the QA-only
+`EMAIL_ALLOWED_RECIPIENT` was removed from production on 19 November 2026, when
+no delivery was pending and no form had email on. Setting it again holds every
+other owner's email as `needs_action`. Each new response sends one email, so
+watch the Resend plan's daily and monthly sending limits.
 Cron and Queue configuration live in Wrangler. Cron runs every 30 minutes for
 retries, deletions and anything missed; a submit wakes Jobs at once through the
 private `/dispatch/responses` binding, so owner emails and webhooks still go out
@@ -113,8 +115,7 @@ they never retarget it. Disabling cannot retract an in-flight request. Tests and
 Unknown outcomes require explicit safe replay/reconciliation, with receiver-side
 deduplication by webhook-id. Do not reset event IDs or attempt counts to replay.
 
-Current verified webhook release and rollback versions are recorded in evidence
-0085. For an incident, disable the affected endpoint in its inbox first; a request
+Current verified webhook release and rollback versions are recorded in evidence 0085. For an incident, disable the affected endpoint in its inbox first; a request
 already in flight may still arrive. Roll back Jobs to the prior email/receipt
 version to stop new webhook claims without deleting its ledger, then roll back
 API/web if needed. Preserve the expanded schema and signing material. Expired
