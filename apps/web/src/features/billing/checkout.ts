@@ -3,6 +3,8 @@
 type Checkout = new (options: {
   key: string;
   subscription_id: string;
+  /** 1 opens Razorpay's card change for a subscription instead of a payment. */
+  subscription_card_change?: 0 | 1;
   name: string;
   description: string;
   handler: () => void;

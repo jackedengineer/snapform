@@ -16,6 +16,7 @@ export const usageFields = {
     'none',
     'created',
     'active',
+    'pending',
     'halted',
     'cancelled',
     'completed',

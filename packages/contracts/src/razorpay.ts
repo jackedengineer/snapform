@@ -116,6 +116,8 @@ const eventType = z.string().check(z.regex(/^[a-z_.]{1,64}$/));
 export const handledEvents: ReadonlySet<string> = new Set([
   'subscription.activated',
   'subscription.charged',
+  // A renewal charge failed and Razorpay is retrying it (0047 keeps Pro meanwhile).
+  'subscription.pending',
   'subscription.halted',
   'subscription.cancelled',
   'subscription.completed',

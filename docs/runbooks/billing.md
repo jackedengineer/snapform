@@ -66,8 +66,16 @@ Switch the dashboard to **Live Mode** first; test and live objects are separate.
      `wrangler secret put RAZORPAY_WEBHOOK_SECRET`.
    - Alert email: an address the owner reads.
    - Active events: `subscription.activated`, `subscription.charged`,
-     `subscription.halted`, `subscription.cancelled`,
+     `subscription.pending`, `subscription.halted`, `subscription.cancelled`,
      `subscription.completed`.
+
+When a renewal charge fails, Razorpay retries it and sends
+`subscription.pending`. The workspace keeps Pro while it retries, for at most
+30 days after the paid period, and the owner sees **Update card**, which opens
+Razorpay's card change for that subscription; a new checkout is refused so no
+one is charged twice. `subscription.halted` (retries exhausted) moves the
+workspace to Free at once. Cancelled and completed subscriptions keep the
+period already paid for (migration 0047).
 
 Other events are acknowledged with 200 and change nothing (they are recorded
 only for dedupe). Snapform never pauses subscriptions; `subscription.paused`

@@ -1,5 +1,10 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { cancelPlan, fetchBillingOptions, startCheckout } from './api';
+import {
+  cancelPlan,
+  fetchBillingOptions,
+  startCardUpdate,
+  startCheckout,
+} from './api';
 
 afterEach(() => vi.unstubAllGlobals());
 const workspaceId = '28765529-6337-4512-b148-f735ad07d28b';
@@ -104,4 +109,50 @@ it('offers INR only unless the server confirms USD plans', async () => {
   }
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
   expect(await fetchBillingOptions()).toEqual(['INR']);
+});
+
+it('asks the server for the pending subscription before opening a card change', async () => {
+  const checkout = {
+    key: 'rzp_live_SyntheticKey01',
+    subscriptionId: 'sub_Synthetic000001',
+  };
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ checkout }));
+  vi.stubGlobal('fetch', fetcher);
+  expect(await startCardUpdate(workspaceId)).toEqual(checkout);
+  const [path, init] = fetcher.mock.calls[0];
+  expect(path).toBe(`/api/v1/workspaces/${workspaceId}/billing/card`);
+  expect(init).toMatchObject({ method: 'POST', body: '{}' });
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json(
+          { error: { code: 'BILLING_NOT_PENDING' } },
+          { status: 409 },
+        ),
+      ),
+  );
+  await expect(startCardUpdate(workspaceId)).rejects.toThrow(
+    'Your last payment went through, so there’s no card to update.',
+  );
+});
+
+it('sends an owner to the card change instead of a second checkout', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json(
+          { error: { code: 'BILLING_PAYMENT_PENDING' } },
+          { status: 409 },
+        ),
+      ),
+  );
+  await expect(
+    startCheckout(workspaceId, { interval: 'monthly', currency: 'INR' }),
+  ).rejects.toThrow(
+    'Razorpay is retrying your last payment. Update your card instead.',
+  );
 });

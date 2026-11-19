@@ -85,6 +85,12 @@ it('describes the plan honestly through cancellation and failed payment', () => 
   expect(planStatus({ ...pro, status: 'cancelled' })).toBe(
     'Pro until 13 December 2026, then Free. Live forms stay live.',
   );
+  expect(planStatus({ ...pro, status: 'pending' })).toBe(
+    'Payment failed: update your card. Pro stays on while Razorpay retries the payment.',
+  );
+  expect(planStatus({ ...free, status: 'pending' })).toBe(
+    'Payment failed: update your card. Razorpay is retrying the payment; this workspace is on Free until it succeeds. Live forms stay live.',
+  );
   expect(planStatus({ ...free, status: 'halted' })).toBe(
     'Razorpay couldn’t take the last Pro payment, so this workspace is on Free. Live forms stay live.',
   );

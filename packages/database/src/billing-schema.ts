@@ -12,7 +12,9 @@ import {
 } from 'drizzle-orm/pg-core';
 import { workspace } from './workspace-schema.ts';
 // No runtime grants or policies: only SECURITY DEFINER functions in 0041 read or write.
-// A missing row means Free; Pro lasts only while current_period_end is in the future.
+// A missing row means Free. Pro lasts while current_period_end is in the future,
+// or while Razorpay retries a failed charge (pending, 0047); halted, cancelled
+// and completed end it at once.
 export const workspacePlan = pgTable(
   'workspace_plan',
   {
@@ -23,7 +25,15 @@ export const workspacePlan = pgTable(
       .notNull()
       .default('free'),
     status: text('status', {
-      enum: ['none', 'created', 'active', 'halted', 'cancelled', 'completed'],
+      enum: [
+        'none',
+        'created',
+        'active',
+        'pending',
+        'halted',
+        'cancelled',
+        'completed',
+      ],
     })
       .notNull()
       .default('none'),
@@ -48,7 +58,7 @@ export const workspacePlan = pgTable(
     check('workspace_plan_plan', sql`${table.plan} in ('free','pro')`),
     check(
       'workspace_plan_status',
-      sql`${table.status} in ('none','created','active','halted','cancelled','completed')`,
+      sql`${table.status} in ('none','created','active','pending','halted','cancelled','completed')`,
     ),
     check(
       'workspace_plan_interval',

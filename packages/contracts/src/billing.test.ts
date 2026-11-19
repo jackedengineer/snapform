@@ -39,6 +39,11 @@ it('reads the database projection strictly', () => {
       liveFormLimit: null,
     }).liveFormLimit,
   ).toBeNull();
+  // Razorpay retries a failed charge while the subscription is pending.
+  expect(
+    billingRecordSchema.parse({ ...record, plan: 'pro', status: 'pending' })
+      .status,
+  ).toBe('pending');
   for (const invalid of [
     { ...record, plan: 'enterprise' },
     { ...record, status: 'paused' },
