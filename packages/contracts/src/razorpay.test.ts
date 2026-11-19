@@ -108,6 +108,19 @@ describe('event mapping', () => {
       periodEnd: new Date(1826115000 * 1000),
     });
   });
+  it('maps a failed charge under retry to a pending subscription event', () => {
+    expect(
+      toBillingEvent(
+        'evt_Synthetic10',
+        payload('subscription.pending', { status: 'pending' }),
+        plans,
+      ),
+    ).toMatchObject({
+      type: 'subscription.pending',
+      subscriptionId: 'sub_Synthetic000001',
+      workspaceId,
+    });
+  });
   it('never grants a plan Snapform did not configure or trusts missing data', () => {
     expect(
       toBillingEvent(

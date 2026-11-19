@@ -30,7 +30,12 @@ it('matches only the UUID-scoped billing resource as a private path', () => {
     workspaceId,
     action: 'checkout',
   });
+  expect(matchBillingRoute(path + '/card')).toEqual({
+    workspaceId,
+    action: 'card',
+  });
   expect(isPrivatePath(path + '/cancel')).toBe(true);
+  expect(isPrivatePath(path + '/card')).toBe(true);
   expect(isPrivatePath(path)).toBe(true);
   for (const candidate of [
     path + '/',
@@ -46,6 +51,7 @@ it('requires a verified account before reading plan usage or changing billing', 
     ['', 'GET'],
     ['/checkout', 'POST'],
     ['/cancel', 'POST'],
+    ['/card', 'POST'],
   ] as const) {
     const response = await SELF.fetch(origin + path + suffix, {
       method,
@@ -84,6 +90,8 @@ it('maps plan limits to stable codes without leaking database detail', () => {
   expect(billingFailures.get('FORBIDDEN')).toBe(403);
   expect(billingFailures.get('BILLING_ALREADY_ACTIVE')).toBe(409);
   expect(billingFailures.get('BILLING_NOT_CONFIGURED')).toBe(503);
+  expect(billingFailures.get('BILLING_NOT_PENDING')).toBe(409);
+  expect(billingFailures.get('BILLING_PAYMENT_PENDING')).toBe(409);
 });
 
 it('configures billing for one explicit Razorpay mode and fails closed otherwise', () => {

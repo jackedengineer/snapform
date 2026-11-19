@@ -46,6 +46,12 @@ export function limitNotice(billing: BillingSummary) {
 }
 export function planStatus(billing: BillingSummary) {
   const kept = 'Live forms stay live.';
+  // Razorpay retries a failed renewal; Pro stays for up to 30 days past the
+  // paid period while it does (0047).
+  if (billing.status === 'pending')
+    return billing.plan === 'pro'
+      ? 'Payment failed: update your card. Pro stays on while Razorpay retries the payment.'
+      : `Payment failed: update your card. Razorpay is retrying the payment; this workspace is on Free until it succeeds. ${kept}`;
   if (billing.plan === 'pro') {
     const end = longDate.format(new Date(billing.currentPeriodEnd ?? 0));
     return billing.status === 'active' && !billing.cancelAtPeriodEnd

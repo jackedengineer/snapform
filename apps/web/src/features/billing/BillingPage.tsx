@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import type { BillingSummary } from '@snapform/contracts/billing';
-import { cancelPlan, startCheckout } from './api';
+import { cancelPlan, startCardUpdate, startCheckout } from './api';
 import { loadCheckout } from './checkout';
 import { PlanChoices, proPrice } from './PlanChoices';
 import { longDate, planStatus, resetDay } from './usage';
@@ -25,6 +25,7 @@ function PlanActions({
     [busy, setBusy] = useState(false),
     [confirming, setConfirming] = useState(false),
     [message, setMessage] = useState('');
+  const pending = billing.status === 'pending';
   const renewing =
     billing.plan === 'pro' &&
     billing.status === 'active' &&
@@ -68,6 +69,26 @@ function PlanActions({
         modal: { ondismiss: () => setBusy(false) },
       }).open();
     });
+  // Razorpay's card change for the subscription it is retrying; the next
+  // retry uses the new card, and the webhook confirms the payment.
+  const updateCard = () =>
+    run(async () => {
+      const checkout = await startCardUpdate(workspaceId);
+      const Razorpay = await loadCheckout();
+      new Razorpay({
+        key: checkout.key,
+        subscription_id: checkout.subscriptionId,
+        subscription_card_change: 1,
+        name: 'Snapform',
+        description: 'Update the card for Pro',
+        handler: () => {
+          setBusy(false);
+          setMessage('Card updated. Razorpay uses it for the next retry.');
+          void refresh();
+        },
+        modal: { ondismiss: () => setBusy(false) },
+      }).open();
+    });
   const cancel = () =>
     run(async () => {
       await cancelPlan(workspaceId);
@@ -78,7 +99,23 @@ function PlanActions({
     });
   return (
     <section className="usage-meter" aria-labelledby="change-title">
-      {renewing ? (
+      {pending ? (
+        <>
+          <h2 id="change-title">Update your card</h2>
+          <p>
+            Razorpay couldn’t take the last Pro payment and is retrying it. Add
+            a card that works and the next retry uses it.
+          </p>
+          <button
+            type="button"
+            className="button primary compact-button"
+            disabled={busy}
+            onClick={() => void updateCard()}
+          >
+            Update card with Razorpay
+          </button>
+        </>
+      ) : renewing ? (
         <>
           <h2 id="change-title">Cancel Pro</h2>
           <p>

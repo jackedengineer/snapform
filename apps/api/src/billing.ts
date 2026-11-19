@@ -16,13 +16,15 @@ import {
 } from './razorpay.ts';
 
 const pattern =
-  /^\/api\/v1\/workspaces\/([A-Fa-f0-9-]{36})\/billing(?:\/(checkout|cancel))?$/;
+  /^\/api\/v1\/workspaces\/([A-Fa-f0-9-]{36})\/billing(?:\/(checkout|cancel|card))?$/;
 export function matchBillingRoute(path: string) {
   const match = path.match(pattern);
   if (!match) return null;
   const workspaceId = createWorkspaceSchema.shape.id.safeParse(match[1]);
   const action =
-    match[2] === 'checkout' || match[2] === 'cancel' ? match[2] : 'read';
+    match[2] === 'checkout' || match[2] === 'cancel' || match[2] === 'card'
+      ? match[2]
+      : 'read';
   return workspaceId.success ? { workspaceId: workspaceId.data, action } : null;
 }
 /** Public: which currencies checkout offers in the current mode, for /pricing. */
@@ -37,6 +39,8 @@ export const billingFailures = new Map([
   ['WORKSPACE_DELETION_PENDING', 409],
   ['BILLING_ALREADY_ACTIVE', 409],
   ['BILLING_NOT_ACTIVE', 409],
+  ['BILLING_NOT_PENDING', 409],
+  ['BILLING_PAYMENT_PENDING', 409],
   ['BILLING_CURRENCY_UNAVAILABLE', 422],
   ['BILLING_PROVIDER_UNAVAILABLE', 502],
   ['BILLING_NOT_CONFIGURED', 503],
@@ -83,7 +87,18 @@ export async function handleBillingRequest(
       record.status === 'active' &&
       record.plan === 'pro' &&
       record.subscriptionId !== null;
+    // While Razorpay retries a failed charge, a new subscription would bill
+    // twice once a retry succeeds; the owner updates the card instead.
+    if (route.action === 'card') {
+      if (record.status !== 'pending' || !record.subscriptionId)
+        throw Error('BILLING_NOT_PENDING');
+      res.json({
+        checkout: { key: config.keyId, subscriptionId: record.subscriptionId },
+      });
+      return;
+    }
     if (input?.success) {
+      if (record.status === 'pending') throw Error('BILLING_PAYMENT_PENDING');
       if (live && !record.cancelAtPeriodEnd)
         throw Error('BILLING_ALREADY_ACTIVE');
       // Reopen an unpaid checkout for the same price instead of creating another.

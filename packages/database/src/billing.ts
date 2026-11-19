@@ -59,7 +59,11 @@ export async function recordSubscription(
         sql`select public.record_billing_subscription(${workspaceId}::uuid,${subscriptionId},${input.interval},${input.currency})`,
       );
     } catch (error) {
-      throw typed(error, ['BILLING_ALREADY_ACTIVE', 'FORBIDDEN']);
+      throw typed(error, [
+        'BILLING_ALREADY_ACTIVE',
+        'BILLING_PAYMENT_PENDING',
+        'FORBIDDEN',
+      ]);
     }
   });
 }

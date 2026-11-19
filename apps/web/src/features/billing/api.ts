@@ -16,6 +16,10 @@ export const billingPath = (workspaceId: string) =>
 const failures: Record<string, string> = {
   BILLING_NOT_CONFIGURED: 'Billing isn’t configured yet.',
   BILLING_ALREADY_ACTIVE: 'This workspace already has Pro.',
+  BILLING_PAYMENT_PENDING:
+    'Razorpay is retrying your last payment. Update your card instead.',
+  BILLING_NOT_PENDING:
+    'Your last payment went through, so there’s no card to update.',
   FORBIDDEN: 'Only the workspace owner can change the plan.',
   BILLING_CURRENCY_UNAVAILABLE: 'That currency isn’t available. Choose INR.',
   BILLING_PROVIDER_UNAVAILABLE:
@@ -81,6 +85,14 @@ function change(workspaceId: string, action: string, input: object) {
 export async function startCheckout(workspaceId: string, input: CheckoutInput) {
   const checkout = checkoutSchema.safeParse(
     field(await change(workspaceId, 'checkout', input), 'checkout'),
+  );
+  if (!checkout.success) throw Error(changeFailure);
+  return checkout.data;
+}
+/** Opens Razorpay's card change for the subscription whose charge failed. */
+export async function startCardUpdate(workspaceId: string) {
+  const checkout = checkoutSchema.safeParse(
+    field(await change(workspaceId, 'card', {}), 'checkout'),
   );
   if (!checkout.success) throw Error(changeFailure);
   return checkout.data;

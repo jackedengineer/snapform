@@ -238,6 +238,124 @@ it(
 );
 
 it(
+  'keeps Pro while Razorpay retries a failed charge and drops it on halted (0047)',
+  async () =>
+    fixture(async (tx, seed) => {
+      // The paid period ended an hour ago and the renewal charge failed.
+      const activated = event(seed, {
+        createdAt: new Date(Date.now() - 10 * 60000),
+        periodStart: new Date(Date.now() - 30 * day),
+        periodEnd: new Date(Date.now() - 3600000),
+      });
+      await applyBillingEvent(tx, activated);
+      const retrying = (minutesAgo: number) =>
+        event(seed, {
+          type: 'subscription.pending',
+          subscriptionId: activated.subscriptionId,
+          createdAt: new Date(Date.now() - minutesAgo * 60000),
+          periodStart: null,
+          periodEnd: null,
+        });
+      expect(await applyBillingEvent(tx, retrying(8))).toBe('applied');
+      // Each failed retry repeats the event; Pro limits stay.
+      expect(await applyBillingEvent(tx, retrying(6))).toBe('applied');
+      expect(await getBilling(tx, seed.actor, seed.workspaceId)).toMatchObject({
+        plan: 'pro',
+        status: 'pending',
+        responseLimit: 2000,
+        liveFormLimit: null,
+        seatLimit: 3,
+      });
+      for (let index = 0; index < 4; index++) await publishNew(tx, seed);
+      // A retry that succeeds renews Pro.
+      expect(
+        await applyBillingEvent(
+          tx,
+          event(seed, {
+            type: 'subscription.charged',
+            subscriptionId: activated.subscriptionId,
+            createdAt: new Date(Date.now() - 4 * 60000),
+            periodStart: new Date(Date.now() - 3600000),
+            periodEnd: new Date(Date.now() + 29 * day),
+          }),
+        ),
+      ).toBe('applied');
+      expect(await getBilling(tx, seed.actor, seed.workspaceId)).toMatchObject({
+        plan: 'pro',
+        status: 'active',
+      });
+      // A stale pending event cannot undo the successful retry.
+      expect(await applyBillingEvent(tx, retrying(5))).toBe('ignored');
+      expect(
+        await applyBillingEvent(
+          tx,
+          event(seed, {
+            type: 'subscription.halted',
+            subscriptionId: activated.subscriptionId,
+            createdAt: new Date(Date.now() - 60000),
+            periodStart: null,
+            periodEnd: null,
+          }),
+        ),
+      ).toBe('applied');
+      const halted = await getBilling(tx, seed.actor, seed.workspaceId);
+      // Halted means Free limits at once, but nothing is unpublished or deleted.
+      expect(halted).toMatchObject({
+        plan: 'free',
+        status: 'halted',
+        liveFormLimit: 3,
+        liveForms: 4,
+      });
+    }),
+  60000,
+);
+
+it(
+  'ends the retry grace 30 days after the paid period if halted never arrives (0047)',
+  async () =>
+    fixture(async (tx, seed) => {
+      const activated = event(seed, {
+        createdAt: new Date(Date.now() - 10 * 60000),
+        periodStart: new Date(Date.now() - 61 * day),
+        periodEnd: new Date(Date.now() - 31 * day),
+      });
+      await applyBillingEvent(tx, activated);
+      await applyBillingEvent(
+        tx,
+        event(seed, {
+          type: 'subscription.pending',
+          subscriptionId: activated.subscriptionId,
+          createdAt: new Date(Date.now() - 60000),
+          periodStart: null,
+          periodEnd: null,
+        }),
+      );
+      expect(await getBilling(tx, seed.actor, seed.workspaceId)).toMatchObject({
+        plan: 'free',
+        status: 'pending',
+      });
+      // A completed subscription keeps the period it already paid for.
+      const other = event(seed, {});
+      await applyBillingEvent(tx, other);
+      await applyBillingEvent(
+        tx,
+        event(seed, {
+          type: 'subscription.completed',
+          subscriptionId: other.subscriptionId,
+          createdAt: new Date(Date.now() - 30000),
+          periodStart: null,
+          periodEnd: null,
+        }),
+      );
+      expect(await getBilling(tx, seed.actor, seed.workspaceId)).toMatchObject({
+        plan: 'pro',
+        status: 'completed',
+      });
+    }),
+  30000,
+);
+
+it(
   'ignores a replayed or stale event under a fresh event ID, and unknown events',
   async () =>
     fixture(async (tx, seed) => {
@@ -373,6 +491,45 @@ it(
           )
         ).rows,
       ).toEqual([{ limits: false, jobs_apply: false }]);
+    }),
+  30000,
+);
+
+it(
+  'refuses a second checkout while Razorpay retries a failed charge (0047)',
+  async () =>
+    fixture(async (tx, seed) => {
+      const activated = event(seed, {
+        createdAt: new Date(Date.now() - 10 * 60000),
+        periodStart: new Date(Date.now() - 30 * day),
+        periodEnd: new Date(Date.now() - 3600000),
+      });
+      await applyBillingEvent(tx, activated);
+      await applyBillingEvent(
+        tx,
+        event(seed, {
+          type: 'subscription.pending',
+          subscriptionId: activated.subscriptionId,
+          createdAt: new Date(Date.now() - 60000),
+          periodStart: null,
+          periodEnd: null,
+        }),
+      );
+      // A new subscription now would charge the owner twice once a retry succeeds.
+      await expect(
+        tx.transaction((attempt) =>
+          recordSubscription(
+            attempt,
+            seed.actor,
+            seed.workspaceId,
+            'sub_QApending0001',
+            { interval: 'monthly', currency: 'INR' },
+          ),
+        ),
+      ).rejects.toThrow('BILLING_PAYMENT_PENDING');
+      expect(
+        (await getBilling(tx, seed.actor, seed.workspaceId)).subscriptionId,
+      ).toBe(activated.subscriptionId);
     }),
   30000,
 );
