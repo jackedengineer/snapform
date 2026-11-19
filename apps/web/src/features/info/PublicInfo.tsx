@@ -9,6 +9,8 @@ export function PublicLinks({ newTab = false }: { newTab?: boolean }) {
         [
           ['/support', 'Support'],
           ['/privacy', 'Privacy'],
+          ['/terms', 'Terms'],
+          ['/refunds', 'Refunds'],
           ['/report-abuse', 'Report abuse'],
         ] as const
       ).map(([to, label]) => (

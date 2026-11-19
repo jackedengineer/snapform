@@ -29,6 +29,7 @@
   margin-bottom: 0.75rem;
 }
 .info-content p,
+.info-content li,
 .info-contact p {
   line-height: 1.75;
   color: var(--text-secondary);
@@ -81,4 +82,8 @@
   .info-content {
     margin-block: 2rem;
   }
+}
+.info-content ul {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
 }

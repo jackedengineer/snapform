@@ -16,11 +16,13 @@ import { Route as InviteRouteImport } from './routes/invite'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ReportAbuseRouteImport } from './routes/report-abuse'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as SupportRouteImport } from './routes/support'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AccountAppRouteImport } from './routes/_account.app'
 import { Route as FPublicIdRouteImport } from './routes/f.$publicId'
@@ -65,6 +67,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RefundsRoute = RefundsRouteImport.update({
+  id: '/refunds',
+  path: '/refunds',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReportAbuseRoute = ReportAbuseRouteImport.update({
   id: '/report-abuse',
   path: '/report-abuse',
@@ -88,6 +95,11 @@ const StartRoute = StartRouteImport.update({
 const SupportRoute = SupportRouteImport.update({
   id: '/support',
   path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -149,11 +161,13 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/refunds': typeof RefundsRoute
   '/report-abuse': typeof ReportAbuseRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/start': typeof StartRoute
   '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/app': typeof AccountAppRoute
   '/f/$publicId': typeof FPublicIdRoute
@@ -171,11 +185,13 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/refunds': typeof RefundsRoute
   '/report-abuse': typeof ReportAbuseRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/start': typeof StartRoute
   '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/app': typeof AccountAppRoute
   '/f/$publicId': typeof FPublicIdRoute
@@ -194,11 +210,13 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/refunds': typeof RefundsRoute
   '/report-abuse': typeof ReportAbuseRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/start': typeof StartRoute
   '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/_account/app': typeof AccountAppRoute
   '/f/$publicId': typeof FPublicIdRoute
@@ -218,11 +236,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/pricing'
     | '/privacy'
+    | '/refunds'
     | '/report-abuse'
     | '/reset-password'
     | '/signup'
     | '/start'
     | '/support'
+    | '/terms'
     | '/verify-email'
     | '/app'
     | '/f/$publicId'
@@ -240,11 +260,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/pricing'
     | '/privacy'
+    | '/refunds'
     | '/report-abuse'
     | '/reset-password'
     | '/signup'
     | '/start'
     | '/support'
+    | '/terms'
     | '/verify-email'
     | '/app'
     | '/f/$publicId'
@@ -262,11 +284,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/pricing'
     | '/privacy'
+    | '/refunds'
     | '/report-abuse'
     | '/reset-password'
     | '/signup'
     | '/start'
     | '/support'
+    | '/terms'
     | '/verify-email'
     | '/_account/app'
     | '/f/$publicId'
@@ -286,11 +310,13 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
+  RefundsRoute: typeof RefundsRoute
   ReportAbuseRoute: typeof ReportAbuseRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   StartRoute: typeof StartRoute
   SupportRoute: typeof SupportRoute
+  TermsRoute: typeof TermsRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   FPublicIdRoute: typeof FPublicIdRoute
 }
@@ -346,6 +372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/refunds': {
+      id: '/refunds'
+      path: '/refunds'
+      fullPath: '/refunds'
+      preLoaderRoute: typeof RefundsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/report-abuse': {
       id: '/report-abuse'
       path: '/report-abuse'
@@ -379,6 +412,13 @@ declare module '@tanstack/react-router' {
       path: '/support'
       fullPath: '/support'
       preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verify-email': {
@@ -496,11 +536,13 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
+  RefundsRoute: RefundsRoute,
   ReportAbuseRoute: ReportAbuseRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   StartRoute: StartRoute,
   SupportRoute: SupportRoute,
+  TermsRoute: TermsRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   FPublicIdRoute: FPublicIdRoute,
 }
