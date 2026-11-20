@@ -2,6 +2,7 @@ import { SELF, env } from 'cloudflare:test';
 import { expect, it } from 'vitest';
 import { matchIntakeRoute } from '../src/intake-routes.ts';
 import { intakeAuthorizationHash } from '../src/intake-capability.ts';
+import { sendWhileFull } from './rate-limit.ts';
 const publicId = crypto.randomUUID(),
   id = crypto.randomUUID(),
   root = `/api/v1/public/forms/${publicId}/sessions`,
@@ -80,12 +81,13 @@ it('bounds anonymous creation and keeps official dummy keys off production mode'
 it('limits session starts before spending provider or database work', async () => {
   const key = '198.51.100.43';
   // Shared networks get 60 starts per address; Turnstile still gates each.
-  for (let i = 0; i < 60; i++) await env.INTAKE_START_RATE_LIMIT.limit({ key });
-  const response = await SELF.fetch(base + root, {
-    method: 'POST',
-    headers: { ...headers, 'cf-connecting-ip': key },
-    body,
-  });
+  const response = await sendWhileFull(env.INTAKE_START_RATE_LIMIT, key, () =>
+    SELF.fetch(base + root, {
+      method: 'POST',
+      headers: { ...headers, 'cf-connecting-ip': key },
+      body,
+    }),
+  );
   expect(response.status).toBe(429);
   expect(response.headers.get('Retry-After')).toBe('60');
 });
@@ -130,17 +132,20 @@ it('matches finalization and bounds progress without accepting account fallback 
 it('limits progress mutations before reading Neon', async () => {
   const key = '198.51.100.44';
   // The address ceiling moved to its own binding and rose from 60 to 300.
-  for (let i = 0; i < 300; i++)
-    await env.INTAKE_IP_WRITE_RATE_LIMIT.limit({ key });
-  const response = await SELF.fetch(base + root + '/' + id, {
-    method: 'PATCH',
-    headers: { ...headers, 'cf-connecting-ip': key },
-    body: JSON.stringify({
-      operationId: crypto.randomUUID(),
-      expectedRevision: 1,
-      answers: {},
-    }),
-  });
+  const response = await sendWhileFull(
+    env.INTAKE_IP_WRITE_RATE_LIMIT,
+    key,
+    () =>
+      SELF.fetch(base + root + '/' + id, {
+        method: 'PATCH',
+        headers: { ...headers, 'cf-connecting-ip': key },
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          expectedRevision: 1,
+          answers: {},
+        }),
+      }),
+  );
   expect(response.status).toBe(429);
   expect(response.headers.get('Retry-After')).toBe('60');
 });
@@ -165,32 +170,31 @@ it('applies address and session limits before reading intake bodies', async () =
   const unread = '{"operationId":';
   const own = { ...headers, Authorization: 'Bearer ' + 'c'.repeat(43) };
   const address = '198.51.100.45';
-  for (let i = 0; i < 60; i++)
-    await env.INTAKE_START_RATE_LIMIT.limit({ key: address });
-  for (let i = 0; i < 300; i++)
-    await env.INTAKE_IP_WRITE_RATE_LIMIT.limit({ key: address });
-  for (const [path, method] of [
-    [root, 'POST'],
-    [root + '/' + id, 'PATCH'],
-    [root + '/' + id + '/submission', 'POST'],
-  ]) {
-    const response = await SELF.fetch(base + path, {
-      method,
-      headers: { ...own, 'cf-connecting-ip': address },
-      body: unread,
-    });
+  for (const [path, method, limiter] of [
+    [root, 'POST', env.INTAKE_START_RATE_LIMIT],
+    [root + '/' + id, 'PATCH', env.INTAKE_IP_WRITE_RATE_LIMIT],
+    [root + '/' + id + '/submission', 'POST', env.INTAKE_IP_WRITE_RATE_LIMIT],
+  ] as const) {
+    const response = await sendWhileFull(limiter, address, () =>
+      SELF.fetch(base + path, {
+        method,
+        headers: { ...own, 'cf-connecting-ip': address },
+        body: unread,
+      }),
+    );
     expect({ path, status: response.status }).toEqual({ path, status: 429 });
     expect(response.headers.get('Retry-After')).toBe('60');
   }
   const hash = await intakeAuthorizationHash(own.Authorization);
-  for (let i = 0; i < 60; i++)
-    await env.INTAKE_WRITE_RATE_LIMIT.limit({
-      key: 'session:' + publicId + ':' + hash,
-    });
-  const session = await SELF.fetch(base + root + '/' + id, {
-    method: 'PATCH',
-    headers: { ...own, 'cf-connecting-ip': '198.51.100.46' },
-    body: unread,
-  });
+  const session = await sendWhileFull(
+    env.INTAKE_WRITE_RATE_LIMIT,
+    'session:' + publicId + ':' + hash,
+    () =>
+      SELF.fetch(base + root + '/' + id, {
+        method: 'PATCH',
+        headers: { ...own, 'cf-connecting-ip': '198.51.100.46' },
+        body: unread,
+      }),
+  );
   expect(session.status).toBe(429);
 });
