@@ -2,6 +2,7 @@ import { createExecutionContext, env } from 'cloudflare:test';
 import { expect, it } from 'vitest';
 import worker from '../src/worker.ts';
 import { sessionCookie, sessionToken } from './session-cookie.ts';
+import { sendWhileFull } from './rate-limit.ts';
 
 // An unusable connection string turns any database attempt into a 500.
 const settings = {
@@ -95,11 +96,11 @@ it('passes well-formed session cookies to Better Auth verification', async () =>
 
 it('limits private requests per client address before opening the database', async () => {
   const address = `qa-private-${crypto.randomUUID()}`;
-  for (let i = 0; i < 600; i++)
-    await env.PRIVATE_IP_RATE_LIMIT.limit({ key: address });
-  const limited = await call('/api/v1/me', {
-    headers: { Cookie: sessionCookie, 'CF-Connecting-IP': address },
-  });
+  const limited = await sendWhileFull(env.PRIVATE_IP_RATE_LIMIT, address, () =>
+    call('/api/v1/me', {
+      headers: { Cookie: sessionCookie, 'CF-Connecting-IP': address },
+    }),
+  );
   expect(limited.status).toBe(429);
   expect(limited.headers.get('Retry-After')).toBe('60');
   expect(await limited.json()).toEqual({ error: { code: 'RATE_LIMITED' } });
@@ -114,15 +115,13 @@ it('limits private requests per client address before opening the database', asy
 
 it('limits emailed auth link callbacks per client address before the database', async () => {
   const address = `qa-auth-link-${crypto.randomUUID()}`;
-  for (let i = 0; i < 20; i++)
-    await env.AUTH_RATE_LIMIT.limit({ key: address });
   for (const path of [
     '/api/auth/verify-email?token=synthetic',
     '/api/auth/reset-password/synthetic',
   ]) {
-    const limited = await call(path, {
-      headers: { 'CF-Connecting-IP': address },
-    });
+    const limited = await sendWhileFull(env.AUTH_RATE_LIMIT, address, () =>
+      call(path, { headers: { 'CF-Connecting-IP': address } }),
+    );
     expect(limited.status).toBe(429);
     expect(limited.headers.get('Retry-After')).toBe('60');
   }
