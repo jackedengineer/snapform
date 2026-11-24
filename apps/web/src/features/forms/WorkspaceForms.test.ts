@@ -66,8 +66,10 @@ it('shows each form’s status, responses and a direct responses link', () => {
     ])
       expect(html).toContain(text);
     expect(html.match(/>Responses<\/a>/g)).toHaveLength(3);
+    // The machine-readable time may contain any digits, such as 01 in January.
+    const visible = html.replace(/<time[^>]*>/g, '<time>');
     for (const text of ['Edit form', '↗', 'WORKSPACE', '01'])
-      expect(html).not.toContain(text);
+      expect(visible).not.toContain(text);
   } finally {
     client.clear();
   }
