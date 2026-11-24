@@ -56,8 +56,8 @@ pnpm exec wrangler versions deploy VERSION_ID@100 -c apps/web/wrangler.jsonc --m
 Worker rollback does not roll back database migrations or stored responses.
 Keep database changes additive and review a separate recovery plan. Retention,
 combined backup/restore and delivery recovery remain separate release gates until
-their implementation and evidence are recorded. Owner alerts are built but off
-until [alerts.md](alerts.md) is followed.
+their implementation and evidence are recorded. Operator alerts are described in
+[alerts.md](alerts.md).
 
 Sources: [Vite auxiliary Workers](https://developers.cloudflare.com/workers/vite-plugin/reference/api/),
 [custom domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/),

@@ -1,8 +1,9 @@
 name: Operations check
-# Add the hourly schedule (cron: '17 * * * *') once docs/runbooks/alerts.md's
-# drill has reached the operator. Scheduled failures email whoever last changed
-# the cron line.
+# Hourly, outside Cloudflare (docs/runbooks/alerts.md). Scheduled failures email
+# whoever last changed the cron line.
 on:
+  schedule:
+    - cron: '17 * * * *'
   workflow_dispatch:
     inputs:
       alert_drill:
