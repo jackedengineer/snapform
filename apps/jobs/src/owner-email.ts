@@ -88,7 +88,7 @@ function renderOwnerEmail(delivery: OwnerEmail) {
   const address = replyTo(summary.respondentEmail);
   return { subject, html, text, ...(address ? { reply_to: address } : {}) };
 }
-async function providerResult(response: Response): Promise<unknown> {
+export async function boundedJson(response: Response): Promise<unknown> {
   if (!response.body) throw Error('Missing provider response');
   const reader = response.body.getReader(),
     decoder = new TextDecoder();
@@ -178,7 +178,7 @@ export async function sendOwnerEmail(
       if (response.status === 409) {
         let result: unknown;
         try {
-          result = await providerResult(response);
+          result = await boundedJson(response);
         } catch {
           return { status: 'needs_action', reason: 'provider-rejected' };
         }
@@ -192,7 +192,7 @@ export async function sendOwnerEmail(
       } else await response.body?.cancel();
       return { status: 'needs_action', reason: 'provider-rejected' };
     }
-    const result = await providerResult(response);
+    const result = await boundedJson(response);
     if (
       typeof result !== 'object' ||
       result === null ||
