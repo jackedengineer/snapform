@@ -3,7 +3,7 @@ name: Operations check
 # whoever last changed the cron line.
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '23 * * * *'
   workflow_dispatch:
     inputs:
       alert_drill:

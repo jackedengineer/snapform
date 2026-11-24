@@ -75,6 +75,13 @@ Each step changes production, so it needs the owner's go-ahead.
    `.github/workflows/operations.yml`, then deploy Jobs normally. A deploy without
    that change would switch alerts off again.
 6. Within about an hour expect "Back to normal" and status `ok`.
+7. Confirm that the schedule fires: within two hours
+   `gh run list --workflow operations.yml` must show an event `schedule`.
+
+Never merge a change to the workflow while it is disabled. On 24 November GitHub
+then showed it as active but started no scheduled run, and a manual run started
+right after re-enabling it stayed queued. GitHub's documented fix is to commit a
+change to the cron line.
 
 ## Drill
 
@@ -100,6 +107,7 @@ Set `OPERATIONS_ENABLED` to `"0"`, deploy Jobs and run
 - Missing or failed backups. A failed backup run sends GitHub's own email.
 - Reaction time: expect up to 30 minutes for the website or forms, up to an hour
   for background jobs, and longer when GitHub delays a scheduled run.
+- The GitHub schedule itself stopping. Nothing reports it; Jobs alerts still work.
 - GitHub turns off schedules in a public repository after 60 days without
   activity. Re-enable the workflow if development pauses that long.
 
