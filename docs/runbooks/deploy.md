@@ -55,8 +55,9 @@ pnpm exec wrangler versions deploy VERSION_ID@100 -c apps/web/wrangler.jsonc --m
 
 Worker rollback does not roll back database migrations or stored responses.
 Keep database changes additive and review a separate recovery plan. Retention,
-combined backup/restore, external monitoring and delivery recovery remain
-separate release gates until their implementation and evidence are recorded.
+combined backup/restore and delivery recovery remain separate release gates until
+their implementation and evidence are recorded. Owner alerts are built but off
+until [alerts.md](alerts.md) is followed.
 
 Sources: [Vite auxiliary Workers](https://developers.cloudflare.com/workers/vite-plugin/reference/api/),
 [custom domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/),
@@ -84,7 +85,9 @@ retries and the `snapform-response-dead` queue. Cron propagation can take up to
 15 minutes. A transport receipt does not prove provider notification delivery.
 
 The API's private `JOBS` binding forwards only `/api/v1/hooks/resend` to the jobs
-receipt handler. Resend calls the public app hostname; Jobs has no public route.
+receipt handler and the read-only `/api/v1/status` to the alert status. Resend
+calls the public app hostname; Jobs has no public route of its own. Jobs also
+binds the private `snapform-operations` bucket, which must exist before a deploy.
 Deploy the receiving API before enabling the new sender on the already existing
 jobs Worker, then deploy the web controls. Verify a real signed callback and the
 matching durable status; an unsigned POST must return 401. Provider acceptance,

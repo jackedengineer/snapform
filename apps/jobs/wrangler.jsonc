@@ -10,11 +10,16 @@
   "vars": {
     "EMAIL_FROM": "Snapform <no-reply@jacked.dev>",
     "PURGE_ENABLED": "0",
+    // "1" turns on owner alerts and "drill" sends a labelled test alert
+    // (docs/runbooks/alerts.md).
+    "OPERATIONS_ENABLED": "0",
   },
   "r2_buckets": [
     { "binding": "PURGE_LEDGER", "bucket_name": "snapform-purge-ledger" },
     // Respondent files, deleted by prefix before a purge is finalized.
     { "binding": "UPLOADS", "bucket_name": "snapform-uploads" },
+    // One small status object, readable while the database is down or asleep.
+    { "binding": "OPERATIONS", "bucket_name": "snapform-operations" },
   ],
   // Every 30 minutes: retries, deletions and anything a submit's instant wake
   // missed. Running every minute kept the database from ever sleeping and used

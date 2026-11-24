@@ -87,6 +87,11 @@ if (!serve)
   throw new Error(
     'The Cloudflare HTTP bridge did not provide a fetch handler.',
   );
+// The only public paths the private Jobs Worker answers, with their limit key.
+const jobsRoutes = new Map([
+  ['/api/v1/hooks/resend', 'provider-receipt'],
+  ['/api/v1/status', 'status'],
+]);
 export default {
   async fetch(
     request: Request<unknown, IncomingRequestCfProperties>,
@@ -111,10 +116,9 @@ export default {
         },
       );
     }
-    if (new URL(request.url).pathname === '/api/v1/hooks/resend') {
-      const key =
-        'provider-receipt:' +
-        (request.headers.get('cf-connecting-ip') || 'local');
+    const jobsRoute = jobsRoutes.get(new URL(request.url).pathname);
+    if (jobsRoute) {
+      const key = `${jobsRoute}:${request.headers.get('cf-connecting-ip') || 'local'}`;
       if (!(await environment.PUBLIC_READ_RATE_LIMIT.limit({ key })).success)
         return Response.json(
           { error: { code: 'RATE_LIMITED' } },
@@ -127,7 +131,7 @@ export default {
         return await environment.JOBS.fetch(request);
       } catch {
         console.error(
-          JSON.stringify({ event: 'provider_receipt_forward_failed' }),
+          JSON.stringify({ event: 'jobs_forward_failed', route: jobsRoute }),
         );
         return Response.json(
           { error: { code: 'UNAVAILABLE' } },

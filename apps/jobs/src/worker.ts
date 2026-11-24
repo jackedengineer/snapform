@@ -35,8 +35,14 @@ import {
   purgeFilePrefix,
 } from '@snapform/database/purge';
 import type { Database } from '@snapform/database';
+import {
+  handleOperationsStatus,
+  operationsEnabled,
+  reportOperations,
+} from './operations';
+import type { OperationsEnvironment } from './operations';
 
-type JobEnvironment = {
+type JobEnvironment = OperationsEnvironment & {
   PURGE_ENABLED?: string;
   PURGE_LEDGER_KEY?: string;
   PURGE_LEDGER?: R2Bucket;
@@ -139,6 +145,8 @@ export default {
           }
         },
       );
+    if (new URL(request.url).pathname === '/api/v1/status')
+      return handleOperationsStatus(request, environment);
     return new Response(null, {
       status: 404,
       headers: { 'Cache-Control': 'no-store' },
@@ -148,6 +156,7 @@ export default {
     _controller: ScheduledController,
     environment: JobEnvironment,
   ) {
+    let failed = false;
     try {
       const { db, close } = await connect(environment);
       try {
@@ -187,9 +196,18 @@ export default {
         await close();
       }
     } catch {
+      failed = true;
       console.error(JSON.stringify({ event: 'response_jobs_failed' }));
-      throw new Error('Response jobs failed');
     }
+    if (operationsEnabled(environment)) {
+      try {
+        await reportOperations(environment, failed);
+      } catch {
+        // The status goes stale, which the outside check reports.
+        console.error(JSON.stringify({ event: 'operations_report_failed' }));
+      }
+    }
+    if (failed) throw new Error('Response jobs failed');
   },
   async queue(batch: MessageBatch<unknown>, environment: JobEnvironment) {
     if (

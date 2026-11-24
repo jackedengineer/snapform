@@ -49,6 +49,7 @@ export default defineConfig({
         'packages/contracts/src/retention.ts',
         'packages/contracts/src/deletion.ts',
         'packages/contracts/src/purge.ts',
+        'packages/contracts/src/operations.ts',
         'packages/contracts/src/plans.ts',
         'packages/contracts/src/billing.ts',
         'packages/contracts/src/billing-server.ts',
