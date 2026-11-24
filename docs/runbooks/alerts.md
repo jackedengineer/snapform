@@ -6,7 +6,7 @@ customers a response time or an availability figure.
 | Check | Runs | Looks at | Tells you by |
 |---|---|---|---|
 | Jobs Worker | Every 30 minutes, after each sweep | Its own run, the home page and a form lookup that needs the database | Email through Resend |
-| GitHub `Operations check` | Hourly, once its schedule is on | The home page, `/api/v1/health` and `/api/v1/status` | GitHub's failed-workflow email |
+| GitHub `Operations check` | Hourly | The home page, `/api/v1/health` and `/api/v1/status` | GitHub's failed-workflow email |
 
 The Jobs check finds most problems and says what is wrong. The GitHub check runs
 outside Cloudflare and Resend, so it also notices when those are down, the Cron

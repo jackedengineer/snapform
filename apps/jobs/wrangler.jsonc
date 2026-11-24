@@ -12,7 +12,7 @@
     "PURGE_ENABLED": "0",
     // "1" turns on owner alerts and "drill" sends a labelled test alert
     // (docs/runbooks/alerts.md).
-    "OPERATIONS_ENABLED": "0",
+    "OPERATIONS_ENABLED": "1",
   },
   "r2_buckets": [
     { "binding": "PURGE_LEDGER", "bucket_name": "snapform-purge-ledger" },

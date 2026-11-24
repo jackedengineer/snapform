@@ -50,6 +50,7 @@ function transport(closeBeforeReady = false) {
   );
   vi.stubGlobal('fetch', fetcher);
   return {
+    client: pair[0],
     server,
     fetcher,
     terminated: () => terminated,
@@ -109,4 +110,28 @@ it('rejects a query when its peer closes in the same turn without a later buffer
   } finally {
     fixture.server.close();
   }
+});
+const lost = () =>
+  new ErrorEvent('error', { message: 'Network connection lost.' });
+it('reports a connection lost while it is in use', async () => {
+  const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const fixture = transport();
+  const connection = await openDatabase(url);
+  fixture.client.dispatchEvent(lost());
+  expect(logged).toHaveBeenCalledWith(
+    JSON.stringify({ event: 'database_connection_failed' }),
+  );
+  await connection.close();
+  fixture.server.close();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+});
+it('stays quiet when the server drops the socket after a clean close', async () => {
+  const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const fixture = transport();
+  const connection = await openDatabase(url);
+  await connection.close();
+  fixture.client.dispatchEvent(lost());
+  fixture.server.close();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(logged).not.toHaveBeenCalled();
 });

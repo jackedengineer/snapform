@@ -9,6 +9,8 @@ export default defineConfig({
       miniflare: {
         bindings: {
           DATABASE_URL: '',
+          // Production runs the checks; tests opt in and never probe the live site.
+          OPERATIONS_ENABLED: '0',
           RESEND_WEBHOOK_SECRET:
             'whsec_MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
         },
