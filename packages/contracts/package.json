@@ -37,6 +37,7 @@
     "./retention": "./src/retention.ts",
     "./purge": "./src/purge.ts",
     "./deletion": "./src/deletion.ts",
+    "./operations": "./src/operations.ts",
     "./plans": "./src/plans.ts",
     "./billing": "./src/billing.ts",
     "./billing-server": "./src/billing-server.ts",
