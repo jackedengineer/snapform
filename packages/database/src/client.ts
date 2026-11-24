@@ -26,8 +26,11 @@ export async function openDatabase(connectionString: string) {
   // A deferred flush can run after peer close in both Node and Workers,
   // escaping the query promise. Send through the driver's immediate path.
   client.neonConfig.coalesceWrites = false;
+  let closing: Promise<void> | undefined;
   client.on('error', () => {
-    console.error(JSON.stringify({ event: 'database_connection_failed' }));
+    // The server drops the socket after our goodbye; nothing was lost.
+    if (!closing)
+      console.error(JSON.stringify({ event: 'database_connection_failed' }));
   });
   let socketClosed = false;
   const disconnected = new Promise<void>((resolve) => {
@@ -36,7 +39,6 @@ export async function openDatabase(connectionString: string) {
       resolve();
     });
   });
-  let closing: Promise<void> | undefined;
   async function close() {
     // After a peer close, end() can write again and await an already-fired event.
     if (socketClosed) return;
