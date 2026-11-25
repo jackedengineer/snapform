@@ -1,9 +1,10 @@
 name: Operations check
-# Hourly, outside Cloudflare (docs/runbooks/alerts.md). Scheduled failures email
-# whoever last changed the cron line.
+# Outside Cloudflare (docs/runbooks/alerts.md). GitHub skips most scheduled runs,
+# so it is asked four times an hour. Scheduled failures email whoever last changed
+# the cron line.
 on:
   schedule:
-    - cron: '23 * * * *'
+    - cron: '8,23,38,53 * * * *'
   workflow_dispatch:
     inputs:
       alert_drill:
