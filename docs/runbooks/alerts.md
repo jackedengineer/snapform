@@ -6,7 +6,7 @@ customers a response time or an availability figure.
 | Check | Runs | Looks at | Tells you by |
 |---|---|---|---|
 | Jobs Worker | Every 30 minutes, after each sweep | Its own run, the home page and a form lookup that needs the database | Email through Resend |
-| GitHub `Operations check` | Hourly | The home page, `/api/v1/health` and `/api/v1/status` | GitHub's failed-workflow email |
+| GitHub `Operations check` | When GitHub has room; asked four times an hour | The home page, `/api/v1/health` and `/api/v1/status` | GitHub's failed-workflow email |
 
 The Jobs check finds most problems and says what is wrong. The GitHub check runs
 outside Cloudflare and Resend, so it also notices when those are down, the Cron
@@ -71,17 +71,16 @@ Each step changes production, so it needs the owner's go-ahead.
    `pnpm exec wrangler deploy -c apps/api/wrangler.jsonc`
 4. Run the drill below. Continue only when both emails arrive.
 5. Merge a change that sets `OPERATIONS_ENABLED` to `"1"` in
-   `apps/jobs/wrangler.jsonc` and adds the hourly schedule to
+   `apps/jobs/wrangler.jsonc` and adds the schedule to
    `.github/workflows/operations.yml`, then deploy Jobs normally. A deploy without
    that change would switch alerts off again.
 6. Within about an hour expect "Back to normal" and status `ok`.
-7. Confirm that the schedule fires: within two hours
+7. Confirm that the schedule fires: within a day
    `gh run list --workflow operations.yml` must show an event `schedule`.
 
-Never merge a change to the workflow while it is disabled. On 24 November GitHub
-then showed it as active but started no scheduled run, and a manual run started
-right after re-enabling it stayed queued. GitHub's documented fix is to commit a
-change to the cron line.
+Never merge a change to the workflow while it is disabled. On 24 November a manual
+run started right after re-enabling it stayed queued, and no scheduled run began
+until a later commit changed the cron line, which is GitHub's documented fix.
 
 ## Drill
 
@@ -105,8 +104,10 @@ Set `OPERATIONS_ENABLED` to `"0"`, deploy Jobs and run
   queue.
 - Slow pages and partial regional outages.
 - Missing or failed backups. A failed backup run sends GitHub's own email.
-- Reaction time: expect up to 30 minutes for the website or forms, up to an hour
-  for background jobs, and longer when GitHub delays a scheduled run.
+- Reaction time: expect up to 30 minutes for the website or forms and up to an
+  hour for background jobs. The GitHub check can take most of a day: an hourly
+  schedule ran only twice in its first 20 hours, 10 hours apart. Before paying
+  customers depend on Snapform, point an uptime service at the status URL.
 - The GitHub schedule itself stopping. Nothing reports it; Jobs alerts still work.
 - GitHub turns off schedules in a public repository after 60 days without
   activity. Re-enable the workflow if development pauses that long.
